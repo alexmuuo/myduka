@@ -12,7 +12,7 @@ from extensions import db
 from models.cashier import Cashier
 
 
-TOKEN_SALT = "agrovet-cashier-auth"
+TOKEN_SALT = "myduka-cashier-auth"
 TOKEN_MAX_AGE = 8 * 60 * 60  # 8 hours
 
 

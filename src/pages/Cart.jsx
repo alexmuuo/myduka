@@ -96,9 +96,9 @@ const styles = `
 
   .hm-cart-item-count {
     padding: 6px 11px;
-    border: 1px solid rgba(214,179,106,.25);
+    border: 1px solid rgba(251, 191, 36,.25);
     border-radius: 999px;
-    background: rgba(214,179,106,.07);
+    background: rgba(251, 191, 36,.07);
     color: var(--hm-gold);
     font-size: .78rem;
     font-weight: 750;
@@ -118,7 +118,7 @@ const styles = `
   }
 
   .hm-cart-item:hover {
-    border-color: rgba(214,179,106,.32);
+    border-color: rgba(251, 191, 36,.32);
   }
 
   .hm-cart-image-wrap {
@@ -131,7 +131,7 @@ const styles = `
     border: 1px solid rgba(255,255,255,.06);
     border-radius: 11px;
     background:
-      radial-gradient(ellipse at center, rgba(214,179,106,.09), transparent 70%),
+      radial-gradient(ellipse at center, rgba(251, 191, 36,.09), transparent 70%),
       #1a211c;
   }
 
@@ -297,7 +297,7 @@ const styles = `
     position: sticky;
     top: 24px;
     overflow: hidden;
-    border: 1px solid rgba(214,179,106,.24);
+    border: 1px solid rgba(251, 191, 36,.24);
     border-radius: 16px;
     background: var(--hm-panel);
   }
@@ -305,7 +305,7 @@ const styles = `
   .hm-cart-summary-header {
     padding: 23px 24px 19px;
     border-bottom: 1px solid var(--hm-border);
-    background: linear-gradient(135deg, rgba(214,179,106,.07), transparent);
+    background: linear-gradient(135deg, rgba(251, 191, 36,.07), transparent);
   }
 
   .hm-cart-summary-title {
@@ -435,7 +435,7 @@ const styles = `
     border: 1px solid var(--hm-border);
     border-radius: 20px;
     background:
-      radial-gradient(ellipse at top, rgba(214,179,106,.07), transparent 65%),
+      radial-gradient(ellipse at top, rgba(251, 191, 36,.07), transparent 65%),
       var(--hm-panel);
     text-align: center;
   }
@@ -446,9 +446,9 @@ const styles = `
     height: 90px;
     margin: 0 auto 25px;
     place-items: center;
-    border: 1px solid rgba(214,179,106,.25);
+    border: 1px solid rgba(251, 191, 36,.25);
     border-radius: 50%;
-    background: rgba(214,179,106,.07);
+    background: rgba(251, 191, 36,.07);
     color: var(--hm-gold);
     font-size: 2.5rem;
   }

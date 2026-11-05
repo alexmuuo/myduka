@@ -35,7 +35,7 @@ const styles = `
     border: 1px solid rgba(210, 174, 91, 0.55);
     border-radius: 20px;
     background: rgba(210, 174, 91, 0.08);
-    color: #d7b56d;
+    color: #fbbf24;
     font-size: 30px;
   }
 
@@ -48,7 +48,7 @@ const styles = `
   }
 
   .hm-reset-brand h1 span {
-    color: #d7b56d;
+    color: #fbbf24;
   }
 
   .hm-reset-brand p {
@@ -136,7 +136,7 @@ const styles = `
     transform: translateY(-50%);
     border: none;
     background: transparent;
-    color: #d7b56d;
+    color: #fbbf24;
     font-size: 12px;
     font-weight: 650;
     cursor: pointer;
@@ -179,7 +179,7 @@ const styles = `
   .hm-reset-checkbox {
     width: 16px;
     height: 16px;
-    accent-color: #d7b56d;
+    accent-color: #fbbf24;
     cursor: pointer;
   }
 
@@ -187,9 +187,9 @@ const styles = `
     width: 100%;
     min-height: 49px;
     padding: 13px 18px;
-    border: 1px solid #d7b56d;
+    border: 1px solid #fbbf24;
     border-radius: 10px;
-    background: linear-gradient(135deg, #e0c47e, #c9a653);
+    background: linear-gradient(135deg, #fbbf24, #c9a653);
     color: #172018;
     font-size: 14px;
     font-weight: 800;
@@ -229,15 +229,15 @@ const styles = `
 
   .hm-reset-invalid {
     padding: 19px;
-    border: 1px solid rgba(215, 181, 109, 0.2);
+    border: 1px solid rgba(251, 191, 36, 0.2);
     border-radius: 12px;
-    background: rgba(215, 181, 109, 0.05);
+    background: rgba(251, 191, 36, 0.05);
     text-align: center;
   }
 
   .hm-reset-invalid-icon {
     margin-bottom: 10px;
-    color: #d7b56d;
+    color: #fbbf24;
     font-size: 30px;
   }
 
@@ -259,7 +259,7 @@ const styles = `
   }
 
   .hm-reset-secondary:hover {
-    color: #d7b56d;
+    color: #fbbf24;
   }
 
   .hm-reset-footer {
@@ -381,7 +381,7 @@ function ResetPassword() {
             </div>
 
             <h1>
-              HEADMASTER <span>LIQUORS</span>
+              MY<span>DUKA</span>
             </h1>
 
             <p>Your account, secured</p>
@@ -391,8 +391,7 @@ function ResetPassword() {
             <h2 className="hm-reset-heading">Create a new password</h2>
 
             <p className="hm-reset-description">
-              Choose a strong password to get back into your Headmaster
-              Liquors account.
+              Choose a strong password to get back into your MyDuka account.
             </p>
 
             {error && (
@@ -556,7 +555,7 @@ function ResetPassword() {
           </section>
 
           <footer className="hm-reset-footer">
-            &copy; {new Date().getFullYear()} Headmaster Liquors. Secure
+            &copy; {new Date().getFullYear()} MyDuka. Secure
             account access.
           </footer>
         </div>

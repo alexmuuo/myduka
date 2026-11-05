@@ -96,7 +96,7 @@ return ( <main className="hm-home"> <section className="hm-hero"> <div className
         <div className="col-lg-5">
           <div className="hm-showcase">
             <div className="hm-showcase-top">
-              <span>THE HEADMASTER EDIT</span>
+              <span>FEATURED PICKS</span>
               <i className="bi bi-stars" />
             </div>
 
@@ -204,7 +204,7 @@ return ( <main className="hm-home"> <section className="hm-hero"> <div className
   <section className="hm-experience-section">
     <div className="container">
       <div className="hm-experience-heading">
-        <span className="hm-section-kicker">THE HEADMASTER EXPERIENCE</span>
+        <span className="hm-section-kicker">THE MYDUKA EXPERIENCE</span>
         <h2>Good service is always in style.</h2>
         <p>
           A convenient way to explore our range and arrange your order.

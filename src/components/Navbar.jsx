@@ -530,8 +530,8 @@ function Navbar() {
 
               {/* CUSTOMER HELP / MESSAGES */}
               <Link
-                className={`${navLinkClass("/ask-agrovet")} hm-help-link`}
-                to="/ask-agrovet"
+                className={`${navLinkClass("/ask-support")} hm-help-link`}
+                to="/ask-support"
                 aria-label={
                   customer && unreadMessageCount > 0
                     ? `Customer help, ${unreadMessageCount} unread messages`

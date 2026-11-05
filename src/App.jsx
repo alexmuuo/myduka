@@ -8,7 +8,7 @@ import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import OrderConfirmation from "./pages/OrderConfirmation";
 import BackendTest from "./pages/BackendTest";
-import AskAgrovet from "./pages/AskAgrovet";
+import AskSupport from "./pages/AskSupport";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -96,7 +96,7 @@ return (
       element={<OrderConfirmation />}
     />
     <Route path="/backend-test" element={<BackendTest />} />
-    <Route path="/ask-agrovet" element={<AskAgrovet />} />
+    <Route path="/ask-support" element={<AskSupport />} />
 
     {/* CUSTOMER AUTHENTICATION */}
     <Route path="/login" element={<Login />} />

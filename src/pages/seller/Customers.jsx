@@ -53,7 +53,7 @@ function Customers() {
           </h1>
 
           <p className="text-secondary mb-0">
-            View and manage your agrovet customers.
+            View and manage your customers.
           </p>
         </div>
 

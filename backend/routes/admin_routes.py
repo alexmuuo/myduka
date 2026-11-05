@@ -4741,7 +4741,7 @@ def export_all_pos_reports_excel():
         workbook.save(output)
         output.seek(0)
 
-        filename_parts = ["headmaster_pos_reports"]
+        filename_parts = ["myduka_pos_reports"]
 
         if start_date:
             filename_parts.append(

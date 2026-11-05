@@ -42,7 +42,7 @@ const styles = `
     background:
       radial-gradient(
         ellipse at 85% 15%,
-        rgba(214,179,106,.15),
+        rgba(251, 191, 36,.15),
         transparent 40%
       ),
       linear-gradient(130deg, #26372b, #1c241e 75%);
@@ -55,11 +55,11 @@ const styles = `
     height: 250px;
     right: -70px;
     bottom: -150px;
-    border: 1px solid rgba(214,179,106,.15);
+    border: 1px solid rgba(251, 191, 36,.15);
     border-radius: 50%;
     box-shadow:
-      0 0 0 25px rgba(214,179,106,.025),
-      0 0 0 50px rgba(214,179,106,.025);
+      0 0 0 25px rgba(251, 191, 36,.025),
+      0 0 0 50px rgba(251, 191, 36,.025);
     pointer-events: none;
   }
 
@@ -153,7 +153,7 @@ const styles = `
 
   .hm-catalogue-search:focus-within {
     border-color: var(--gold);
-    box-shadow: 0 0 0 3px rgba(214,179,106,.08);
+    box-shadow: 0 0 0 3px rgba(251, 191, 36,.08);
   }
 
   .hm-catalogue-categories {
@@ -178,7 +178,7 @@ const styles = `
   .hm-category-button:hover,
   .hm-category-button.active {
     border-color: var(--gold);
-    background: rgba(214,179,106,.12);
+    background: rgba(251, 191, 36,.12);
     color: var(--gold);
   }
 
@@ -202,7 +202,7 @@ const styles = `
 
   .hm-product-card:hover {
     transform: translateY(-5px);
-    border-color: rgba(214,179,106,.4);
+    border-color: rgba(251, 191, 36,.4);
     box-shadow: 0 15px 35px rgba(0,0,0,.2);
   }
 
@@ -217,7 +217,7 @@ const styles = `
     background:
       radial-gradient(
         ellipse at center,
-        rgba(214,179,106,.10),
+        rgba(251, 191, 36,.10),
         transparent 65%
       ),
       linear-gradient(145deg, #2b382e, #202923);
@@ -239,7 +239,7 @@ const styles = `
     width: 85px;
     height: 85px;
     place-items: center;
-    border: 1px solid rgba(214,179,106,.2);
+    border: 1px solid rgba(251, 191, 36,.2);
     border-radius: 50%;
     color: var(--gold);
     font-size: 2rem;
@@ -252,7 +252,7 @@ const styles = `
     max-width: calc(100% - 26px);
     overflow: hidden;
     padding: 6px 10px;
-    border: 1px solid rgba(214,179,106,.25);
+    border: 1px solid rgba(251, 191, 36,.25);
     border-radius: 999px;
     background: rgba(23,29,25,.85);
     color: var(--gold);
@@ -308,7 +308,7 @@ const styles = `
     justify-content: center;
     min-height: 38px;
     padding: 9px 13px;
-    border: 1px solid rgba(214,179,106,.5);
+    border: 1px solid rgba(251, 191, 36,.5);
     border-radius: 8px;
     background: transparent;
     color: var(--gold);
@@ -351,9 +351,9 @@ const styles = `
     height: 65px;
     margin-bottom: 20px;
     place-items: center;
-    border: 1px solid rgba(214,179,106,.25);
+    border: 1px solid rgba(251, 191, 36,.25);
     border-radius: 50%;
-    background: rgba(214,179,106,.08);
+    background: rgba(251, 191, 36,.08);
     color: var(--gold);
     font-size: 1.8rem;
   }
@@ -376,7 +376,7 @@ const styles = `
     width: 43px;
     height: 43px;
     margin-bottom: 22px;
-    border: 3px solid rgba(214,179,106,.2);
+    border: 3px solid rgba(251, 191, 36,.2);
     border-top-color: var(--gold);
     border-radius: 50%;
     animation: hm-catalogue-spin .8s linear infinite;
@@ -662,7 +662,7 @@ function Products() {
       <div className="hm-catalogue-container">
         <section className="hm-catalogue-hero">
           <div className="hm-catalogue-eyebrow">
-            Headmaster Liquors
+            MyDuka
           </div>
 
           <h1 className="hm-catalogue-heading">

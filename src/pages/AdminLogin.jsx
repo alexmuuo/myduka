@@ -54,7 +54,7 @@ function AdminLogin() {
           <h2 className="text-center mb-2">Admin Login</h2>
 
           <p className="text-center text-muted mb-4">
-            Headmaster liquors Management Portal
+            MyDuka Management Portal
           </p>
 
           {error && (

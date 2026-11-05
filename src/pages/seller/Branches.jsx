@@ -9,7 +9,7 @@ const styles = {
   label: { display: "block", fontWeight: 600, marginBottom: 8 },
   input: { width: "100%", padding: "10px 12px", border: "1px solid #ced4da", borderRadius: 6, boxSizing: "border-box", background: "#fff" },
   button: { padding: "9px 14px", border: 0, borderRadius: 6, cursor: "pointer", fontWeight: 600 },
-  primary: { background: "#198754", color: "#fff" },
+  primary: { background: "#4f46e5", color: "#fff" },
   secondary: { background: "#e9ecef", color: "#212529" },
   danger: { background: "#dc3545", color: "#fff" },
   tableWrap: { overflowX: "auto" },
