@@ -6,10 +6,17 @@ from werkzeug.security import (
 )
 
 from extensions import db
+from models.tenant import TenantMixin
 
 
-class Cashier(db.Model):
+class Cashier(TenantMixin, db.Model):
     __tablename__ = "cashiers"
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "business_id", "username", name="uq_cashier_business_username"
+        ),
+    )
 
     # --------------------------------------------------
     # PRIMARY KEY
@@ -28,7 +35,6 @@ class Cashier(db.Model):
     username = db.Column(
         db.String(80),
         nullable=False,
-        unique=True,
         index=True
     )
 

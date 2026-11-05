@@ -22,6 +22,8 @@ from itsdangerous import (
 from extensions import db
 from models.customer import Customer
 from customer_auth import create_customer_token
+from flask import g
+from tenancy import shop_context_required
 
 
 customer_bp = Blueprint(
@@ -177,7 +179,7 @@ def send_password_reset_email(customer, reset_url):
         )
 
     message = Message(
-        subject="Reset Your MyDuka Account Password",
+        subject="Reset Your Password",
         recipients=[customer.email],
         body=(
             f"Hello {customer.name},\n\n"
@@ -207,6 +209,7 @@ def send_password_reset_email(customer, reset_url):
     "/api/customers",
     methods=["POST"]
 )
+@shop_context_required
 def create_or_get_customer():
     """
     Create a customer record or retrieve an existing
@@ -349,6 +352,7 @@ def create_or_get_customer():
     "/api/customers/register",
     methods=["POST"]
 )
+@shop_context_required
 def register_customer():
     """
     Register a customer or allow an existing customer
@@ -528,6 +532,7 @@ def register_customer():
     "/api/customers/login",
     methods=["POST"]
 )
+@shop_context_required
 def login_customer():
     """
     Authenticate a customer using their phone number
@@ -625,6 +630,7 @@ def login_customer():
     "/api/customers/forgot-password",
     methods=["POST"]
 )
+@shop_context_required
 def forgot_customer_password():
     """
     Request a password-reset email.
@@ -684,8 +690,11 @@ def forgot_customer_password():
             "token": token
         })
 
+        # The link is shop-specific so the reset page talks to the
+        # right business.
         reset_url = (
-            f"{frontend_url}/reset-password?{query_string}"
+            f"{frontend_url}/shop/{g.business.slug}"
+            f"/reset-password?{query_string}"
         )
 
         # -------------------------------------------------
@@ -734,6 +743,7 @@ def forgot_customer_password():
     "/api/customers/reset-password",
     methods=["POST"]
 )
+@shop_context_required
 def reset_customer_password():
     """
     Verify a password-reset token and update the customer's

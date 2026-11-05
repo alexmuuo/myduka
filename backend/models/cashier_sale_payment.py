@@ -1,9 +1,10 @@
 from datetime import datetime
 
 from extensions import db
+from models.tenant import TenantMixin
 
 
-class CashierSalePayment(db.Model):
+class CashierSalePayment(TenantMixin, db.Model):
     __tablename__ = "cashier_sale_payments"
 
     id = db.Column(

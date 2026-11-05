@@ -1,8 +1,9 @@
 from datetime import datetime
 from extensions import db
+from models.tenant import TenantMixin
 
 
-class Payment(db.Model):
+class Payment(TenantMixin, db.Model):
     __tablename__ = "payments"
 
     id = db.Column(db.Integer, primary_key=True)

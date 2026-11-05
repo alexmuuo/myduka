@@ -3,13 +3,14 @@ from datetime import datetime
 from decimal import Decimal
 
 from extensions import db
+from models.tenant import TenantMixin
 
 
 ZERO = Decimal("0.00")
 ZERO_QUANTITY = Decimal("0.000")
 
 
-class CashierSale(db.Model):
+class CashierSale(TenantMixin, db.Model):
     __tablename__ = "cashier_sales"
 
     id = db.Column(
@@ -133,7 +134,7 @@ class CashierSale(db.Model):
         }
 
 
-class CashierSaleItem(db.Model):
+class CashierSaleItem(TenantMixin, db.Model):
     __tablename__ = "cashier_sale_items"
 
     id = db.Column(

@@ -2,9 +2,10 @@ from datetime import datetime
 from decimal import Decimal
 
 from extensions import db
+from models.tenant import TenantMixin
 
 
-class Product(db.Model):
+class Product(TenantMixin, db.Model):
     __tablename__ = "products"
 
     id = db.Column(
@@ -24,6 +25,15 @@ class Product(db.Model):
 
     description = db.Column(
         db.Text
+    )
+
+    # Optional link to the categories table. The free-text "category"
+    # column above is kept so existing screens keep working.
+    category_id = db.Column(
+        db.Integer,
+        db.ForeignKey("categories.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True
     )
 
     # Cost paid by the business to acquire one stock unit.
@@ -112,6 +122,7 @@ class Product(db.Model):
             "id": self.id,
             "name": self.name,
             "category": self.category,
+            "category_id": self.category_id,
             "description": self.description,
             "buying_price": (
                 float(self.buying_price)

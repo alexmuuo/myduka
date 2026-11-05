@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
 from extensions import db
+from models.tenant import TenantMixin
 
 
 EAT = timezone(timedelta(hours=3), "EAT")
@@ -10,7 +11,7 @@ def _utcnow():
     return datetime.now(timezone.utc)
 
 
-class StockMovement(db.Model):
+class StockMovement(TenantMixin, db.Model):
     __tablename__ = "stock_movements"
 
     id = db.Column(

@@ -8,8 +8,11 @@ from itsdangerous import (
     URLSafeTimedSerializer,
 )
 
+from admin_auth import password_version
 from extensions import db
+from models.business import Business
 from models.cashier import Cashier
+from tenancy import business_is_open, set_tenant, unscoped
 
 
 TOKEN_SALT = "myduka-cashier-auth"
@@ -20,125 +23,99 @@ def get_token_serializer():
     secret = os.getenv("CASHIER_TOKEN_SECRET")
 
     if not secret or not secret.strip():
-        raise RuntimeError(
-            "CASHIER_TOKEN_SECRET is not configured."
-        )
+        raise RuntimeError("CASHIER_TOKEN_SECRET is not configured.")
 
-    return URLSafeTimedSerializer(
-        secret,
-        salt=TOKEN_SALT,
-    )
+    return URLSafeTimedSerializer(secret, salt=TOKEN_SALT)
 
 
 def create_cashier_token(cashier):
-    serializer = get_token_serializer()
-
-    return serializer.dumps({
+    return get_token_serializer().dumps({
+        "k": "cashier",
         "cashier_id": cashier.id,
-        "username": cashier.username,
-        "role": "cashier",
+        "pv": password_version(cashier.password_hash),
     })
+
+
+def _error(message, status):
+    return jsonify({"status": "error", "message": message}), status
+
 
 def cashier_required(view_function):
     @wraps(view_function)
     def wrapped(*args, **kwargs):
-        # Allow browser CORS preflight requests through without
-        # requiring a cashier token. The actual request remains protected.
+        # CORS preflight carries no token; the real request is protected.
         if request.method == "OPTIONS":
             return "", 204
 
-        authorization = request.headers.get("Authorization", "")
-        parts = authorization.split()
+        parts = request.headers.get("Authorization", "").split()
 
         if (
             len(parts) != 2
             or parts[0].lower() != "bearer"
             or not parts[1]
         ):
-            return jsonify({
-                "status": "error",
-                "message": "Cashier authentication required.",
-            }), 401
+            return _error("Cashier authentication required.", 401)
 
-        token = parts[1]
-
-        # Validate the token signature, age, and payload.
         try:
-            serializer = get_token_serializer()
-            cashier_data = serializer.loads(
-                token,
-                max_age=TOKEN_MAX_AGE,
+            data = get_token_serializer().loads(
+                parts[1], max_age=TOKEN_MAX_AGE
             )
 
         except SignatureExpired:
-            return jsonify({
-                "status": "error",
-                "message": (
-                    "Cashier session expired. "
-                    "Please log in again."
-                ),
-            }), 401
+            return _error(
+                "Cashier session expired. Please log in again.", 401
+            )
 
         except (BadSignature, ValueError, TypeError):
-            return jsonify({
-                "status": "error",
-                "message": "Invalid authentication token.",
-            }), 401
+            return _error("Invalid authentication token.", 401)
 
         except RuntimeError:
-            return jsonify({
-                "status": "error",
-                "message": (
-                    "Cashier authentication is not configured."
-                ),
-            }), 500
+            return _error("Cashier authentication is not configured.", 500)
 
-        # Validate the token payload.
-        if not isinstance(cashier_data, dict):
-            return jsonify({
-                "status": "error",
-                "message": "Invalid cashier session.",
-            }), 401
+        if not isinstance(data, dict) or data.get("k") != "cashier":
+            return _error("Invalid cashier session.", 401)
 
-        if cashier_data.get("role") != "cashier":
-            return jsonify({
-                "status": "error",
-                "message": "Cashier access required.",
-            }), 403
+        cashier_id = data.get("cashier_id")
 
-        cashier_id = cashier_data.get("cashier_id")
-
-        # Reject invalid IDs, including booleans.
         if (
             not isinstance(cashier_id, int)
             or isinstance(cashier_id, bool)
             or cashier_id <= 0
         ):
-            return jsonify({
-                "status": "error",
-                "message": "Invalid cashier session.",
-            }), 401
+            return _error("Invalid cashier session.", 401)
 
-        # Confirm the account still exists and is active.
+        # The cashier row decides the tenant, so this one lookup is
+        # deliberately unscoped.
         try:
-            cashier = db.session.get(Cashier, cashier_id)
+            with unscoped():
+                cashier = db.session.get(Cashier, cashier_id)
+
+            business = (
+                db.session.get(Business, cashier.business_id)
+                if cashier is not None
+                else None
+            )
 
         except Exception:
             db.session.rollback()
-            return jsonify({
-                "status": "error",
-                "message": "Unable to verify cashier session.",
-            }), 503
+            return _error("Unable to verify cashier session.", 503)
 
-        if cashier is None or not cashier.is_active:
-            return jsonify({
-                "status": "error",
-                "message": "Cashier account is unavailable.",
-            }), 401
+        if (
+            cashier is None
+            or not cashier.is_active
+            or data.get("pv") != password_version(cashier.password_hash)
+        ):
+            return _error("Cashier account is unavailable.", 401)
+
+        if not business_is_open(business):
+            return _error(
+                "This business is not active. Contact support.", 403
+            )
 
         g.cashier = cashier
+        g.business = business
+        set_tenant(cashier.business_id)
 
         return view_function(*args, **kwargs)
 
     return wrapped
-

@@ -2,9 +2,10 @@ from datetime import datetime
 from decimal import Decimal
 
 from extensions import db
+from models.tenant import TenantMixin
 
 
-class BranchProductStock(db.Model):
+class BranchProductStock(TenantMixin, db.Model):
     __tablename__ = "branch_product_stock"
 
     id = db.Column(

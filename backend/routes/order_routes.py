@@ -6,6 +6,8 @@ from flask import Blueprint, jsonify, request
 from sqlalchemy import select
 
 from extensions import db
+from customer_auth import identify_customer_from_token
+from tenancy import shop_context_required
 from models.customer import Customer
 from models.product import Product
 from models.order import Order, OrderItem
@@ -84,6 +86,7 @@ def validate_order_total(value):
 # ============================================================
 
 @order_bp.route("/api/orders", methods=["POST"])
+@shop_context_required
 def create_order():
 
     data = request.get_json(silent=True)
@@ -227,18 +230,19 @@ def create_order():
                     400
                 )
 
-            customer = db.session.get(
-                Customer,
-                customer_id
-            )
+            # A customer id is only honoured for the logged-in
+            # customer who owns it (and only within this shop).
+            signed_in = identify_customer_from_token()
 
-            if not customer:
+            if signed_in is None or signed_in.id != customer_id:
                 db.session.rollback()
 
                 return error_response(
-                    "Customer account not found.",
-                    404
+                    "Please log in to order with your account.",
+                    401
                 )
+
+            customer = signed_in
 
             # Do not compare customer.phone with the phone
             # entered at checkout.

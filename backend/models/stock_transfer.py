@@ -1,13 +1,14 @@
 from datetime import datetime, timezone
 
 from extensions import db
+from models.tenant import TenantMixin
 
 
 def _utcnow():
     return datetime.now(timezone.utc)
 
 
-class StockTransfer(db.Model):
+class StockTransfer(TenantMixin, db.Model):
     __tablename__ = "stock_transfers"
 
     id = db.Column(
@@ -139,7 +140,7 @@ class StockTransfer(db.Model):
         }
 
 
-class StockTransferItem(db.Model):
+class StockTransferItem(TenantMixin, db.Model):
     __tablename__ = "stock_transfer_items"
 
     id = db.Column(

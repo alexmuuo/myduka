@@ -3,10 +3,20 @@ from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from extensions import db
+from models.tenant import TenantMixin
 
 
-class Customer(db.Model):
+class Customer(TenantMixin, db.Model):
     __tablename__ = "customers"
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "business_id", "phone", name="uq_customer_business_phone"
+        ),
+        db.UniqueConstraint(
+            "business_id", "email", name="uq_customer_business_email"
+        ),
+    )
 
     id = db.Column(
         db.Integer,
@@ -20,13 +30,11 @@ class Customer(db.Model):
 
     phone = db.Column(
         db.String(30),
-        nullable=False,
-        unique=True
+        nullable=False
     )
 
     email = db.Column(
-        db.String(150),
-        unique=True
+        db.String(150)
     )
 
     password_hash = db.Column(

@@ -2,9 +2,10 @@
 from datetime import datetime
 
 from extensions import db
+from models.tenant import TenantMixin
 
 
-class Notification(db.Model):
+class Notification(TenantMixin, db.Model):
     __tablename__ = "notifications"
 
     id = db.Column(

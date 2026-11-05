@@ -11,6 +11,7 @@ from flask import Blueprint, request, jsonify, g
 from sqlalchemy import select
 
 from extensions import db
+from tenancy import set_tenant, shop_context_required, unscoped
 from cashier_auth import cashier_required
 
 from models.order import Order
@@ -481,6 +482,7 @@ def receipt_exists_in_any_payment_table(receipt):
 # ============================================================
 
 @payment_bp.route("/stk-push", methods=["POST"])
+@shop_context_required
 def initiate_stk_push():
     """
     Initiate M-Pesa payment for a website Order.
@@ -873,6 +875,38 @@ def mpesa_callback():
             }), 400
 
         # ----------------------------------------------------
+        # IDENTIFY THE OWNING BUSINESS
+        # ----------------------------------------------------
+        #
+        # Safaricom calls this endpoint with no shop or login, so the
+        # checkout request id alone names the business. Everything
+        # after this point runs scoped to that one business.
+
+        with unscoped():
+            owner_business_id = db.session.execute(
+                select(Payment.business_id).where(
+                    Payment.checkout_request_id
+                    == checkout_request_id
+                )
+            ).scalar_one_or_none()
+
+            if owner_business_id is None:
+                owner_business_id = db.session.execute(
+                    select(CashierSalePayment.business_id).where(
+                        CashierSalePayment.checkout_request_id
+                        == checkout_request_id
+                    )
+                ).scalar_one_or_none()
+
+        if owner_business_id is None:
+            return jsonify({
+                "ResultCode": 0,
+                "ResultDesc": "Accepted"
+            }), 200
+
+        set_tenant(owner_business_id)
+
+        # ----------------------------------------------------
         # FIND THE PAYMENT RECORD
         # ----------------------------------------------------
 
@@ -1185,6 +1219,7 @@ def mpesa_callback():
 # ============================================================
 
 @payment_bp.route("/status/<int:order_id>", methods=["GET"])
+@shop_context_required
 def customer_payment_status(order_id):
     """
     Return payment status for a website order only.

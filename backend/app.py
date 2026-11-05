@@ -117,6 +117,7 @@ CORS(
             "allow_headers": [
                 "Content-Type",
                 "Authorization",
+                "X-Shop-Slug",
             ],
             "supports_credentials": False,
         }
@@ -147,20 +148,8 @@ logger = logging.getLogger(__name__)
 # IMPORT MODELS
 # --------------------------------------------------
 
-from models.product import Product
-from models.customer import Customer
-from models.order import Order, OrderItem
-from models.message import Message
-from models.notification import Notification
-from models.payment import Payment
-from models.cashier import Cashier
-from models.cash_collection import CashCollection
-from models.stock_movement import StockMovement
-from models.branch import Branch
-from models.branch_product_stock import BranchProductStock
-from models.cashier_sale import CashierSale, CashierSaleItem
-from models.cashier_sale_payment import CashierSalePayment
-from models.cashier_sale_audit import CashierSaleAudit
+import models  # noqa: F401  (registers every model with SQLAlchemy)
+import tenancy  # noqa: F401  (installs tenant isolation hooks)
 
 
 # --------------------------------------------------
@@ -194,6 +183,30 @@ app.register_blueprint(payment_bp)
 app.register_blueprint(cashier_bp)
 app.register_blueprint(cashier_sales_bp)
 app.register_blueprint(admin_pos_sales_bp)
+
+# --------------------------------------------------
+# TENANT ERRORS AND COMMAND-LINE TOOLS
+# --------------------------------------------------
+
+from tenancy import TenantError
+
+
+@app.errorhandler(TenantError)
+def handle_tenant_error(error):
+    db.session.rollback()
+
+    logger.error("Tenant isolation error: %s", error)
+
+    return jsonify({
+        "status": "error",
+        "message": "Request refused.",
+    }), 403
+
+
+import cli  # noqa: E402
+
+cli.register(app)
+
 
 # --------------------------------------------------
 # PUBLIC HEALTH CHECK

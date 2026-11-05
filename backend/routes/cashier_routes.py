@@ -18,6 +18,12 @@ from models.branch import Branch
 from models.branch_product_stock import BranchProductStock
 
 from admin_auth import admin_required
+from plans import check_plan_limit
+from tenancy import (
+    business_is_open,
+    resolve_shop_from_request,
+    set_tenant,
+)
 
 from cashier_auth import (
     cashier_required,
@@ -229,6 +235,17 @@ def cashier_login():
         }), 400
 
     try:
+        # Usernames are unique per business, so the shop is required.
+        business = resolve_shop_from_request()
+
+        if not business_is_open(business):
+            return jsonify({
+                "status": "error",
+                "message": "Shop not found.",
+            }), 404
+
+        set_tenant(business.id)
+
         cashier = Cashier.query.filter(
             func.lower(Cashier.username) == username.lower()
         ).first()
@@ -1645,6 +1662,16 @@ def create_cashier():
                 "status": "error",
                 "message": "That username is already registered.",
             }), 409
+
+        limit_message = check_plan_limit(
+            g.business, Cashier, "max_cashiers"
+        )
+
+        if limit_message:
+            return jsonify({
+                "status": "error",
+                "message": limit_message,
+            }), 403
 
         cashier = Cashier(
             username=username,

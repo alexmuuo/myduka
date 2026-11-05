@@ -1,13 +1,25 @@
 from datetime import datetime
+from decimal import Decimal
 
 from extensions import db
+from models.tenant import TenantMixin
+
+
+def _clean_quantity(value):
+    """JSON-friendly quantity: whole numbers stay ints, fractions stay exact."""
+    if value is None:
+        return 0
+    value = Decimal(str(value))
+    if value == value.to_integral_value():
+        return int(value)
+    return float(value)
 
 
 # ============================================================
 # ORDER MODEL
 # ============================================================
 
-class Order(db.Model):
+class Order(TenantMixin, db.Model):
     __tablename__ = "orders"
 
     # --------------------------------------------------------
@@ -199,7 +211,7 @@ class Order(db.Model):
 # ORDER ITEM MODEL
 # ============================================================
 
-class OrderItem(db.Model):
+class OrderItem(TenantMixin, db.Model):
     __tablename__ = "order_items"
 
     # --------------------------------------------------------
@@ -236,7 +248,7 @@ class OrderItem(db.Model):
     # --------------------------------------------------------
 
     quantity = db.Column(
-        db.Integer,
+        db.Numeric(12, 3),
         nullable=False
     )
 
@@ -289,7 +301,7 @@ class OrderItem(db.Model):
                 else None
             ),
 
-            "quantity": self.quantity,
+            "quantity": _clean_quantity(self.quantity),
 
             # Selling price per unit.
             "price": (

@@ -1,9 +1,10 @@
 from datetime import datetime
 
 from extensions import db
+from models.tenant import TenantMixin
 
 
-class Message(db.Model):
+class Message(TenantMixin, db.Model):
     __tablename__ = "messages"
 
     id = db.Column(

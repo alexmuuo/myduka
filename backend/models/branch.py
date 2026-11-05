@@ -1,10 +1,20 @@
 from datetime import datetime
 
 from extensions import db
+from models.tenant import TenantMixin
 
 
-class Branch(db.Model):
+class Branch(TenantMixin, db.Model):
     __tablename__ = "branches"
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "business_id", "name", name="uq_branch_business_name"
+        ),
+        db.UniqueConstraint(
+            "business_id", "code", name="uq_branch_business_code"
+        ),
+    )
 
     id = db.Column(
         db.Integer,
@@ -13,14 +23,12 @@ class Branch(db.Model):
 
     name = db.Column(
         db.String(100),
-        nullable=False,
-        unique=True
+        nullable=False
     )
 
     code = db.Column(
         db.String(30),
-        nullable=False,
-        unique=True
+        nullable=False
     )
 
     is_active = db.Column(

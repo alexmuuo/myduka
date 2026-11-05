@@ -5,7 +5,7 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from urllib.parse import urlparse
 
-from flask import Blueprint, jsonify, request, send_from_directory
+from flask import g, Blueprint, jsonify, request, send_from_directory
 from werkzeug.utils import secure_filename
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -15,6 +15,8 @@ from models.product import Product
 from models.branch import Branch
 from models.branch_product_stock import BranchProductStock
 from admin_auth import admin_required
+from plans import check_plan_limit
+from tenancy import shop_context_required
 
 
 product_bp = Blueprint("product_bp", __name__)
@@ -346,6 +348,7 @@ def get_product_image(filename):
 # ============================================================
 
 @product_bp.route("/api/products", methods=["GET"])
+@shop_context_required
 def get_products():
     products = Product.query.filter_by(is_active=True).all()
 
@@ -357,6 +360,7 @@ def get_products():
 # ============================================================
 
 @product_bp.route("/api/products/<int:product_id>", methods=["GET"])
+@shop_context_required
 def get_product(product_id):
     product = db.session.get(Product, product_id)
 
@@ -507,6 +511,16 @@ def create_product():
             image_value = saved_image_path
         else:
             image_value = image_url.strip() or None
+
+        limit_message = check_plan_limit(
+            g.business, Product, "max_products"
+        )
+
+        if limit_message:
+            return jsonify({
+                "status": "error",
+                "message": limit_message,
+            }), 403
 
         product = Product(
             name=name,
