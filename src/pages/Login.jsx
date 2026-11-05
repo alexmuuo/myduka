@@ -162,7 +162,7 @@ function Login() {
       display: flex;
       align-items: center;
       padding: 55px 18px 70px;
-      color: #f4f1e8;
+      color: #f1f5f9;
       background:
         radial-gradient(ellipse at 15% 15%, rgba(35, 91, 57, 0.23), transparent 42%),
         radial-gradient(ellipse at 90% 85%, rgba(183, 146, 65, 0.08), transparent 35%),
@@ -206,7 +206,7 @@ function Login() {
       bottom: -100px;
       width: 280px;
       height: 280px;
-      border: 1px solid rgba(215, 182, 107, 0.18);
+      border: 1px solid rgba(251, 191, 36, 0.18);
       border-radius: 50%;
       content: "";
     }
@@ -217,7 +217,7 @@ function Login() {
       bottom: -55px;
       width: 190px;
       height: 190px;
-      border: 1px solid rgba(215, 182, 107, 0.15);
+      border: 1px solid rgba(251, 191, 36, 0.15);
       border-radius: 50%;
       content: "";
     }
@@ -228,9 +228,9 @@ function Login() {
       height: 58px;
       align-items: center;
       justify-content: center;
-      border: 1px solid rgba(215, 182, 107, 0.55);
+      border: 1px solid rgba(251, 191, 36, 0.55);
       border-radius: 16px;
-      background: rgba(215, 182, 107, 0.08);
+      background: rgba(251, 191, 36, 0.08);
       color: #e1c47d;
       font-size: 1.7rem;
     }
@@ -245,7 +245,7 @@ function Login() {
     }
 
     .hm-auth .hm-gold {
-      color: #dfc27a;
+      color: #fbbf24;
     }
 
     .hm-auth .hm-aside-copy {
@@ -280,7 +280,7 @@ function Login() {
       border: 1px solid #3e5944;
       border-radius: 10px;
       background: rgba(44, 95, 58, 0.22);
-      color: #dfc27a;
+      color: #fbbf24;
     }
 
     .hm-auth .hm-aside-footer {
@@ -298,7 +298,7 @@ function Login() {
 
     .hm-auth .hm-eyebrow {
       margin-bottom: 10px;
-      color: #dfc27a;
+      color: #fbbf24;
       font-size: 0.74rem;
       font-weight: 800;
       letter-spacing: 0.18em;
@@ -360,7 +360,7 @@ function Login() {
       border-radius: 10px;
       outline: none;
       background: #121612;
-      color: #f4f1e8;
+      color: #f1f5f9;
       font-size: 0.92rem;
       transition: border-color 0.2s, box-shadow 0.2s;
     }
@@ -371,7 +371,7 @@ function Login() {
 
     .hm-auth .hm-input:focus {
       border-color: #b89a53;
-      box-shadow: 0 0 0 3px rgba(215, 182, 107, 0.1);
+      box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.1);
     }
 
     .hm-auth .hm-input.is-valid {
@@ -393,7 +393,7 @@ function Login() {
       padding: 5px;
       border: 0;
       background: transparent;
-      color: #dfc27a;
+      color: #fbbf24;
       font-size: 0.8rem;
       font-weight: 700;
       transform: translateY(-50%);
@@ -413,7 +413,7 @@ function Login() {
     .hm-auth .hm-forgot {
       display: inline-block;
       margin-top: -5px;
-      color: #dfc27a;
+      color: #fbbf24;
       font-size: 0.84rem;
       text-decoration: none;
     }
@@ -432,9 +432,9 @@ function Login() {
       gap: 10px;
       margin-top: 10px;
       padding: 13px 18px;
-      border: 1px solid #d7b66b;
+      border: 1px solid #fbbf24;
       border-radius: 10px;
-      background: #d7b66b;
+      background: #fbbf24;
       color: #171a14;
       font-size: 0.94rem;
       font-weight: 800;
@@ -463,7 +463,7 @@ function Login() {
       padding: 0;
       border: 0;
       background: transparent;
-      color: #dfc27a;
+      color: #fbbf24;
       font-weight: 750;
     }
 
@@ -606,9 +606,7 @@ function Login() {
                   </p>
 
                   <h2 className="hm-brand-name">
-                    Headmaster
-                    <br />
-                    <span className="hm-gold">Liquors.</span>
+                    My<span className="hm-gold">Duka.</span>
                   </h2>
 
                   <p className="hm-aside-copy">
@@ -902,7 +900,7 @@ function Login() {
                 <div className="hm-switch">
                   {isRegister
                     ? "Already have an account?"
-                    : "New to Headmaster Liquors?"}
+                    : "New to MyDuka?"}
 
                   <button
                     type="button"

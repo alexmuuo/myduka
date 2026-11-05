@@ -268,7 +268,7 @@ ADMIN DASHBOARD </span>
 
 
       <h2 className="fw-bold mt-2 mb-2">
-        Headmaster Liquors
+        MyDuka
       </h2>
 
       <p className="text-secondary mb-0">

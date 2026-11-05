@@ -39,15 +39,22 @@ if not DATABASE_URL:
         "Check the backend .env file or server environment variables."
     )
 
-# Normalize older PostgreSQL URL formats.
-if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace(
-        "postgres://",
-        "postgresql://",
-        1
-    )
+# Use the psycopg (v3) driver for every PostgreSQL URL form.
+for _prefix in ("postgres://", "postgresql://"):
+    if DATABASE_URL.startswith(_prefix):
+        DATABASE_URL = "postgresql+psycopg://" + DATABASE_URL[len(_prefix):]
+        break
 
 app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
+
+# Serverless-friendly connection settings. prepare_threshold=None turns off
+# server-side prepared statements, which Supabase's pooled (pgbouncer)
+# connections do not support.
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "pool_pre_ping": True,
+    "pool_recycle": 280,
+    "connect_args": {"prepare_threshold": None},
+}
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 
@@ -84,10 +91,14 @@ mail = Mail(app)
 # CORS CONFIGURATION
 # --------------------------------------------------
 
+# The frontend calls the API on the same origin (/api), so CORS is only
+# needed for local development or extra origins set in CORS_ORIGINS.
 allowed_origins = [
-    "http://localhost:5173",
-    "https://agrovet-shop.vercel.app",
-     "https://headmasterliquors.vercel.app"
+    origin.strip()
+    for origin in os.getenv(
+        "CORS_ORIGINS", "http://localhost:5173"
+    ).split(",")
+    if origin.strip()
 ]
 
 CORS(
@@ -191,7 +202,7 @@ app.register_blueprint(admin_pos_sales_bp)
 @app.route("/")
 def home():
     return jsonify({
-        "message": "Agrovet API is running."
+        "message": "MyDuka API is running."
     })
 
 
@@ -199,7 +210,7 @@ def home():
 def health():
     return jsonify({
         "status": "ok",
-        "message": "Agrovet backend is healthy."
+        "message": "MyDuka backend is healthy."
     })
 
 

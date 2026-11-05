@@ -112,7 +112,7 @@ const styles = `
 
   .hm-checkout-step-active .hm-checkout-step-number {
     border-color: var(--hm-gold);
-    background: rgba(214,179,106,.10);
+    background: rgba(251, 191, 36,.10);
     color: var(--hm-gold);
   }
 
@@ -143,7 +143,7 @@ const styles = `
     gap: 14px;
     padding: 21px 24px;
     border-bottom: 1px solid var(--hm-border);
-    background: linear-gradient(120deg, rgba(214,179,106,.045), transparent);
+    background: linear-gradient(120deg, rgba(251, 191, 36,.045), transparent);
   }
 
   .hm-checkout-section-icon {
@@ -152,9 +152,9 @@ const styles = `
     height: 42px;
     flex: 0 0 42px;
     place-items: center;
-    border: 1px solid rgba(214,179,106,.23);
+    border: 1px solid rgba(251, 191, 36,.23);
     border-radius: 11px;
-    background: rgba(214,179,106,.07);
+    background: rgba(251, 191, 36,.07);
     color: var(--hm-gold);
     font-size: 1.15rem;
   }
@@ -222,7 +222,7 @@ const styles = `
   .hm-checkout-input:focus,
   .hm-checkout-textarea:focus {
     border-color: var(--hm-gold);
-    box-shadow: 0 0 0 3px rgba(214,179,106,.09);
+    box-shadow: 0 0 0 3px rgba(251, 191, 36,.09);
   }
 
   .hm-checkout-input:disabled,
@@ -265,12 +265,12 @@ const styles = `
   }
 
   .hm-checkout-option:hover {
-    border-color: rgba(214,179,106,.45);
+    border-color: rgba(251, 191, 36,.45);
   }
 
   .hm-checkout-option-selected {
     border-color: var(--hm-gold);
-    background: rgba(214,179,106,.065);
+    background: rgba(251, 191, 36,.065);
   }
 
   .hm-checkout-option input {
@@ -307,9 +307,9 @@ const styles = `
     height: 34px;
     flex: 0 0 34px;
     place-items: center;
-    border: 1px solid rgba(214,179,106,.2);
+    border: 1px solid rgba(251, 191, 36,.2);
     border-radius: 9px;
-    background: rgba(214,179,106,.07);
+    background: rgba(251, 191, 36,.07);
     color: var(--hm-gold);
     font-size: 1rem;
   }
@@ -340,8 +340,8 @@ const styles = `
   }
 
   .hm-checkout-alert-warning {
-    border-color: rgba(214,179,106,.35);
-    background: rgba(214,179,106,.075);
+    border-color: rgba(251, 191, 36,.35);
+    background: rgba(251, 191, 36,.075);
     color: var(--hm-cream);
   }
 
@@ -366,7 +366,7 @@ const styles = `
     position: sticky;
     top: 24px;
     overflow: hidden;
-    border: 1px solid rgba(214,179,106,.25);
+    border: 1px solid rgba(251, 191, 36,.25);
     border-radius: 15px;
     background: var(--hm-panel);
   }
@@ -374,7 +374,7 @@ const styles = `
   .hm-checkout-summary-header {
     padding: 24px;
     border-bottom: 1px solid var(--hm-border);
-    background: linear-gradient(135deg, rgba(214,179,106,.09), transparent);
+    background: linear-gradient(135deg, rgba(251, 191, 36,.09), transparent);
   }
 
   .hm-checkout-summary-title {
@@ -527,7 +527,7 @@ const styles = `
 
   .hm-checkout-secondary-button:hover:not(:disabled) {
     border-color: var(--hm-gold);
-    background: rgba(214,179,106,.05);
+    background: rgba(251, 191, 36,.05);
     color: var(--hm-gold);
   }
 
@@ -600,9 +600,9 @@ const styles = `
     height: 85px;
     margin: 0 auto 23px;
     place-items: center;
-    border: 1px solid rgba(214,179,106,.25);
+    border: 1px solid rgba(251, 191, 36,.25);
     border-radius: 50%;
-    background: rgba(214,179,106,.07);
+    background: rgba(251, 191, 36,.07);
     color: var(--hm-gold);
     font-size: 2.4rem;
   }
@@ -1129,7 +1129,7 @@ function Checkout() {
       <div className="hm-checkout-container">
         <header className="hm-checkout-header">
           <div className="hm-checkout-eyebrow">
-            Headmaster Liquors
+            MyDuka
           </div>
 
           <h1 className="hm-checkout-title">

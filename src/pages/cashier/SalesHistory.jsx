@@ -687,7 +687,7 @@ color: #1f2937;
         className="sales-receipt"
         onClick={(event) => event.stopPropagation()}
       >
-        <h2>HEADMASTER LIQUORS</h2>
+        <h2>MYDUKA</h2>
 
         <div className="sales-receipt-subtitle">
           POS Sales Receipt

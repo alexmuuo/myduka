@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import api from "../api/api";
 
-function AskAgrovet() {
+function AskSupport() {
   const [customer, setCustomer] = useState(null);
   const [messages, setMessages] = useState([]);
 
@@ -336,7 +336,7 @@ function AskAgrovet() {
         // This legacy flow is for guests only. Do not overwrite
         // the authenticated customer's session.
         localStorage.setItem(
-          "agrovet_customer",
+          "myduka_customer",
           JSON.stringify(currentCustomer)
         );
 
@@ -463,14 +463,14 @@ function AskAgrovet() {
   };
 
   // ============================================================
-  // RENDER — HEADMASTER LIQUORS SUPPORT EXPERIENCE
+  // RENDER — MYDUKA SUPPORT EXPERIENCE
   // ============================================================
 
   return (
     <main className="hm-support-page">
       <section className="hm-support-hero">
         <div className="hm-support-hero-copy">
-          <span className="hm-support-eyebrow"><span className="hm-support-live-dot" /> HEADMASTER CUSTOMER CARE</span>
+          <span className="hm-support-eyebrow"><span className="hm-support-live-dot" /> MYDUKA CUSTOMER CARE</span>
           <h1>We’re here to <em>help.</em></h1>
           <p>Questions about an order, a product, or your shopping experience? Send our team a message and we’ll take it from there.</p>
           <div className="hm-support-pills">
@@ -479,7 +479,7 @@ function AskAgrovet() {
         </div>
         <div className="hm-support-hero-mark" aria-hidden="true">
           <div className="hm-support-mark-ring"><span>H</span></div>
-          <div className="hm-support-mark-caption">HEADMASTER <b>LIQUORS</b></div>
+          <div className="hm-support-mark-caption">MY<b>DUKA</b></div>
         </div>
       </section>
 
@@ -503,7 +503,7 @@ function AskAgrovet() {
           <header className="hm-support-chat-header">
             <div className="hm-support-agent-avatar">H</div>
             <div className="hm-support-agent-details">
-              <h2>Headmaster Support</h2>
+              <h2>MyDuka Support</h2>
               <p><span className="hm-support-live-dot" /> Customer care</p>
             </div>
             {customer && (
@@ -551,7 +551,7 @@ function AskAgrovet() {
                       )}
                       <div className={`hm-support-message-row ${isCustomer ? "is-customer" : "is-support"}`}>
                         <div className="hm-support-message-wrap">
-                          <div className="hm-support-message-sender">{isCustomer ? "You" : "Headmaster Support"}</div>
+                          <div className="hm-support-message-sender">{isCustomer ? "You" : "MyDuka Support"}</div>
                           <div className="hm-support-bubble">
                             <div className="hm-support-message-text">{item.message}</div>
                             <time>{formatTime(item.created_at)}</time>
@@ -611,7 +611,7 @@ function AskAgrovet() {
                 </button>
               </div>
             </div>
-            <p className="hm-support-privacy-note">Your conversation is handled by the Headmaster Liquors customer care team.</p>
+            <p className="hm-support-privacy-note">Your conversation is handled by the MyDuka customer care team.</p>
           </form>
         </section>
       </section>
@@ -619,4 +619,4 @@ function AskAgrovet() {
   );
 }
 
-export default AskAgrovet;
+export default AskSupport;

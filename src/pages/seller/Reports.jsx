@@ -439,7 +439,7 @@ const exportPosReportsToExcel = async () => {
       : "All_Branches";
 
     link.href = downloadUrl;
-    link.download = `Headmaster_POS_Reports_${branchFileName}_${datePart}.xlsx`;
+    link.download = `MyDuka_POS_Reports_${branchFileName}_${datePart}.xlsx`;
     document.body.appendChild(link);
     link.click();
     link.remove();

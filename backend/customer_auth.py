@@ -28,7 +28,7 @@ def get_customer_token_serializer():
 
     return URLSafeTimedSerializer(
         secret,
-        salt="agrovet-customer-auth"
+        salt="myduka-customer-auth"
     )
 
 

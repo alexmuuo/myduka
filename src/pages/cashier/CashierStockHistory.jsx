@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 
-const API_BASE = "https://agrovet-api-a00w.onrender.com/api";
+import { API_BASE } from "../../api/api";
 const LIMIT = 50;
 
 function formatDate(value) {

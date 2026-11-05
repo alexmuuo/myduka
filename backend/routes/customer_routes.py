@@ -53,7 +53,7 @@ def get_password_reset_serializer():
 
     return URLSafeTimedSerializer(
         secret,
-        salt="agrovet-customer-password-reset"
+        salt="myduka-customer-password-reset"
     )
 
 
@@ -177,11 +177,11 @@ def send_password_reset_email(customer, reset_url):
         )
 
     message = Message(
-        subject="Reset Your Agrovet Account Password",
+        subject="Reset Your MyDuka Account Password",
         recipients=[customer.email],
         body=(
             f"Hello {customer.name},\n\n"
-            "We received a request to reset your Agrovet "
+            "We received a request to reset your MyDuka "
             "account password.\n\n"
             "Use the following link to choose a new password:\n\n"
             f"{reset_url}\n\n"
@@ -192,7 +192,7 @@ def send_password_reset_email(customer, reset_url):
             "you can safely ignore this email.\n\n"
             "For your security, do not share this link "
             "with anyone.\n\n"
-            "Agrovet Team"
+            "MyDuka Team"
         ),
     )
 

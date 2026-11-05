@@ -30,10 +30,10 @@ const styles = `
     align-items: center;
     justify-content: center;
     margin: 0 auto 17px;
-    border: 1px solid rgba(215, 181, 109, 0.4);
+    border: 1px solid rgba(251, 191, 36, 0.4);
     border-radius: 20px;
-    background: rgba(215, 181, 109, 0.08);
-    color: #d7b56d;
+    background: rgba(251, 191, 36, 0.08);
+    color: #fbbf24;
     font-size: 29px;
   }
 
@@ -85,10 +85,10 @@ const styles = `
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid rgba(215, 181, 109, 0.4);
+    border: 1px solid rgba(251, 191, 36, 0.4);
     border-radius: 50%;
-    background: rgba(215, 181, 109, 0.12);
-    color: #e0c47e;
+    background: rgba(251, 191, 36, 0.12);
+    color: #fbbf24;
     font-size: 21px;
   }
 
@@ -190,7 +190,7 @@ const styles = `
 
   .hm-message-sender {
     margin-bottom: 7px;
-    color: #d7b56d;
+    color: #fbbf24;
     font-size: 11px;
     font-weight: 750;
   }
@@ -237,7 +237,7 @@ const styles = `
     border: 1px solid #39463c;
     border-radius: 18px;
     background: #202a22;
-    color: #d7b56d;
+    color: #fbbf24;
     font-size: 24px;
   }
 
@@ -271,7 +271,7 @@ const styles = `
     height: 31px;
     margin-bottom: 15px;
     border: 3px solid #35443a;
-    border-top-color: #d7b56d;
+    border-top-color: #fbbf24;
     border-radius: 50%;
     animation: hm-message-spin 0.8s linear infinite;
   }
@@ -339,7 +339,7 @@ const styles = `
 
   .hm-messages-input:focus {
     border-color: #bda05e;
-    box-shadow: 0 0 0 3px rgba(215, 181, 109, 0.1);
+    box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.1);
   }
 
   .hm-messages-input::placeholder {
@@ -358,9 +358,9 @@ const styles = `
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid #d7b56d;
+    border: 1px solid #fbbf24;
     border-radius: 11px;
-    background: linear-gradient(135deg, #e0c47e, #c9a653);
+    background: linear-gradient(135deg, #fbbf24, #c9a653);
     color: #172018;
     font-size: 18px;
     cursor: pointer;
@@ -396,7 +396,7 @@ const styles = `
   }
 
   .hm-messages-back:hover {
-    color: #d7b56d;
+    color: #fbbf24;
   }
 
   .hm-messages-guest-card {
@@ -430,9 +430,9 @@ const styles = `
     justify-content: center;
     gap: 9px;
     padding: 12px 23px;
-    border: 1px solid #d7b56d;
+    border: 1px solid #fbbf24;
     border-radius: 10px;
-    background: linear-gradient(135deg, #e0c47e, #c9a653);
+    background: linear-gradient(135deg, #fbbf24, #c9a653);
     color: #172018;
     font-size: 13px;
     font-weight: 800;
@@ -454,7 +454,7 @@ const styles = `
   }
 
   .hm-messages-guest-link:hover {
-    color: #d7b56d;
+    color: #fbbf24;
   }
 
   @media (max-width: 600px) {
@@ -791,7 +791,7 @@ function MyMessages() {
               <h2>Your conversations, all in one place.</h2>
 
               <p>
-                Log in to your Headmaster Liquors account to send messages,
+                Log in to your MyDuka account to send messages,
                 get assistance with orders, and keep track of your
                 conversations with our team.
               </p>
@@ -845,7 +845,7 @@ function MyMessages() {
                 </div>
 
                 <div>
-                  <h2>Headmaster Customer Support</h2>
+                  <h2>MyDuka Customer Support</h2>
                   <p>
                     Signed in as {customer.name || "Customer"}
                     {customer.phone ? ` · ${customer.phone}` : ""}
@@ -921,7 +921,7 @@ function MyMessages() {
                       >
                         <div className="hm-message-bubble">
                           <div className="hm-message-sender">
-                            {isCustomer ? "You" : "Headmaster Support"}
+                            {isCustomer ? "You" : "MyDuka Support"}
                           </div>
 
                           <div className="hm-message-text">

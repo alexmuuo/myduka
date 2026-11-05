@@ -83,7 +83,7 @@ const styles = `
     background:
       radial-gradient(
         ellipse at 50% 42%,
-        rgba(214,179,106,.10),
+        rgba(251, 191, 36,.10),
         transparent 58%
       ),
       linear-gradient(145deg, #26332a, #1b221d 70%);
@@ -94,7 +94,7 @@ const styles = `
     position: absolute;
     width: 270px;
     height: 270px;
-    border: 1px solid rgba(214,179,106,.12);
+    border: 1px solid rgba(251, 191, 36,.12);
     border-radius: 50%;
     pointer-events: none;
   }
@@ -104,7 +104,7 @@ const styles = `
     position: absolute;
     width: 210px;
     height: 210px;
-    border: 1px solid rgba(214,179,106,.08);
+    border: 1px solid rgba(251, 191, 36,.08);
     border-radius: 50%;
     pointer-events: none;
   }
@@ -157,9 +157,9 @@ const styles = `
     display: inline-block;
     margin-bottom: 15px;
     padding: 7px 12px;
-    border: 1px solid rgba(214,179,106,.25);
+    border: 1px solid rgba(251, 191, 36,.25);
     border-radius: 999px;
-    background: rgba(214,179,106,.07);
+    background: rgba(251, 191, 36,.07);
     color: var(--hm-gold);
     font-size: .8rem;
     font-weight: 650;
@@ -449,9 +449,9 @@ const styles = `
     height: 66px;
     margin-bottom: 22px;
     place-items: center;
-    border: 1px solid rgba(214,179,106,.24);
+    border: 1px solid rgba(251, 191, 36,.24);
     border-radius: 50%;
-    background: rgba(214,179,106,.08);
+    background: rgba(251, 191, 36,.08);
     color: var(--hm-gold);
     font-size: 1.8rem;
   }
@@ -481,7 +481,7 @@ const styles = `
     gap: 9px;
     min-height: 45px;
     padding: 12px 19px;
-    border: 1px solid rgba(214,179,106,.5);
+    border: 1px solid rgba(251, 191, 36,.5);
     border-radius: 9px;
     background: transparent;
     color: var(--hm-gold);
@@ -498,7 +498,7 @@ const styles = `
   .hm-product-spinner {
     width: 44px;
     height: 44px;
-    border: 3px solid rgba(214,179,106,.2);
+    border: 3px solid rgba(251, 191, 36,.2);
     border-top-color: var(--hm-gold);
     border-radius: 50%;
     animation: hm-product-spin .8s linear infinite;
@@ -889,14 +889,14 @@ function ProductDetails() {
             </div>
 
             <p className="hm-product-image-caption">
-              A considered selection from Headmaster Liquors.
+              A considered selection from MyDuka.
             </p>
           </section>
 
           {/* Product information */}
           <section className="hm-product-details">
             <div className="hm-product-eyebrow">
-              Headmaster Liquors
+              MyDuka
             </div>
 
             {product.category && (

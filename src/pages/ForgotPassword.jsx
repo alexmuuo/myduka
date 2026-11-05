@@ -33,7 +33,7 @@ const styles = `
     padding: 34px 30px 26px;
     text-align: center;
     background: linear-gradient(145deg, #203c2c, #19291f);
-    border-bottom: 1px solid rgba(215, 181, 109, 0.2);
+    border-bottom: 1px solid rgba(251, 191, 36, 0.2);
   }
 
   .hm-forgot-icon {
@@ -43,16 +43,16 @@ const styles = `
     align-items: center;
     justify-content: center;
     margin: 0 auto 19px;
-    border: 1px solid rgba(215, 181, 109, 0.45);
+    border: 1px solid rgba(251, 191, 36, 0.45);
     border-radius: 21px;
-    background: rgba(215, 181, 109, 0.1);
-    color: #e0c47e;
+    background: rgba(251, 191, 36, 0.1);
+    color: #fbbf24;
     font-size: 30px;
   }
 
   .hm-forgot-eyebrow {
     margin-bottom: 9px;
-    color: #d7b56d;
+    color: #fbbf24;
     font-size: 10px;
     font-weight: 800;
     letter-spacing: 2px;
@@ -117,7 +117,7 @@ const styles = `
 
   .hm-forgot-input:focus {
     border-color: #c9a653;
-    box-shadow: 0 0 0 3px rgba(215, 181, 109, 0.1);
+    box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.1);
   }
 
   .hm-forgot-input::placeholder {
@@ -168,9 +168,9 @@ const styles = `
     gap: 10px;
     margin-top: 23px;
     padding: 13px 18px;
-    border: 1px solid #d7b56d;
+    border: 1px solid #fbbf24;
     border-radius: 11px;
-    background: linear-gradient(135deg, #e0c47e, #c9a653);
+    background: linear-gradient(135deg, #fbbf24, #c9a653);
     color: #172018;
     font-size: 13px;
     font-weight: 850;
@@ -207,7 +207,7 @@ const styles = `
   }
 
   .hm-forgot-back:hover {
-    color: #e0c47e;
+    color: #fbbf24;
   }
 
   .hm-forgot-footnote {
@@ -315,7 +315,7 @@ function ForgotPassword() {
 
               <p className="hm-forgot-description">
                 It happens. Enter the email address linked to your
-                Headmaster Liquors account and we'll help you get back in.
+                MyDuka account and we'll help you get back in.
               </p>
             </header>
 

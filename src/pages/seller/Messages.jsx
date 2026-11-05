@@ -927,7 +927,7 @@ function Messages() {
                           width: "42px",
                           height: "42px",
                           backgroundColor: isSelected
-                            ? "#198754"
+                            ? "#4f46e5"
                             : "#e9ecef",
                           color: isSelected
                             ? "white"
@@ -1025,7 +1025,7 @@ function Messages() {
                         style={{
                           width: "42px",
                           height: "42px",
-                          backgroundColor: "#198754",
+                          backgroundColor: "#4f46e5",
                           color: "white",
                           fontWeight: "600",
                         }}
@@ -1262,7 +1262,7 @@ function Messages() {
                               backgroundColor: isChecked
                                 ? "#d9eadf"
                                 : isSeller
-                                ? "#198754"
+                                ? "#4f46e5"
                                 : "white",
                               color: isChecked
                                 ? "#212529"
@@ -1280,7 +1280,7 @@ function Messages() {
                                 ? "pointer"
                                 : "default",
                               outline: isChecked
-                                ? "2px solid #198754"
+                                ? "2px solid #4f46e5"
                                 : "none",
                               outlineOffset: "-2px",
                             }}

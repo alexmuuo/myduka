@@ -4,14 +4,14 @@ const CartContext = createContext();
 
 export function CartProvider({ children }) {
   const [cartItems, setCartItems] = useState(() => {
-    const savedCart = localStorage.getItem("agrovetCart");
+    const savedCart = localStorage.getItem("mydukaCart");
 
     return savedCart ? JSON.parse(savedCart) : [];
   });
 
   useEffect(() => {
     localStorage.setItem(
-      "agrovetCart",
+      "mydukaCart",
       JSON.stringify(cartItems)
     );
   }, [cartItems]);

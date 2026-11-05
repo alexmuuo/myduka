@@ -5,7 +5,7 @@ from flask import request, jsonify, g
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 
 
-TOKEN_SALT = "agrovet-admin-auth"
+TOKEN_SALT = "myduka-admin-auth"
 TOKEN_MAX_AGE = 8 * 60 * 60  # 8 hours
 
 

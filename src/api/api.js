@@ -1,7 +1,11 @@
 import axios from "axios";
 
+// Same-origin by default: Vercel serves the Flask API under /api.
+// Set VITE_API_URL only to point at a different API during development.
+export const API_BASE = import.meta.env.VITE_API_URL || "/api";
+
 const api = axios.create({
-  baseURL: "https://agrovet-api-a00w.onrender.com/api",
+  baseURL: API_BASE,
   timeout: 30000,
 });
 // ============================================================

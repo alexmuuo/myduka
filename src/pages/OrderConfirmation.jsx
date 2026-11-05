@@ -8,7 +8,7 @@ function OrderConfirmation() {
     .hm-confirmation {
       min-height: 100vh;
       padding: 56px 20px 80px;
-      color: #f4f1e8;
+      color: #f1f5f9;
       background:
         radial-gradient(ellipse at top, rgba(29, 82, 56, 0.25), transparent 55%),
         #101310;
@@ -29,7 +29,7 @@ function OrderConfirmation() {
     }
 
     .hm-confirmation .hm-gold {
-      color: #d7b66b;
+      color: #fbbf24;
     }
 
     .hm-confirmation .hm-success-icon {
@@ -39,16 +39,16 @@ function OrderConfirmation() {
       width: 84px;
       height: 84px;
       margin: 0 auto;
-      border: 1px solid rgba(215, 182, 107, 0.55);
+      border: 1px solid rgba(251, 191, 36, 0.55);
       border-radius: 50%;
       background: rgba(27, 75, 49, 0.45);
-      color: #e0c47e;
+      color: #fbbf24;
       font-size: 2.6rem;
-      box-shadow: 0 0 35px rgba(215, 182, 107, 0.08);
+      box-shadow: 0 0 35px rgba(251, 191, 36, 0.08);
     }
 
     .hm-confirmation .hm-eyebrow {
-      color: #d7b66b;
+      color: #fbbf24;
       font-size: 0.76rem;
       font-weight: 800;
       letter-spacing: 0.2em;
@@ -93,7 +93,7 @@ function OrderConfirmation() {
 
     .hm-confirmation .hm-section-title {
       margin: 0;
-      color: #f4f1e8;
+      color: #f1f5f9;
       font-size: 1.05rem;
       font-weight: 750;
     }
@@ -117,7 +117,7 @@ function OrderConfirmation() {
 
     .hm-confirmation .hm-order-number {
       margin-top: 5px;
-      color: #dfc27a;
+      color: #fbbf24;
       font-size: 1.25rem;
       font-weight: 800;
       overflow-wrap: anywhere;
@@ -150,8 +150,8 @@ function OrderConfirmation() {
     }
 
     .hm-confirmation .hm-badge-warning {
-      border-color: rgba(215, 182, 107, 0.3);
-      background: rgba(215, 182, 107, 0.1);
+      border-color: rgba(251, 191, 36, 0.3);
+      background: rgba(251, 191, 36, 0.1);
       color: #e5c879;
     }
 
@@ -200,7 +200,7 @@ function OrderConfirmation() {
     }
 
     .hm-confirmation .hm-grand-total {
-      color: #dfc27a;
+      color: #fbbf24;
       font-size: clamp(1.35rem, 4vw, 1.8rem);
       font-weight: 850;
       text-align: right;
@@ -218,7 +218,7 @@ function OrderConfirmation() {
 
     .hm-confirmation .hm-info-icon {
       flex-shrink: 0;
-      color: #dfc27a;
+      color: #fbbf24;
       font-size: 1.35rem;
     }
 
@@ -264,8 +264,8 @@ function OrderConfirmation() {
     }
 
     .hm-confirmation .hm-btn-primary {
-      border-color: #d7b66b;
-      background: #d7b66b;
+      border-color: #fbbf24;
+      background: #fbbf24;
       color: #171911;
     }
 
@@ -282,8 +282,8 @@ function OrderConfirmation() {
     }
 
     .hm-confirmation .hm-btn-secondary:hover {
-      border-color: #d7b66b;
-      background: rgba(215, 182, 107, 0.06);
+      border-color: #fbbf24;
+      background: rgba(251, 191, 36, 0.06);
       color: #e7cd8d;
     }
 
@@ -297,7 +297,7 @@ function OrderConfirmation() {
       border: 1px solid #41483e;
       border-radius: 50%;
       background: #1a201a;
-      color: #d7b66b;
+      color: #fbbf24;
       font-size: 2.5rem;
     }
 
@@ -384,7 +384,7 @@ function OrderConfirmation() {
               <i className="bi bi-receipt" aria-hidden="true"></i>
             </div>
 
-            <p className="hm-eyebrow">Headmaster Liquors</p>
+            <p className="hm-eyebrow">MyDuka</p>
 
             <h1 className="hm-heading">
               No order found
@@ -516,7 +516,7 @@ function OrderConfirmation() {
           </div>
 
           <p className="hm-eyebrow mt-4 mb-0">
-            Headmaster Liquors
+            MyDuka
           </p>
 
           <h1 className="hm-heading">
@@ -753,7 +753,7 @@ function OrderConfirmation() {
         </div>
 
         <p className="text-center hm-muted small mt-4 mb-0">
-          Thank you for shopping with Headmaster Liquors.
+          Thank you for shopping with MyDuka.
           Please enjoy responsibly.
         </p>
       </div>
