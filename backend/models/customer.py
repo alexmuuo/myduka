@@ -13,6 +13,13 @@ class Customer(db.Model):
         primary_key=True
     )
 
+    business_id = db.Column(
+        db.Integer,
+        db.ForeignKey("businesses.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True
+    )
+
     name = db.Column(
         db.String(150),
         nullable=False
@@ -20,13 +27,11 @@ class Customer(db.Model):
 
     phone = db.Column(
         db.String(30),
-        nullable=False,
-        unique=True
+        nullable=False
     )
 
     email = db.Column(
-        db.String(150),
-        unique=True
+        db.String(150)
     )
 
     password_hash = db.Column(
@@ -37,6 +42,19 @@ class Customer(db.Model):
     created_at = db.Column(
         db.DateTime,
         default=datetime.utcnow
+    )
+
+    # A customer account belongs to one business shop. The same person
+    # registering at another shop gets a separate account.
+    __table_args__ = (
+        db.UniqueConstraint(
+            "business_id", "phone",
+            name="uq_customers_business_phone"
+        ),
+        db.UniqueConstraint(
+            "business_id", "email",
+            name="uq_customers_business_email"
+        ),
     )
 
     orders = db.relationship(

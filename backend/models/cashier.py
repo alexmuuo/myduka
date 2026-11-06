@@ -25,10 +25,16 @@ class Cashier(db.Model):
     # ACCOUNT INFORMATION
     # --------------------------------------------------
 
+    business_id = db.Column(
+        db.Integer,
+        db.ForeignKey("businesses.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True
+    )
+
     username = db.Column(
         db.String(80),
         nullable=False,
-        unique=True,
         index=True
     )
 
@@ -79,6 +85,13 @@ class Cashier(db.Model):
         db.DateTime,
         nullable=False,
         default=datetime.utcnow
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "business_id", "username",
+            name="uq_cashiers_business_username"
+        ),
     )
 
     # --------------------------------------------------

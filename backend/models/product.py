@@ -12,6 +12,13 @@ class Product(db.Model):
         primary_key=True
     )
 
+    business_id = db.Column(
+        db.Integer,
+        db.ForeignKey("businesses.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True
+    )
+
     name = db.Column(
         db.String(150),
         nullable=False

@@ -16,10 +16,16 @@ class StockTransfer(db.Model):
         autoincrement=True
     )
 
+    business_id = db.Column(
+        db.Integer,
+        db.ForeignKey("businesses.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True
+    )
+
     reference = db.Column(
         db.String(100),
         nullable=False,
-        unique=True,
         index=True
     )
 
@@ -91,6 +97,11 @@ class StockTransfer(db.Model):
     # --------------------------------------------------------
 
     __table_args__ = (
+        db.UniqueConstraint(
+            "business_id", "reference",
+            name="uq_stock_transfers_business_reference"
+        ),
+
         db.CheckConstraint(
             "source_branch_id != destination_branch_id",
             name="ck_stock_transfer_different_branches"

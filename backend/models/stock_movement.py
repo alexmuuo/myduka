@@ -19,6 +19,13 @@ class StockMovement(db.Model):
         autoincrement=True
     )
 
+    business_id = db.Column(
+        db.Integer,
+        db.ForeignKey("businesses.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True
+    )
+
     # Cashier movements retain their cashier ID.
     # Administrator movements do not need a fake cashier.
     cashier_id = db.Column(
