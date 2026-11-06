@@ -23,10 +23,23 @@ class Order(db.Model):
     # ORDER IDENTIFICATION
     # --------------------------------------------------------
 
+    business_id = db.Column(
+        db.Integer,
+        db.ForeignKey("businesses.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True
+    )
+
     order_number = db.Column(
         db.String(50),
-        unique=True,
         nullable=False
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "business_id", "order_number",
+            name="uq_orders_business_order_number"
+        ),
     )
 
     # --------------------------------------------------------

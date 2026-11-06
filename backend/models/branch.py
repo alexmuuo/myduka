@@ -11,16 +11,21 @@ class Branch(db.Model):
         primary_key=True
     )
 
+    business_id = db.Column(
+        db.Integer,
+        db.ForeignKey("businesses.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True
+    )
+
     name = db.Column(
         db.String(100),
-        nullable=False,
-        unique=True
+        nullable=False
     )
 
     code = db.Column(
         db.String(30),
-        nullable=False,
-        unique=True
+        nullable=False
     )
 
     is_active = db.Column(
@@ -33,6 +38,17 @@ class Branch(db.Model):
         db.DateTime,
         nullable=False,
         default=datetime.utcnow
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "business_id", "name",
+            name="uq_branches_business_name"
+        ),
+        db.UniqueConstraint(
+            "business_id", "code",
+            name="uq_branches_business_code"
+        ),
     )
 
     cashiers = db.relationship(
