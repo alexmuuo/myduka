@@ -1,18 +1,17 @@
-from datetime import datetime
+from datetime import datetime, timezone
+
+from sqlalchemy.dialects.postgresql import UUID
 
 from extensions import db
 
 
 class Business(db.Model):
-    """A tenant: one business with its own shop, branches, staff and customers.
-
-    The slug is the public shop identifier used in URLs (/s/<slug>).
-    """
+    """A business tenant in the MyDuka platform."""
 
     __tablename__ = "businesses"
 
     id = db.Column(
-        db.Integer,
+        UUID(as_uuid=True),
         primary_key=True
     )
 
@@ -28,43 +27,33 @@ class Business(db.Model):
         index=True
     )
 
-    email = db.Column(
-        db.String(150)
-    )
-
     phone = db.Column(
-        db.String(30)
+        db.String(30),
+        nullable=True
     )
 
-    logo = db.Column(
-        db.String(500)
-    )
-
-    is_active = db.Column(
-        db.Boolean,
-        nullable=False,
-        default=True,
-        server_default=db.true()
+    address = db.Column(
+        db.Text,
+        nullable=True
     )
 
     created_at = db.Column(
-        db.DateTime,
+        db.DateTime(timezone=True),
         nullable=False,
-        default=datetime.utcnow
-    )
-
-    users = db.relationship(
-        "User",
-        back_populates="business"
+        default=lambda: datetime.now(timezone.utc)
     )
 
     def to_dict(self):
         return {
-            "id": self.id,
+            "id": str(self.id),
             "name": self.name,
             "slug": self.slug,
-            "logo": self.logo,
-            "is_active": self.is_active,
+            "phone": self.phone,
+            "address": self.address,
+            "created_at": (
+                self.created_at.isoformat()
+                if self.created_at else None
+            )
         }
 
     def __repr__(self):
