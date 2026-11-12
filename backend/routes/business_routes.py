@@ -213,7 +213,6 @@ def create_business():
 @business_member_required
 def list_branches(business_id):
 
-    # Ensure the URL business matches the authenticated business.
     if business_id != g.business_id:
         return jsonify({
             "status": "error",
@@ -279,6 +278,158 @@ def list_branches(business_id):
         return jsonify({
             "status": "error",
             "message": "Unable to retrieve branches."
+        }), 500
+
+    finally:
+        db.session.remove()
+
+
+# ==================================================
+# CREATE BUSINESS BRANCH
+# ==================================================
+
+@business_bp.route(
+    "/<uuid:business_id>/branches",
+    methods=["POST"]
+)
+@business_member_required("owner", "admin", "manager")
+def create_branch(business_id):
+
+    if business_id != g.business_id:
+        return jsonify({
+            "status": "error",
+            "message": "Business access denied."
+        }), 403
+
+    data = request.get_json(silent=True) or {}
+
+    name = str(data.get("name", "")).strip()
+    phone = data.get("phone")
+    address = data.get("address")
+
+    if not name:
+        return jsonify({
+            "status": "error",
+            "message": "Branch name is required."
+        }), 400
+
+    if len(name) > 150:
+        return jsonify({
+            "status": "error",
+            "message": "Branch name cannot exceed 150 characters."
+        }), 400
+
+    if phone is not None:
+        phone = str(phone).strip() or None
+
+        if len(phone or "") > 30:
+            return jsonify({
+                "status": "error",
+                "message": "Branch phone number is too long."
+            }), 400
+
+    if address is not None:
+        address = str(address).strip() or None
+
+    try:
+        # Prevent duplicate branch names within this business.
+        existing_branch = db.session.execute(
+            text("""
+                SELECT id
+                FROM public.branches
+                WHERE business_id = :business_id
+                  AND LOWER(TRIM(name)) = LOWER(TRIM(:name))
+                LIMIT 1
+            """),
+            {
+                "business_id": g.business_id,
+                "name": name
+            }
+        ).first()
+
+        if existing_branch:
+            return jsonify({
+                "status": "error",
+                "message": "A branch with this name already exists."
+            }), 409
+
+        # New branches are never automatically marked as the main branch.
+        result = db.session.execute(
+            text("""
+                INSERT INTO public.branches (
+                    business_id,
+                    name,
+                    phone,
+                    address,
+                    is_main,
+                    is_active
+                )
+                VALUES (
+                    :business_id,
+                    :name,
+                    :phone,
+                    :address,
+                    FALSE,
+                    TRUE
+                )
+                RETURNING
+                    id,
+                    business_id,
+                    name,
+                    phone,
+                    address,
+                    is_main,
+                    is_active,
+                    created_at,
+                    updated_at
+            """),
+            {
+                "business_id": g.business_id,
+                "name": name,
+                "phone": phone,
+                "address": address
+            }
+        )
+
+        row = result.mappings().one()
+
+        db.session.commit()
+
+        branch = {
+            "id": str(row["id"]),
+            "business_id": str(row["business_id"]),
+            "name": row["name"],
+            "phone": row["phone"],
+            "address": row["address"],
+            "is_main": row["is_main"],
+            "is_active": row["is_active"],
+            "created_at": (
+                row["created_at"].isoformat()
+                if row["created_at"] else None
+            ),
+            "updated_at": (
+                row["updated_at"].isoformat()
+                if row["updated_at"] else None
+            )
+        }
+
+        return jsonify({
+            "status": "success",
+            "message": "Branch created successfully.",
+            "branch": branch
+        }), 201
+
+    except Exception:
+        db.session.rollback()
+
+        logger.exception(
+            "Failed to create branch for business %s.",
+            business_id
+        )
+
+        return jsonify({
+            "status": "error",
+            "message": "Unable to create branch."
         }), 500
 
     finally:
