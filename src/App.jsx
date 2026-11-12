@@ -1,4 +1,5 @@
 import { Routes, Route, useLocation } from "react-router-dom";
+import BusinessRegister from "./pages/BusinessRegister";
 
 // Customer pages
 import Home from "./pages/Home";
@@ -115,6 +116,10 @@ return (
       path="/admin-login"
       element={<AdminLogin />}
     />
+    <Route
+  path="/business-register"
+  element={<BusinessRegister />}
+/>
 
     {/* PROTECTED ADMIN ROUTES */}
     <Route element={<AdminProtectedRoute />}>
