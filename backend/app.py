@@ -3,100 +3,94 @@ import logging
 
 from flask import Flask, jsonify
 from flask_cors import CORS
-from flask_mail import Mail
 from dotenv import load_dotenv
-from flask_migrate import Migrate
+
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 
 from extensions import db
 
 
-# --------------------------------------------------
-# LOAD ENVIRONMENT VARIABLES
-# --------------------------------------------------
+# ==================================================
+# ENVIRONMENT CONFIGURATION
+# ==================================================
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-ENV_FILE = os.path.join(BASE_DIR, ".env")
 
-load_dotenv(ENV_FILE)
-
-
-# --------------------------------------------------
-# INITIALIZE FLASK APPLICATION
-# --------------------------------------------------
-
-app = Flask(__name__)
+load_dotenv(os.path.join(BASE_DIR, ".env"))
 
 
-# --------------------------------------------------
-# APPLICATION CONFIGURATION
-# --------------------------------------------------
+# ==================================================
+# LOGGING
+# ==================================================
+
+logging.basicConfig(level=logging.INFO)
+
+logger = logging.getLogger("myduka")
+
+
+# ==================================================
+# DATABASE URL
+# ==================================================
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if not DATABASE_URL:
     raise RuntimeError(
-        "DATABASE_URL is not configured. "
-        "Check the backend .env file or server environment variables."
+        "DATABASE_URL is missing. "
+        "Configure it in backend/.env or Vercel environment variables."
     )
 
-# Use the psycopg (v3) driver for every PostgreSQL URL form.
-for _prefix in ("postgres://", "postgresql://"):
-    if DATABASE_URL.startswith(_prefix):
-        DATABASE_URL = "postgresql+psycopg://" + DATABASE_URL[len(_prefix):]
-        break
+# Normalize PostgreSQL URLs for psycopg 3.
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace(
+        "postgres://",
+        "postgresql+psycopg://",
+        1
+    )
 
-app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
-
-# Serverless-friendly connection settings. prepare_threshold=None turns off
-# server-side prepared statements, which Supabase's pooled (pgbouncer)
-# connections do not support.
-app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-    "pool_pre_ping": True,
-    "pool_recycle": 280,
-    "connect_args": {"prepare_threshold": None},
-}
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+elif DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace(
+        "postgresql://",
+        "postgresql+psycopg://",
+        1
+    )
 
 
-# --------------------------------------------------
-# EMAIL CONFIGURATION — GMAIL SMTP
-# --------------------------------------------------
+# ==================================================
+# CREATE FLASK APPLICATION
+# ==================================================
 
-app.config["MAIL_SERVER"] = os.getenv(
-    "MAIL_SERVER",
-    "smtp.gmail.com"
+app = Flask(__name__)
+
+app.config.update(
+    SQLALCHEMY_DATABASE_URI=DATABASE_URL,
+
+    SQLALCHEMY_TRACK_MODIFICATIONS=False,
+
+    SQLALCHEMY_ENGINE_OPTIONS={
+        "pool_pre_ping": True,
+        "pool_recycle": 280,
+        "pool_size": 5,
+        "max_overflow": 2,
+        "connect_args": {
+            "prepare_threshold": None
+        }
+    },
+
+    JSON_SORT_KEYS=False
 )
 
-app.config["MAIL_PORT"] = int(
-    os.getenv("MAIL_PORT", "587")
-)
 
-app.config["MAIL_USE_TLS"] = (
-    os.getenv("MAIL_USE_TLS", "true").lower() == "true"
-)
-
-app.config["MAIL_USE_SSL"] = False
-
-app.config["MAIL_USERNAME"] = os.getenv("MAIL_USERNAME")
-app.config["MAIL_PASSWORD"] = os.getenv("MAIL_PASSWORD")
-
-app.config["MAIL_DEFAULT_SENDER"] = os.getenv(
-    "MAIL_DEFAULT_SENDER"
-)
-
-mail = Mail(app)
-
-
-# --------------------------------------------------
+# ==================================================
 # CORS CONFIGURATION
-# --------------------------------------------------
+# ==================================================
 
-# The frontend calls the API on the same origin (/api), so CORS is only
-# needed for local development or extra origins set in CORS_ORIGINS.
 allowed_origins = [
-    origin.strip()
+    origin.strip().rstrip("/")
     for origin in os.getenv(
-        "CORS_ORIGINS", "http://localhost:5173"
+        "CORS_ORIGINS",
+        "http://localhost:5173"
     ).split(",")
     if origin.strip()
 ]
@@ -104,7 +98,7 @@ allowed_origins = [
 CORS(
     app,
     resources={
-        r"/*": {
+        r"/api/*": {
             "origins": allowed_origins,
             "methods": [
                 "GET",
@@ -112,147 +106,121 @@ CORS(
                 "PUT",
                 "PATCH",
                 "DELETE",
-                "OPTIONS",
+                "OPTIONS"
             ],
             "allow_headers": [
                 "Content-Type",
-                "Authorization",
+                "Authorization"
             ],
-            "supports_credentials": False,
+            "supports_credentials": False
         }
-    },
+    }
 )
 
-# --------------------------------------------------
-# INITIALIZE DATABASE AND MIGRATIONS
-# --------------------------------------------------
+
+# ==================================================
+# DATABASE INITIALIZATION
+# ==================================================
 
 db.init_app(app)
 
-# Enables Flask-Migrate commands (flask db ...).
-# This does not modify the database until a migration is applied.
-migrate = Migrate(app, db)
 
+# ==================================================
+# APPLICATION INFORMATION
+# ==================================================
 
-# --------------------------------------------------
-# LOGGING CONFIGURATION
-# --------------------------------------------------
-
-logging.basicConfig(level=logging.INFO)
-
-logger = logging.getLogger(__name__)
-
-
-# --------------------------------------------------
-# IMPORT MODELS
-# --------------------------------------------------
-
-from models.business import Business
-from models.user import User
-from models.product import Product
-from models.customer import Customer
-from models.order import Order, OrderItem
-from models.message import Message
-from models.notification import Notification
-from models.payment import Payment
-from models.cashier import Cashier
-from models.cash_collection import CashCollection
-from models.stock_movement import StockMovement
-from models.branch import Branch
-from models.branch_product_stock import BranchProductStock
-from models.cashier_sale import CashierSale, CashierSaleItem
-from models.cashier_sale_payment import CashierSalePayment
-from models.cashier_sale_audit import CashierSaleAudit
-
-
-# --------------------------------------------------
-# IMPORT ROUTES
-# --------------------------------------------------
-
-from routes.product_routes import product_bp
-from routes.order_routes import order_bp
-from routes.admin_routes import admin_bp
-from routes.message_routes import message_bp
-from routes.customer_routes import customer_bp
-from routes.notification import notification_bp
-from routes.admin_auth_routes import admin_auth_bp
-from routes.payment_routes import payment_bp
-from routes.cashier_routes import cashier_bp
-from routes.cashier_sales import cashier_sales_bp
-from routes.admin_pos_sales import admin_pos_sales_bp
-
-# --------------------------------------------------
-# REGISTER ROUTES
-# --------------------------------------------------
-
-app.register_blueprint(product_bp)
-app.register_blueprint(order_bp)
-app.register_blueprint(admin_bp)
-app.register_blueprint(message_bp)
-app.register_blueprint(customer_bp)
-app.register_blueprint(notification_bp)
-app.register_blueprint(admin_auth_bp)
-app.register_blueprint(payment_bp)
-app.register_blueprint(cashier_bp)
-app.register_blueprint(cashier_sales_bp)
-app.register_blueprint(admin_pos_sales_bp)
-
-# --------------------------------------------------
-# PUBLIC HEALTH CHECK
-# --------------------------------------------------
-
-@app.route("/")
+@app.route("/", methods=["GET"])
 def home():
     return jsonify({
-        "message": "MyDuka API is running."
-    })
+        "application": "MyDuka",
+        "message": "MyDuka API is running.",
+        "status": "ok"
+    }), 200
 
 
-@app.route("/api/health")
+# ==================================================
+# HEALTH CHECK
+# ==================================================
+
+@app.route("/api/health", methods=["GET"])
 def health():
+
     return jsonify({
-        "status": "ok",
-        "message": "MyDuka backend is healthy."
-    })
+        "application": "MyDuka",
+        "status": "healthy",
+        "message": "MyDuka backend is operational."
+    }), 200
 
 
-# --------------------------------------------------
-# DATABASE DIAGNOSTIC
-# --------------------------------------------------
-# Requires the existing admin authentication token.
+# ==================================================
+# DATABASE CONNECTION TEST
+# ==================================================
 
-from admin_auth import admin_required
-
-
-@app.route("/api/database-test")
-@admin_required
+@app.route("/api/database-test", methods=["GET"])
 def database_test():
+
     try:
-        db.session.execute(db.text("SELECT 1"))
+        db.session.execute(text("SELECT 1"))
 
         return jsonify({
             "status": "ok",
-            "message": "Database connection is working."
-        })
+            "database": "connected",
+            "message": "MyDuka database connection is working."
+        }), 200
 
-    except Exception:
+    except SQLAlchemyError:
+
         db.session.rollback()
 
-        logger.exception("Database diagnostic failed.")
+        logger.exception(
+            "MyDuka database connection test failed."
+        )
 
         return jsonify({
             "status": "error",
-            "message": "Database connection test failed."
+            "database": "disconnected",
+            "message": "Unable to connect to the database."
         }), 500
 
+    finally:
+        db.session.remove()
 
-# --------------------------------------------------
-# APPLICATION STARTUP
-# --------------------------------------------------
+
+# ==================================================
+# ERROR HANDLERS
+# ==================================================
+
+@app.errorhandler(404)
+def not_found(error):
+
+    return jsonify({
+        "status": "error",
+        "message": "The requested endpoint does not exist."
+    }), 404
+
+
+@app.errorhandler(500)
+def internal_server_error(error):
+
+    logger.exception("Unexpected internal server error.")
+
+    return jsonify({
+        "status": "error",
+        "message": "An unexpected server error occurred."
+    }), 500
+
+
+# ==================================================
+# LOCAL DEVELOPMENT
+# ==================================================
 
 if __name__ == "__main__":
+
     app.run(
-        debug=os.getenv("FLASK_DEBUG", "false").lower() == "true",
-        host="127.0.0.1",
+        host="0.0.0.0",
         port=int(os.getenv("PORT", "5000")),
+        debug=os.getenv(
+            "FLASK_DEBUG",
+            "false"
+        ).lower() == "true"
     )
