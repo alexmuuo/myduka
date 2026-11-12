@@ -1,4 +1,6 @@
 import { Routes, Route, useLocation } from "react-router-dom";
+
+// Business registration
 import BusinessRegister from "./pages/BusinessRegister";
 
 // Customer pages
@@ -51,168 +53,198 @@ import AdminProtectedRoute from "./components/AdminProtectedRoute";
 import CashierProtectedRoute from "./components/CashierProtectedRoute";
 
 function App() {
-const location = useLocation();
-const pathname = location.pathname;
+  const location = useLocation();
+  const pathname = location.pathname;
 
-const isAdminLogin = pathname === "/admin-login";
-const isCashierLogin = pathname === "/cashier-login";
+  const isAdminLogin = pathname === "/admin-login";
+  const isCashierLogin = pathname === "/cashier-login";
+  const isBusinessRegister = pathname === "/business-register";
 
-const isAdminPage =
-pathname === "/admin" ||
-pathname.startsWith("/admin/");
+  const isAdminPage =
+    pathname === "/admin" ||
+    pathname.startsWith("/admin/");
 
-const isCashierPage = pathname.startsWith("/cashier/");
+  const isCashierPage = pathname.startsWith("/cashier/");
 
-const hasAdminToken = Boolean(
-localStorage.getItem("adminToken")
-);
+  // MyDuka business context
+  const hasBusinessContext = Boolean(
+    localStorage.getItem("mydukaBusinessId")
+  );
 
-const showAdminNavbar =
-isAdminPage && hasAdminToken && !isAdminLogin;
+  // Navigation visibility
+  const showAdminNavbar =
+    isAdminPage && hasBusinessContext && !isAdminLogin;
 
-const showCustomerNavbar =
-!isAdminLogin &&
-!isCashierLogin &&
-!isAdminPage &&
-!isCashierPage;
+  const showCustomerNavbar =
+    !isAdminLogin &&
+    !isCashierLogin &&
+    !isBusinessRegister &&
+    !isAdminPage &&
+    !isCashierPage;
 
-return (
-<>
-{/* Navigation */}
-{showAdminNavbar ? ( <AdminNavbar />
-) : isCashierPage ? ( <CashierNavbar />
-) : showCustomerNavbar ? ( <Navbar />
-) : null}
+  return (
+    <>
+      {/* Navigation */}
+      {showAdminNavbar ? (
+        <AdminNavbar />
+      ) : isCashierPage ? (
+        <CashierNavbar />
+      ) : showCustomerNavbar ? (
+        <Navbar />
+      ) : null}
 
+      <Routes>
+        {/* CUSTOMER ROUTES */}
+        <Route path="/" element={<Home />} />
+        <Route path="/products" element={<Products />} />
+        <Route path="/products/:id" element={<ProductDetails />} />
+        <Route path="/cart" element={<Cart />} />
+        <Route path="/checkout" element={<Checkout />} />
 
-  <Routes>
-    {/* CUSTOMER ROUTES */}
-    <Route path="/" element={<Home />} />
-    <Route path="/products" element={<Products />} />
-    <Route path="/products/:id" element={<ProductDetails />} />
-    <Route path="/cart" element={<Cart />} />
-    <Route path="/checkout" element={<Checkout />} />
-    <Route
-      path="/order-confirmation"
-      element={<OrderConfirmation />}
-    />
-    <Route path="/backend-test" element={<BackendTest />} />
-    <Route path="/ask-support" element={<AskSupport />} />
+        <Route
+          path="/order-confirmation"
+          element={<OrderConfirmation />}
+        />
 
-    {/* CUSTOMER AUTHENTICATION */}
-    <Route path="/login" element={<Login />} />
-    <Route path="/register" element={<Register />} />
-    <Route
-      path="/forgot-password"
-      element={<ForgotPassword />}
-    />
-    <Route
-      path="/reset-password"
-      element={<ResetPassword />}
-    />
+        <Route path="/backend-test" element={<BackendTest />} />
+        <Route path="/ask-support" element={<AskSupport />} />
 
-    {/* ADMIN LOGIN */}
-    <Route
-      path="/admin-login"
-      element={<AdminLogin />}
-    />
-    <Route
-  path="/business-register"
-  element={<BusinessRegister />}
-/>
+        {/* CUSTOMER AUTHENTICATION */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
 
-    {/* PROTECTED ADMIN ROUTES */}
-    <Route element={<AdminProtectedRoute />}>
-      <Route path="/admin" element={<AdminDashboard />} />
-      <Route
-        path="/admin/orders/:id"
-        element={<AdminOrderDetails />}
-      />
-      <Route
-        path="/admin/products"
-        element={<SellerProducts />}
-      />
-      <Route
-        path="/admin/inventory"
-        element={<Inventory />}
-      />
-      <Route
-        path="/admin/orders"
-        element={<SellerOrders />}
-      />
-      <Route
-        path="/admin/customers"
-        element={<Customers />}
-      />
-      <Route
-        path="/admin/messages"
-        element={<Messages />}
-      />
-      <Route
-        path="/admin/deliveries"
-        element={<Deliveries />}
-      />
-      <Route
-        path="/admin/reports"
-        element={<Reports />}
-      />
-      <Route
-        path="/admin/cashiers"
-        element={<Cashiers />}
-      />
-      <Route
-        path="/admin/stock-history"
-        element={<AdminStockHistory />}
-      />
-      <Route
-        path="/admin/sales"
-        element={<Sales />}
-      />
-      <Route
-        path="/admin/branches"
-        element={<Branches />}
-      />
-    </Route>
-    <Route path="/admin/pos-sales" element={<POSSales />} />
+        <Route
+          path="/forgot-password"
+          element={<ForgotPassword />}
+        />
 
-    {/* CASHIER LOGIN */}
-    <Route
-      path="/cashier-login"
-      element={<CashierLogin />}
-    />
+        <Route
+          path="/reset-password"
+          element={<ResetPassword />}
+        />
 
-    {/* PROTECTED CASHIER ROUTES */}
-    <Route element={<CashierProtectedRoute />}>
-      <Route
-        path="/cashier/pos"
-        element={<CashierPOS />}
-      />
-      <Route
-        path="/cashier/sales-history"
-        element={<SalesHistory />}
-      />
-      <Route
-        path="/cashier/orders"
-        element={<CashierOrders />}
-      />
-      <Route
-        path="/cashier/deliveries"
-        element={<CashierDeliveries />}
-      />
-      <Route
-        path="/cashier/stock-history"
-        element={<CashierStockHistory />}
-      />
-      <Route
-        path="/cashier/stock"
-        element={<CashierStock />}
-      />
-    </Route>
-  </Routes>
-</>
+        {/* BUSINESS OWNER AUTHENTICATION */}
+        <Route
+          path="/admin-login"
+          element={<AdminLogin />}
+        />
 
+        <Route
+          path="/business-register"
+          element={<BusinessRegister />}
+        />
 
-);
+        {/* PROTECTED ADMIN ROUTES */}
+        <Route element={<AdminProtectedRoute />}>
+          <Route path="/admin" element={<AdminDashboard />} />
+
+          <Route
+            path="/admin/orders/:id"
+            element={<AdminOrderDetails />}
+          />
+
+          <Route
+            path="/admin/products"
+            element={<SellerProducts />}
+          />
+
+          <Route
+            path="/admin/inventory"
+            element={<Inventory />}
+          />
+
+          <Route
+            path="/admin/orders"
+            element={<SellerOrders />}
+          />
+
+          <Route
+            path="/admin/customers"
+            element={<Customers />}
+          />
+
+          <Route
+            path="/admin/messages"
+            element={<Messages />}
+          />
+
+          <Route
+            path="/admin/deliveries"
+            element={<Deliveries />}
+          />
+
+          <Route
+            path="/admin/reports"
+            element={<Reports />}
+          />
+
+          <Route
+            path="/admin/cashiers"
+            element={<Cashiers />}
+          />
+
+          <Route
+            path="/admin/stock-history"
+            element={<AdminStockHistory />}
+          />
+
+          <Route
+            path="/admin/sales"
+            element={<Sales />}
+          />
+
+          <Route
+            path="/admin/branches"
+            element={<Branches />}
+          />
+
+          <Route
+            path="/admin/pos-sales"
+            element={<POSSales />}
+          />
+        </Route>
+
+        {/* CASHIER LOGIN */}
+        <Route
+          path="/cashier-login"
+          element={<CashierLogin />}
+        />
+
+        {/* PROTECTED CASHIER ROUTES */}
+        <Route element={<CashierProtectedRoute />}>
+          <Route
+            path="/cashier/pos"
+            element={<CashierPOS />}
+          />
+
+          <Route
+            path="/cashier/sales-history"
+            element={<SalesHistory />}
+          />
+
+          <Route
+            path="/cashier/orders"
+            element={<CashierOrders />}
+          />
+
+          <Route
+            path="/cashier/deliveries"
+            element={<CashierDeliveries />}
+          />
+
+          <Route
+            path="/cashier/stock-history"
+            element={<CashierStockHistory />}
+          />
+
+          <Route
+            path="/cashier/stock"
+            element={<CashierStock />}
+          />
+        </Route>
+      </Routes>
+    </>
+  );
 }
 
 export default App;
