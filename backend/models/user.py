@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from sqlalchemy.dialects.postgresql import UUID
 
 from extensions import db
@@ -10,9 +8,10 @@ class Profile(db.Model):
 
     __tablename__ = "profiles"
 
+    # The foreign key to auth.users is already enforced in Supabase.
+    # We omit its ORM declaration because auth.users is in another schema.
     id = db.Column(
         UUID(as_uuid=True),
-        db.ForeignKey("auth.users.id", ondelete="CASCADE"),
         primary_key=True
     )
 
@@ -33,13 +32,11 @@ class Profile(db.Model):
 
     created_at = db.Column(
         db.DateTime(timezone=True),
-        nullable=False,
         server_default=db.func.now()
     )
 
     updated_at = db.Column(
         db.DateTime(timezone=True),
-        nullable=False,
         server_default=db.func.now()
     )
 
