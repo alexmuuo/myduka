@@ -1,9 +1,9 @@
+import os
 import logging
 import re
 import requests
 
 from flask import Blueprint, request, jsonify, g
-
 from sqlalchemy import text
 
 from extensions import db
@@ -14,7 +14,11 @@ from models.business_member import BusinessMember
 
 logger = logging.getLogger("myduka.business")
 
-business_bp = Blueprint("business", __name__, url_prefix="/api/businesses")
+business_bp = Blueprint(
+    "business",
+    __name__,
+    url_prefix="/api/businesses"
+)
 
 
 # ==================================================
@@ -65,6 +69,7 @@ def create_business():
 
     name = str(data.get("name", "")).strip()
     slug = str(data.get("slug", "")).strip().lower()
+
     phone = data.get("phone")
     address = data.get("address")
 
@@ -95,11 +100,22 @@ def create_business():
             "message": "Phone number is too long."
         }), 400
 
+    supabase_url = os.getenv("SUPABASE_URL", "").rstrip("/")
+    supabase_key = os.getenv("SUPABASE_ANON_KEY", "")
+
+    if not supabase_url or not supabase_key:
+        logger.error("Supabase configuration is missing.")
+
+        return jsonify({
+            "status": "error",
+            "message": "Business registration service is not configured."
+        }), 503
+
     try:
         response = requests.post(
-            f"{__import__('os').getenv('SUPABASE_URL', '').rstrip('/')}/rest/v1/rpc/create_business",
+            f"{supabase_url}/rest/v1/rpc/create_business",
             headers={
-                "apikey": __import__('os').getenv("SUPABASE_ANON_KEY", ""),
+                "apikey": supabase_key,
                 "Authorization": f"Bearer {g.supabase_access_token}",
                 "Content-Type": "application/json"
             },
@@ -114,7 +130,8 @@ def create_business():
 
         if response.status_code not in (200, 201):
             logger.error(
-                "Business registration failed: %s",
+                "Business registration failed. HTTP %s: %s",
+                response.status_code,
                 response.text
             )
 
@@ -126,11 +143,27 @@ def create_business():
         business_id = response.json()
 
         if isinstance(business_id, list):
-            business_id = business_id[0]
+            business_id = business_id[0] if business_id else None
+
+        if isinstance(business_id, dict):
+            business_id = business_id.get("create_business")
+
+        if not business_id:
+            logger.error("Supabase returned no business ID.")
+
+            return jsonify({
+                "status": "error",
+                "message": "Business creation returned an invalid response."
+            }), 500
 
         business = db.session.get(Business, business_id)
 
         if not business:
+            logger.error(
+                "Business %s was created but could not be retrieved.",
+                business_id
+            )
+
             return jsonify({
                 "status": "error",
                 "message": "Business was created, but could not be retrieved."
@@ -144,7 +177,9 @@ def create_business():
         }), 201
 
     except requests.RequestException:
-        logger.exception("Supabase business registration request failed.")
+        logger.exception(
+            "Supabase business registration request failed."
+        )
 
         return jsonify({
             "status": "error",
@@ -153,21 +188,37 @@ def create_business():
 
     except Exception:
         db.session.rollback()
-        logger.exception("Unexpected business registration error.")
+
+        logger.exception(
+            "Unexpected business registration error."
+        )
 
         return jsonify({
             "status": "error",
             "message": "An unexpected error occurred."
         }), 500
 
+    finally:
+        db.session.remove()
+
 
 # ==================================================
 # LIST BUSINESS BRANCHES
 # ==================================================
 
-@business_bp.route("/<uuid:business_id>/branches", methods=["GET"])
+@business_bp.route(
+    "/<uuid:business_id>/branches",
+    methods=["GET"]
+)
 @business_member_required
 def list_branches(business_id):
+
+    # Ensure the URL business matches the authenticated business.
+    if business_id != g.business_id:
+        return jsonify({
+            "status": "error",
+            "message": "Business access denied."
+        }), 403
 
     try:
         result = db.session.execute(
@@ -194,6 +245,7 @@ def list_branches(business_id):
         branches = []
 
         for row in result.mappings():
+
             branches.append({
                 "id": str(row["id"]),
                 "business_id": str(row["business_id"]),
@@ -218,9 +270,16 @@ def list_branches(business_id):
         }), 200
 
     except Exception:
-        logger.exception("Failed to retrieve business branches.")
+        db.session.rollback()
+
+        logger.exception(
+            "Failed to retrieve business branches."
+        )
 
         return jsonify({
             "status": "error",
             "message": "Unable to retrieve branches."
         }), 500
+
+    finally:
+        db.session.remove()
