@@ -5,10 +5,13 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
 
+
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
 from extensions import db
+from routes.business_routes import business_bp
+
 
 
 # ==================================================
@@ -110,7 +113,8 @@ CORS(
             ],
             "allow_headers": [
                 "Content-Type",
-                "Authorization"
+                "Authorization",
+                "X-Business-ID"
             ],
             "supports_credentials": False
         }
@@ -123,7 +127,7 @@ CORS(
 # ==================================================
 
 db.init_app(app)
-
+app.register_blueprint(business_bp)
 
 # ==================================================
 # APPLICATION INFORMATION
