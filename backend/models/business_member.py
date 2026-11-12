@@ -34,9 +34,10 @@ class BusinessMember(db.Model):
         index=True
     )
 
+    # Supabase auth.users FK is enforced by PostgreSQL.
+    # We intentionally omit its SQLAlchemy ForeignKey declaration.
     user_id = db.Column(
         UUID(as_uuid=True),
-        db.ForeignKey("auth.users.id", ondelete="CASCADE"),
         nullable=False,
         index=True
     )
