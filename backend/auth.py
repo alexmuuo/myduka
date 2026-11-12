@@ -17,29 +17,35 @@ logger = logging.getLogger("myduka.auth")
 # SUPABASE CONFIGURATION
 # ==================================================
 
-SUPABASE_URL = os.getenv("SUPABASE_URL", "").rstrip("/")
-SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
+def get_supabase_config():
+    return (
+        os.getenv("SUPABASE_URL", "").rstrip("/"),
+        os.getenv("SUPABASE_ANON_KEY", "")
+    )
 
+
+# ==================================================
+# VERIFY SUPABASE ACCESS TOKEN
+# ==================================================
 
 def verify_supabase_token(token):
-    """
-    Verify a Supabase access token using Supabase Auth.
 
-    Returns the authenticated user or None.
-    """
+    supabase_url, anon_key = get_supabase_config()
 
-    if not SUPABASE_URL or not SUPABASE_ANON_KEY:
-        logger.error("Supabase authentication environment variables missing.")
+    if not supabase_url or not anon_key:
+        logger.error(
+            "SUPABASE_URL or SUPABASE_ANON_KEY is missing."
+        )
         return None
 
     try:
         response = requests.get(
-            f"{SUPABASE_URL}/auth/v1/user",
+            f"{supabase_url}/auth/v1/user",
             headers={
-                "apikey": SUPABASE_ANON_KEY,
-                "Authorization": f"Bearer {token}",
+                "apikey": anon_key,
+                "Authorization": f"Bearer {token}"
             },
-            timeout=10,
+            timeout=10
         )
 
         if response.status_code != 200:
@@ -53,7 +59,7 @@ def verify_supabase_token(token):
         return user
 
     except requests.RequestException:
-        logger.exception("Supabase token verification failed.")
+        logger.exception("Supabase authentication request failed.")
         return None
 
 
@@ -64,9 +70,11 @@ def verify_supabase_token(token):
 def supabase_auth_required(function):
 
     @wraps(function)
-    def decorated(_args, __kwargs):
+    def decorated(*args, **kwargs):
 
-        authorization = request.headers.get("Authorization", "")
+        authorization = request.headers.get(
+            "Authorization", ""
+        )
 
         if not authorization.startswith("Bearer "):
             return jsonify({
@@ -92,6 +100,7 @@ def supabase_auth_required(function):
 
         try:
             g.current_user_id = UUID(user["id"])
+
         except (ValueError, TypeError, KeyError):
             return jsonify({
                 "status": "error",
@@ -99,6 +108,7 @@ def supabase_auth_required(function):
             }), 401
 
         g.current_user = user
+        g.supabase_access_token = token
 
         return function(*args, **kwargs)
 
@@ -117,7 +127,9 @@ def business_member_required(*allowed_roles):
         @supabase_auth_required
         def decorated(*args, **kwargs):
 
-            business_id = request.headers.get("X-Business-ID")
+            business_id = request.headers.get(
+                "X-Business-ID"
+            )
 
             if not business_id:
                 return jsonify({
@@ -127,6 +139,7 @@ def business_member_required(*allowed_roles):
 
             try:
                 business_uuid = UUID(business_id)
+
             except (ValueError, TypeError):
                 return jsonify({
                     "status": "error",
@@ -145,7 +158,10 @@ def business_member_required(*allowed_roles):
                     "message": "You do not have access to this business."
                 }), 403
 
-            if allowed_roles and membership.role not in allowed_roles:
+            if (
+                allowed_roles
+                and membership.role not in allowed_roles
+            ):
                 return jsonify({
                     "status": "error",
                     "message": "You do not have permission to perform this action."
