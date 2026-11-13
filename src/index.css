@@ -3,13 +3,7 @@
    Light: Modern Premium
    Dark: Dark Premium
    System: Follows device preference
-
-   Theme selection:
-   <html data-theme="light">
-   <html data-theme="dark">
-   <html data-theme="system">
    ============================================================ */
-
 
 /* ============================================================
    1. LIGHT THEME — MODERN PREMIUM
@@ -25,7 +19,6 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  /* Brand colours */
   --md-primary: #4f46e5;
   --md-primary-dark: #4338ca;
   --md-primary-light: #eef2ff;
@@ -33,23 +26,21 @@
   --md-accent: #f59e0b;
   --md-accent-soft: #fef3c7;
 
-  /* Backgrounds */
   --md-background: #f8fafc;
   --md-surface: #ffffff;
   --md-surface-secondary: #f1f5f9;
   --md-surface-hover: #f8fafc;
+  --md-input-bg: #ffffff;
 
-  /* Text */
   --md-text: #0f172a;
   --md-heading: #1e1b4b;
   --md-muted: #64748b;
+  --md-text-muted: #64748b;
   --md-text-inverse: #ffffff;
 
-  /* Borders */
   --md-border: #e2e8f0;
   --md-border-strong: #cbd5e1;
 
-  /* Status colours */
   --md-success: #16a34a;
   --md-success-soft: #dcfce7;
   --md-danger: #dc2626;
@@ -59,20 +50,18 @@
   --md-info: #0284c7;
   --md-info-soft: #e0f2fe;
 
-  /* Shape */
   --md-radius: 14px;
   --md-radius-lg: 20px;
 
-  /* Shadows */
   --md-shadow: 0 4px 18px rgba(30, 27, 75, 0.06);
   --md-shadow-hover: 0 12px 28px rgba(30, 27, 75, 0.12);
+  --md-card-shadow: 0 4px 18px rgba(30, 27, 75, 0.06);
 
-  /* Bootstrap integration */
   --bs-primary: #4f46e5;
   --bs-primary-rgb: 79, 70, 229;
 
-  --bs-success: #4f46e5;
-  --bs-success-rgb: 79, 70, 229;
+  --bs-success: #16a34a;
+  --bs-success-rgb: 22, 163, 74;
 
   --bs-link-color: #4f46e5;
   --bs-link-color-rgb: 79, 70, 229;
@@ -87,7 +76,6 @@
   --bs-border-radius: 0.6rem;
   --bs-focus-ring-color: rgba(79, 70, 229, 0.25);
 }
-
 
 /* ============================================================
    2. DARK THEME — DARK PREMIUM
@@ -107,10 +95,12 @@
   --md-surface: #111827;
   --md-surface-secondary: #1e293b;
   --md-surface-hover: #263449;
+  --md-input-bg: #1e293b;
 
   --md-text: #e2e8f0;
   --md-heading: #f1f5f9;
   --md-muted: #94a3b8;
+  --md-text-muted: #94a3b8;
   --md-text-inverse: #ffffff;
 
   --md-border: #334155;
@@ -127,13 +117,13 @@
 
   --md-shadow: 0 4px 18px rgba(0, 0, 0, 0.20);
   --md-shadow-hover: 0 12px 28px rgba(0, 0, 0, 0.35);
+  --md-card-shadow: 0 4px 18px rgba(0, 0, 0, 0.20);
 
-  /* Bootstrap integration */
   --bs-primary: #818cf8;
   --bs-primary-rgb: 129, 140, 248;
 
-  --bs-success: #818cf8;
-  --bs-success-rgb: 129, 140, 248;
+  --bs-success: #4ade80;
+  --bs-success-rgb: 74, 222, 128;
 
   --bs-link-color: #a5b4fc;
   --bs-link-color-rgb: 165, 180, 252;
@@ -148,11 +138,69 @@
   --bs-focus-ring-color: rgba(129, 140, 248, 0.3);
 }
 
-
 /* ============================================================
-   3. SYSTEM THEME
-   Automatically follows operating system preference.
+   3. SYSTEM THEME — LIGHT DEFAULT
    ============================================================ */
+
+:root[data-theme="system"] {
+  color-scheme: light;
+
+  --md-primary: #4f46e5;
+  --md-primary-dark: #4338ca;
+  --md-primary-light: #eef2ff;
+
+  --md-accent: #f59e0b;
+  --md-accent-soft: #fef3c7;
+
+  --md-background: #f8fafc;
+  --md-surface: #ffffff;
+  --md-surface-secondary: #f1f5f9;
+  --md-surface-hover: #f8fafc;
+  --md-input-bg: #ffffff;
+
+  --md-text: #0f172a;
+  --md-heading: #1e1b4b;
+  --md-muted: #64748b;
+  --md-text-muted: #64748b;
+  --md-text-inverse: #ffffff;
+
+  --md-border: #e2e8f0;
+  --md-border-strong: #cbd5e1;
+
+  --md-success: #16a34a;
+  --md-success-soft: #dcfce7;
+  --md-danger: #dc2626;
+  --md-danger-soft: #fee2e2;
+  --md-warning: #d97706;
+  --md-warning-soft: #fef3c7;
+  --md-info: #0284c7;
+  --md-info-soft: #e0f2fe;
+
+  --md-shadow: 0 4px 18px rgba(30, 27, 75, 0.06);
+  --md-shadow-hover: 0 12px 28px rgba(30, 27, 75, 0.12);
+  --md-card-shadow: 0 4px 18px rgba(30, 27, 75, 0.06);
+
+  --bs-primary: #4f46e5;
+  --bs-primary-rgb: 79, 70, 229;
+
+  --bs-success: #16a34a;
+  --bs-success-rgb: 22, 163, 74;
+
+  --bs-link-color: #4f46e5;
+  --bs-link-color-rgb: 79, 70, 229;
+  --bs-link-hover-color: #4338ca;
+
+  --bs-body-color: #0f172a;
+  --bs-body-bg: #f8fafc;
+  --bs-secondary-color: #64748b;
+  --bs-tertiary-bg: #f1f5f9;
+
+  --bs-border-color: #e2e8f0;
+  --bs-border-radius: 0.6rem;
+  --bs-focus-ring-color: rgba(79, 70, 229, 0.25);
+}
+
+/* System dark preference */
 
 @media (prefers-color-scheme: dark) {
   :root[data-theme="system"] {
@@ -169,10 +217,12 @@
     --md-surface: #111827;
     --md-surface-secondary: #1e293b;
     --md-surface-hover: #263449;
+    --md-input-bg: #1e293b;
 
     --md-text: #e2e8f0;
     --md-heading: #f1f5f9;
     --md-muted: #94a3b8;
+    --md-text-muted: #94a3b8;
     --md-text-inverse: #ffffff;
 
     --md-border: #334155;
@@ -189,12 +239,13 @@
 
     --md-shadow: 0 4px 18px rgba(0, 0, 0, 0.20);
     --md-shadow-hover: 0 12px 28px rgba(0, 0, 0, 0.35);
+    --md-card-shadow: 0 4px 18px rgba(0, 0, 0, 0.20);
 
     --bs-primary: #818cf8;
     --bs-primary-rgb: 129, 140, 248;
 
-    --bs-success: #818cf8;
-    --bs-success-rgb: 129, 140, 248;
+    --bs-success: #4ade80;
+    --bs-success-rgb: 74, 222, 128;
 
     --bs-link-color: #a5b4fc;
     --bs-link-color-rgb: 165, 180, 252;
@@ -209,7 +260,6 @@
     --bs-focus-ring-color: rgba(129, 140, 248, 0.3);
   }
 }
-
 
 /* ============================================================
    4. GLOBAL FOUNDATION
@@ -237,16 +287,13 @@ body {
   color: var(--md-text);
   background-color: var(--md-background);
 
-  transition:
-    background-color 0.2s ease,
-    color 0.2s ease;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 #root {
   width: 100%;
   min-height: 100vh;
   margin: 0;
-
   display: flex;
   flex-direction: column;
 }
@@ -254,7 +301,6 @@ body {
 main {
   flex: 1;
 }
-
 
 /* ============================================================
    5. TYPOGRAPHY
@@ -290,9 +336,8 @@ a:hover {
   color: var(--md-primary-dark);
 }
 
-
 /* ============================================================
-   6. FORM ELEMENTS
+   6. FORM ELEMENTS — THEME AWARE
    ============================================================ */
 
 button,
@@ -303,48 +348,81 @@ textarea {
 }
 
 .form-control,
-.form-select {
-  min-height: 44px;
-
-  color: var(--md-text);
-  background-color: var(--md-surface);
-
-  border: 1px solid var(--md-border);
+.form-select,
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+textarea,
+select {
+  color: var(--md-text) !important;
+  background-color: var(--md-input-bg) !important;
+  border: 1px solid var(--md-border) !important;
   border-radius: 9px;
 }
 
-.form-control::placeholder {
-  color: var(--md-muted);
-  opacity: 0.8;
+.form-control,
+.form-select {
+  min-height: 44px;
+}
+
+.form-control::placeholder,
+input::placeholder,
+textarea::placeholder {
+  color: var(--md-muted) !important;
+  opacity: 1;
 }
 
 .form-control:focus,
-.form-select:focus {
-  color: var(--md-text);
-  background-color: var(--md-surface);
-
-  border-color: var(--md-primary);
-
-  box-shadow: 0 0 0 0.2rem
-    rgba(79, 70, 229, 0.13);
+.form-select:focus,
+input:focus,
+textarea:focus,
+select:focus {
+  color: var(--md-text) !important;
+  background-color: var(--md-input-bg) !important;
+  border-color: var(--md-primary) !important;
+  outline: none;
+  box-shadow: 0 0 0 0.2rem rgba(79, 70, 229, 0.13) !important;
 }
 
 :root[data-theme="dark"] .form-control:focus,
-:root[data-theme="dark"] .form-select:focus {
-  box-shadow: 0 0 0 0.2rem
-    rgba(129, 140, 248, 0.18);
+:root[data-theme="dark"] .form-select:focus,
+:root[data-theme="dark"] input:focus,
+:root[data-theme="dark"] textarea:focus,
+:root[data-theme="dark"] select:focus {
+  box-shadow: 0 0 0 0.2rem rgba(129, 140, 248, 0.18) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="system"] .form-control:focus,
+  :root[data-theme="system"] .form-select:focus,
+  :root[data-theme="system"] input:focus,
+  :root[data-theme="system"] textarea:focus,
+  :root[data-theme="system"] select:focus {
+    box-shadow: 0 0 0 0.2rem rgba(129, 140, 248, 0.18) !important;
+  }
+}
+
+.form-control:disabled,
+.form-select:disabled,
+input:disabled,
+textarea:disabled,
+select:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
 }
 
 .form-check-input {
-  background-color: var(--md-surface);
-  border-color: var(--md-border-strong);
+  background-color: var(--md-surface) !important;
+  border-color: var(--md-border-strong) !important;
 }
 
 .form-check-input:checked {
-  background-color: var(--md-primary);
-  border-color: var(--md-primary);
+  background-color: var(--md-primary) !important;
+  border-color: var(--md-primary) !important;
 }
 
+.form-check-input:focus {
+  border-color: var(--md-primary) !important;
+  box-shadow: 0 0 0 0.2rem rgba(79, 70, 229, 0.15) !important;
+}
 
 /* ============================================================
    7. BUTTONS
@@ -367,13 +445,10 @@ button {
 .btn-success {
   --bs-btn-bg: var(--md-primary);
   --bs-btn-border-color: var(--md-primary);
-
   --bs-btn-hover-bg: var(--md-primary-dark);
   --bs-btn-hover-border-color: var(--md-primary-dark);
-
   --bs-btn-active-bg: var(--md-primary-dark);
   --bs-btn-active-border-color: var(--md-primary-dark);
-
   --bs-btn-color: #ffffff;
   --bs-btn-hover-color: #ffffff;
   --bs-btn-active-color: #ffffff;
@@ -383,18 +458,11 @@ button {
 .btn-outline-success {
   --bs-btn-color: var(--md-primary);
   --bs-btn-border-color: var(--md-primary);
-
   --bs-btn-hover-bg: var(--md-primary);
   --bs-btn-hover-border-color: var(--md-primary);
-
   --bs-btn-active-bg: var(--md-primary-dark);
   --bs-btn-active-border-color: var(--md-primary-dark);
 }
-
-.btn:disabled {
-  cursor: not-allowed;
-}
-
 
 /* ============================================================
    8. CARDS AND SURFACES
@@ -403,11 +471,9 @@ button {
 .card {
   color: var(--md-text);
   background-color: var(--md-surface);
-
   border-color: var(--md-border);
   border-radius: var(--md-radius);
-
-  box-shadow: var(--md-shadow);
+  box-shadow: var(--md-card-shadow);
 }
 
 .card-header,
@@ -445,6 +511,25 @@ button {
   border-color: var(--md-border);
 }
 
+/* Theme-aware Bootstrap utility backgrounds */
+
+.bg-white {
+  color: var(--md-text) !important;
+  background-color: var(--md-surface) !important;
+}
+
+.bg-light {
+  color: var(--md-text) !important;
+  background-color: var(--md-surface-secondary) !important;
+}
+
+.text-dark {
+  color: var(--md-text) !important;
+}
+
+.border {
+  border-color: var(--md-border) !important;
+}
 
 /* ============================================================
    9. TABLES
@@ -469,7 +554,6 @@ button {
   border-bottom-color: var(--md-border);
 }
 
-
 /* ============================================================
    10. NAVIGATION
    ============================================================ */
@@ -479,6 +563,11 @@ button {
   border-color: var(--md-border);
 }
 
+.navbar {
+  color: var(--md-text);
+  background-color: var(--md-surface);
+}
+
 .nav-tabs .nav-link {
   color: var(--md-muted);
 }
@@ -486,10 +575,8 @@ button {
 .nav-tabs .nav-link.active {
   color: var(--md-primary);
   background-color: var(--md-surface);
-  border-color: var(--md-border) var(--md-border)
-    var(--md-surface);
+  border-color: var(--md-border) var(--md-border) var(--md-surface);
 }
-
 
 /* ============================================================
    11. ALERTS AND STATUS BADGES
@@ -502,7 +589,6 @@ button {
 .badge {
   font-weight: 600;
 }
-
 
 /* ============================================================
    12. ACCESSIBILITY
@@ -522,7 +608,6 @@ img {
   max-width: 100%;
 }
 
-
 /* ============================================================
    13. RESPONSIVE TYPOGRAPHY
    ============================================================ */
@@ -536,7 +621,6 @@ img {
     line-height: 1.2;
   }
 }
-
 
 /* ============================================================
    14. REDUCED MOTION
