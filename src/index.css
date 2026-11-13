@@ -1,16 +1,18 @@
 /* ============================================================
-   MYDUKA GLOBAL DESIGN SYSTEM
-   Light: Modern Premium
-   Dark: Dark Premium
-   System: Follows device preference
+   MYDUKA — GLOBAL STYLES
+   Theme tokens are controlled by src/styles/theme.css
    ============================================================ */
 
 /* ============================================================
-   1. LIGHT THEME — MODERN PREMIUM
+   1. THEME COMPATIBILITY
+   Maps legacy --md-* variables to central theme.css variables.
+   This allows existing pages to keep working while we update
+   them gradually to use the central design tokens.
    ============================================================ */
 
 :root,
-:root[data-theme="light"] {
+:root[data-theme="light"],
+:root[data-theme="dark"] {
   color-scheme: light;
 
   font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
@@ -19,253 +21,77 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  --md-primary: #4f46e5;
-  --md-primary-dark: #4338ca;
-  --md-primary-light: #eef2ff;
+  --md-primary: var(--primary);
+  --md-primary-dark: var(--primary-hover);
+  --md-primary-light: var(--primary-light);
 
-  --md-accent: #f59e0b;
-  --md-accent-soft: #fef3c7;
+  --md-accent: var(--accent);
+  --md-accent-soft: var(--accent-light, var(--surface-secondary));
 
-  --md-background: #f8fafc;
-  --md-surface: #ffffff;
-  --md-surface-secondary: #f1f5f9;
-  --md-surface-hover: #f8fafc;
-  --md-input-bg: #ffffff;
+  --md-background: var(--background);
+  --md-surface: var(--surface);
+  --md-surface-secondary: var(--surface-secondary);
+  --md-surface-hover: var(--surface-hover);
+  --md-input-bg: var(--input-bg, var(--surface));
 
-  --md-text: #0f172a;
-  --md-heading: #1e1b4b;
-  --md-muted: #64748b;
-  --md-text-muted: #64748b;
-  --md-text-inverse: #ffffff;
+  --md-text: var(--text-primary);
+  --md-heading: var(--text-primary);
+  --md-muted: var(--text-muted);
+  --md-text-muted: var(--text-muted);
+  --md-text-inverse: var(--text-inverse);
 
-  --md-border: #e2e8f0;
-  --md-border-strong: #cbd5e1;
+  --md-border: var(--border);
+  --md-border-strong: var(--border-strong);
 
-  --md-success: #16a34a;
-  --md-success-soft: #dcfce7;
-  --md-danger: #dc2626;
-  --md-danger-soft: #fee2e2;
-  --md-warning: #d97706;
-  --md-warning-soft: #fef3c7;
-  --md-info: #0284c7;
-  --md-info-soft: #e0f2fe;
+  --md-success: var(--success);
+  --md-success-soft: var(--success-light, var(--surface-secondary));
 
-  --md-radius: 14px;
-  --md-radius-lg: 20px;
+  --md-danger: var(--danger);
+  --md-danger-soft: var(--danger-light, var(--surface-secondary));
 
-  --md-shadow: 0 4px 18px rgba(30, 27, 75, 0.06);
-  --md-shadow-hover: 0 12px 28px rgba(30, 27, 75, 0.12);
-  --md-card-shadow: 0 4px 18px rgba(30, 27, 75, 0.06);
+  --md-warning: var(--warning);
+  --md-warning-soft: var(--warning-light, var(--surface-secondary));
 
-  --bs-primary: #4f46e5;
-  --bs-primary-rgb: 79, 70, 229;
+  --md-info: var(--info);
+  --md-info-soft: var(--info-light, var(--surface-secondary));
 
-  --bs-success: #16a34a;
-  --bs-success-rgb: 22, 163, 74;
+  --md-radius: var(--radius-md, 14px);
+  --md-radius-lg: var(--radius-lg, 20px);
 
-  --bs-link-color: #4f46e5;
-  --bs-link-color-rgb: 79, 70, 229;
-  --bs-link-hover-color: #4338ca;
+  --md-shadow: var(--shadow-md);
+  --md-shadow-hover: var(--shadow-lg);
+  --md-card-shadow: var(--shadow-md);
 
-  --bs-body-color: #0f172a;
-  --bs-body-bg: #f8fafc;
-  --bs-secondary-color: #64748b;
-  --bs-tertiary-bg: #f1f5f9;
+  --bs-primary: var(--primary);
+  --bs-primary-rgb: var(--primary-rgb);
 
-  --bs-border-color: #e2e8f0;
-  --bs-border-radius: 0.6rem;
-  --bs-focus-ring-color: rgba(79, 70, 229, 0.25);
+  --bs-success: var(--success);
+
+  --bs-link-color: var(--primary);
+  --bs-link-hover-color: var(--primary-hover);
+
+  --bs-body-color: var(--text-primary);
+  --bs-body-bg: var(--background);
+  --bs-secondary-color: var(--text-muted);
+  --bs-tertiary-bg: var(--surface-secondary);
+
+  --bs-border-color: var(--border);
+  --bs-border-radius: 0.65rem;
 }
 
-/* ============================================================
-   2. DARK THEME — DARK PREMIUM
-   ============================================================ */
+/* Dark mode Bootstrap compatibility */
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-
-  --md-primary: #818cf8;
-  --md-primary-dark: #6366f1;
-  --md-primary-light: #312e81;
-
-  --md-accent: #fbbf24;
-  --md-accent-soft: #422006;
-
-  --md-background: #0b1120;
-  --md-surface: #111827;
-  --md-surface-secondary: #1e293b;
-  --md-surface-hover: #263449;
-  --md-input-bg: #1e293b;
-
-  --md-text: #e2e8f0;
-  --md-heading: #f1f5f9;
-  --md-muted: #94a3b8;
-  --md-text-muted: #94a3b8;
-  --md-text-inverse: #ffffff;
-
-  --md-border: #334155;
-  --md-border-strong: #475569;
-
-  --md-success: #4ade80;
-  --md-success-soft: #14532d;
-  --md-danger: #f87171;
-  --md-danger-soft: #7f1d1d;
-  --md-warning: #fbbf24;
-  --md-warning-soft: #78350f;
-  --md-info: #38bdf8;
-  --md-info-soft: #0c4a6e;
-
-  --md-shadow: 0 4px 18px rgba(0, 0, 0, 0.20);
-  --md-shadow-hover: 0 12px 28px rgba(0, 0, 0, 0.35);
-  --md-card-shadow: 0 4px 18px rgba(0, 0, 0, 0.20);
-
-  --bs-primary: #818cf8;
-  --bs-primary-rgb: 129, 140, 248;
-
-  --bs-success: #4ade80;
-  --bs-success-rgb: 74, 222, 128;
-
-  --bs-link-color: #a5b4fc;
-  --bs-link-color-rgb: 165, 180, 252;
-  --bs-link-hover-color: #c7d2fe;
-
-  --bs-body-color: #e2e8f0;
-  --bs-body-bg: #0b1120;
-  --bs-secondary-color: #94a3b8;
-  --bs-tertiary-bg: #1e293b;
-
-  --bs-border-color: #334155;
-  --bs-focus-ring-color: rgba(129, 140, 248, 0.3);
 }
 
 /* ============================================================
-   3. SYSTEM THEME — LIGHT DEFAULT
+   2. GLOBAL FOUNDATION
    ============================================================ */
 
-:root[data-theme="system"] {
-  color-scheme: light;
-
-  --md-primary: #4f46e5;
-  --md-primary-dark: #4338ca;
-  --md-primary-light: #eef2ff;
-
-  --md-accent: #f59e0b;
-  --md-accent-soft: #fef3c7;
-
-  --md-background: #f8fafc;
-  --md-surface: #ffffff;
-  --md-surface-secondary: #f1f5f9;
-  --md-surface-hover: #f8fafc;
-  --md-input-bg: #ffffff;
-
-  --md-text: #0f172a;
-  --md-heading: #1e1b4b;
-  --md-muted: #64748b;
-  --md-text-muted: #64748b;
-  --md-text-inverse: #ffffff;
-
-  --md-border: #e2e8f0;
-  --md-border-strong: #cbd5e1;
-
-  --md-success: #16a34a;
-  --md-success-soft: #dcfce7;
-  --md-danger: #dc2626;
-  --md-danger-soft: #fee2e2;
-  --md-warning: #d97706;
-  --md-warning-soft: #fef3c7;
-  --md-info: #0284c7;
-  --md-info-soft: #e0f2fe;
-
-  --md-shadow: 0 4px 18px rgba(30, 27, 75, 0.06);
-  --md-shadow-hover: 0 12px 28px rgba(30, 27, 75, 0.12);
-  --md-card-shadow: 0 4px 18px rgba(30, 27, 75, 0.06);
-
-  --bs-primary: #4f46e5;
-  --bs-primary-rgb: 79, 70, 229;
-
-  --bs-success: #16a34a;
-  --bs-success-rgb: 22, 163, 74;
-
-  --bs-link-color: #4f46e5;
-  --bs-link-color-rgb: 79, 70, 229;
-  --bs-link-hover-color: #4338ca;
-
-  --bs-body-color: #0f172a;
-  --bs-body-bg: #f8fafc;
-  --bs-secondary-color: #64748b;
-  --bs-tertiary-bg: #f1f5f9;
-
-  --bs-border-color: #e2e8f0;
-  --bs-border-radius: 0.6rem;
-  --bs-focus-ring-color: rgba(79, 70, 229, 0.25);
-}
-
-/* System dark preference */
-
-@media (prefers-color-scheme: dark) {
-  :root[data-theme="system"] {
-    color-scheme: dark;
-
-    --md-primary: #818cf8;
-    --md-primary-dark: #6366f1;
-    --md-primary-light: #312e81;
-
-    --md-accent: #fbbf24;
-    --md-accent-soft: #422006;
-
-    --md-background: #0b1120;
-    --md-surface: #111827;
-    --md-surface-secondary: #1e293b;
-    --md-surface-hover: #263449;
-    --md-input-bg: #1e293b;
-
-    --md-text: #e2e8f0;
-    --md-heading: #f1f5f9;
-    --md-muted: #94a3b8;
-    --md-text-muted: #94a3b8;
-    --md-text-inverse: #ffffff;
-
-    --md-border: #334155;
-    --md-border-strong: #475569;
-
-    --md-success: #4ade80;
-    --md-success-soft: #14532d;
-    --md-danger: #f87171;
-    --md-danger-soft: #7f1d1d;
-    --md-warning: #fbbf24;
-    --md-warning-soft: #78350f;
-    --md-info: #38bdf8;
-    --md-info-soft: #0c4a6e;
-
-    --md-shadow: 0 4px 18px rgba(0, 0, 0, 0.20);
-    --md-shadow-hover: 0 12px 28px rgba(0, 0, 0, 0.35);
-    --md-card-shadow: 0 4px 18px rgba(0, 0, 0, 0.20);
-
-    --bs-primary: #818cf8;
-    --bs-primary-rgb: 129, 140, 248;
-
-    --bs-success: #4ade80;
-    --bs-success-rgb: 74, 222, 128;
-
-    --bs-link-color: #a5b4fc;
-    --bs-link-color-rgb: 165, 180, 252;
-    --bs-link-hover-color: #c7d2fe;
-
-    --bs-body-color: #e2e8f0;
-    --bs-body-bg: #0b1120;
-    --bs-secondary-color: #94a3b8;
-    --bs-tertiary-bg: #1e293b;
-
-    --bs-border-color: #334155;
-    --bs-focus-ring-color: rgba(129, 140, 248, 0.3);
-  }
-}
-
-/* ============================================================
-   4. GLOBAL FOUNDATION
-   ============================================================ */
-
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
@@ -284,16 +110,19 @@ body {
   font-size: 16px;
   line-height: 1.6;
 
-  color: var(--md-text);
-  background-color: var(--md-background);
+  color: var(--text-primary);
+  background-color: var(--background);
 
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
 
 #root {
   width: 100%;
   min-height: 100vh;
   margin: 0;
+
   display: flex;
   flex-direction: column;
 }
@@ -302,8 +131,19 @@ main {
   flex: 1;
 }
 
+img {
+  max-width: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
 /* ============================================================
-   5. TYPOGRAPHY
+   3. TYPOGRAPHY
    ============================================================ */
 
 h1,
@@ -312,7 +152,7 @@ h3,
 h4,
 h5,
 h6 {
-  color: var(--md-heading);
+  color: var(--text-primary);
   font-weight: 650;
   line-height: 1.3;
 }
@@ -323,39 +163,39 @@ p {
 
 small,
 .text-muted {
-  color: var(--md-muted) !important;
+  color: var(--text-muted) !important;
 }
 
 a {
-  color: var(--md-primary);
+  color: var(--primary);
   text-decoration: none;
+
   transition: color 0.2s ease;
 }
 
 a:hover {
-  color: var(--md-primary-dark);
+  color: var(--primary-hover);
 }
 
 /* ============================================================
-   6. FORM ELEMENTS — THEME AWARE
+   4. FORM ELEMENTS
    ============================================================ */
-
-button,
-input,
-select,
-textarea {
-  font: inherit;
-}
 
 .form-control,
 .form-select,
 input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
 textarea,
 select {
-  color: var(--md-text) !important;
-  background-color: var(--md-input-bg) !important;
-  border: 1px solid var(--md-border) !important;
+  color: var(--text-primary) !important;
+  background-color: var(--input-bg, var(--surface)) !important;
+
+  border: 1px solid var(--border) !important;
   border-radius: 9px;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
 }
 
 .form-control,
@@ -366,7 +206,7 @@ select {
 .form-control::placeholder,
 input::placeholder,
 textarea::placeholder {
-  color: var(--md-muted) !important;
+  color: var(--text-muted) !important;
   opacity: 1;
 }
 
@@ -375,29 +215,13 @@ textarea::placeholder {
 input:focus,
 textarea:focus,
 select:focus {
-  color: var(--md-text) !important;
-  background-color: var(--md-input-bg) !important;
-  border-color: var(--md-primary) !important;
+  color: var(--text-primary) !important;
+  background-color: var(--input-bg, var(--surface)) !important;
+
+  border-color: var(--primary) !important;
   outline: none;
-  box-shadow: 0 0 0 0.2rem rgba(79, 70, 229, 0.13) !important;
-}
 
-:root[data-theme="dark"] .form-control:focus,
-:root[data-theme="dark"] .form-select:focus,
-:root[data-theme="dark"] input:focus,
-:root[data-theme="dark"] textarea:focus,
-:root[data-theme="dark"] select:focus {
-  box-shadow: 0 0 0 0.2rem rgba(129, 140, 248, 0.18) !important;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root[data-theme="system"] .form-control:focus,
-  :root[data-theme="system"] .form-select:focus,
-  :root[data-theme="system"] input:focus,
-  :root[data-theme="system"] textarea:focus,
-  :root[data-theme="system"] select:focus {
-    box-shadow: 0 0 0 0.2rem rgba(129, 140, 248, 0.18) !important;
-  }
+  box-shadow: 0 0 0 0.2rem var(--focus-ring, rgba(79, 70, 229, 0.15)) !important;
 }
 
 .form-control:disabled,
@@ -410,22 +234,22 @@ select:disabled {
 }
 
 .form-check-input {
-  background-color: var(--md-surface) !important;
-  border-color: var(--md-border-strong) !important;
+  background-color: var(--surface) !important;
+  border-color: var(--border-strong) !important;
 }
 
 .form-check-input:checked {
-  background-color: var(--md-primary) !important;
-  border-color: var(--md-primary) !important;
+  background-color: var(--primary) !important;
+  border-color: var(--primary) !important;
 }
 
 .form-check-input:focus {
-  border-color: var(--md-primary) !important;
-  box-shadow: 0 0 0 0.2rem rgba(79, 70, 229, 0.15) !important;
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 0.2rem var(--focus-ring, rgba(79, 70, 229, 0.15)) !important;
 }
 
 /* ============================================================
-   7. BUTTONS
+   5. BUTTONS
    ============================================================ */
 
 button {
@@ -443,12 +267,15 @@ button {
 
 .btn-primary,
 .btn-success {
-  --bs-btn-bg: var(--md-primary);
-  --bs-btn-border-color: var(--md-primary);
-  --bs-btn-hover-bg: var(--md-primary-dark);
-  --bs-btn-hover-border-color: var(--md-primary-dark);
-  --bs-btn-active-bg: var(--md-primary-dark);
-  --bs-btn-active-border-color: var(--md-primary-dark);
+  --bs-btn-bg: var(--primary);
+  --bs-btn-border-color: var(--primary);
+
+  --bs-btn-hover-bg: var(--primary-hover);
+  --bs-btn-hover-border-color: var(--primary-hover);
+
+  --bs-btn-active-bg: var(--primary-hover);
+  --bs-btn-active-border-color: var(--primary-hover);
+
   --bs-btn-color: #ffffff;
   --bs-btn-hover-color: #ffffff;
   --bs-btn-active-color: #ffffff;
@@ -456,134 +283,159 @@ button {
 
 .btn-outline-primary,
 .btn-outline-success {
-  --bs-btn-color: var(--md-primary);
-  --bs-btn-border-color: var(--md-primary);
-  --bs-btn-hover-bg: var(--md-primary);
-  --bs-btn-hover-border-color: var(--md-primary);
-  --bs-btn-active-bg: var(--md-primary-dark);
-  --bs-btn-active-border-color: var(--md-primary-dark);
+  --bs-btn-color: var(--primary);
+  --bs-btn-border-color: var(--primary);
+
+  --bs-btn-hover-bg: var(--primary);
+  --bs-btn-hover-border-color: var(--primary);
+
+  --bs-btn-active-bg: var(--primary-hover);
+  --bs-btn-active-border-color: var(--primary-hover);
+}
+
+.btn:disabled {
+  cursor: not-allowed;
 }
 
 /* ============================================================
-   8. CARDS AND SURFACES
+   6. CARDS AND SURFACES
    ============================================================ */
 
 .card {
-  color: var(--md-text);
-  background-color: var(--md-surface);
-  border-color: var(--md-border);
-  border-radius: var(--md-radius);
-  box-shadow: var(--md-card-shadow);
+  color: var(--text-primary);
+  background-color: var(--surface);
+
+  border-color: var(--border);
+  border-radius: var(--radius-md, 14px);
+
+  box-shadow: var(--shadow-md);
 }
 
 .card-header,
 .card-footer {
-  color: var(--md-text);
-  background-color: var(--md-surface-secondary);
-  border-color: var(--md-border);
+  color: var(--text-primary);
+  background-color: var(--surface-secondary);
+
+  border-color: var(--border);
 }
 
 .dropdown-menu {
-  color: var(--md-text);
-  background-color: var(--md-surface);
-  border-color: var(--md-border);
-  box-shadow: var(--md-shadow);
+  color: var(--text-primary);
+  background-color: var(--surface);
+
+  border-color: var(--border);
+  box-shadow: var(--shadow-md);
 }
 
 .dropdown-item {
-  color: var(--md-text);
+  color: var(--text-primary);
 }
 
 .dropdown-item:hover,
 .dropdown-item:focus {
-  color: var(--md-text);
-  background-color: var(--md-surface-secondary);
+  color: var(--text-primary);
+  background-color: var(--surface-hover);
 }
 
 .modal-content {
-  color: var(--md-text);
-  background-color: var(--md-surface);
-  border-color: var(--md-border);
+  color: var(--text-primary);
+  background-color: var(--surface);
+
+  border-color: var(--border);
+  border-radius: var(--radius-lg, 20px);
 }
 
 .modal-header,
 .modal-footer {
-  border-color: var(--md-border);
+  border-color: var(--border);
 }
 
-/* Theme-aware Bootstrap utility backgrounds */
+/* Bootstrap utility compatibility */
 
 .bg-white {
-  color: var(--md-text) !important;
-  background-color: var(--md-surface) !important;
+  color: var(--text-primary) !important;
+  background-color: var(--surface) !important;
 }
 
 .bg-light {
-  color: var(--md-text) !important;
-  background-color: var(--md-surface-secondary) !important;
+  color: var(--text-primary) !important;
+  background-color: var(--surface-secondary) !important;
 }
 
 .text-dark {
-  color: var(--md-text) !important;
+  color: var(--text-primary) !important;
 }
 
 .border {
-  border-color: var(--md-border) !important;
+  border-color: var(--border) !important;
 }
 
 /* ============================================================
-   9. TABLES
+   7. TABLES
    ============================================================ */
 
 .table {
-  --bs-table-color: var(--md-text);
-  --bs-table-bg: var(--md-surface);
-  --bs-table-border-color: var(--md-border);
-  --bs-table-striped-bg: var(--md-surface-secondary);
-  --bs-table-striped-color: var(--md-text);
-  --bs-table-hover-bg: var(--md-surface-hover);
-  --bs-table-hover-color: var(--md-text);
+  --bs-table-color: var(--text-primary);
+  --bs-table-bg: var(--surface);
 
-  color: var(--md-text);
-  border-color: var(--md-border);
+  --bs-table-border-color: var(--border);
+
+  --bs-table-striped-bg: var(--surface-secondary);
+  --bs-table-striped-color: var(--text-primary);
+
+  --bs-table-hover-bg: var(--surface-hover);
+  --bs-table-hover-color: var(--text-primary);
+
+  color: var(--text-primary);
+  border-color: var(--border);
 }
 
 .table > :not(caption) > * > * {
-  color: var(--md-text);
+  color: var(--text-primary);
   background-color: var(--bs-table-bg);
-  border-bottom-color: var(--md-border);
+
+  border-bottom-color: var(--border);
+}
+
+.table thead th {
+  color: var(--text-secondary, var(--text-primary));
+  font-weight: 650;
 }
 
 /* ============================================================
-   10. NAVIGATION
+   8. NAVIGATION
    ============================================================ */
 
 .navbar,
 .nav-tabs {
-  border-color: var(--md-border);
+  border-color: var(--border);
 }
 
 .navbar {
-  color: var(--md-text);
-  background-color: var(--md-surface);
+  color: var(--text-primary);
+  background-color: var(--surface);
 }
 
 .nav-tabs .nav-link {
-  color: var(--md-muted);
+  color: var(--text-muted);
 }
 
 .nav-tabs .nav-link.active {
-  color: var(--md-primary);
-  background-color: var(--md-surface);
-  border-color: var(--md-border) var(--md-border) var(--md-surface);
+  color: var(--primary);
+  background-color: var(--surface);
+
+  border-color:
+    var(--border)
+    var(--border)
+    var(--surface);
 }
 
 /* ============================================================
-   11. ALERTS AND STATUS BADGES
+   9. ALERTS AND STATUS BADGES
    ============================================================ */
 
 .alert {
-  border-radius: var(--md-radius);
+  border-radius: var(--radius-md, 14px);
 }
 
 .badge {
@@ -591,25 +443,21 @@ button {
 }
 
 /* ============================================================
-   12. ACCESSIBILITY
+   10. ACCESSIBILITY
    ============================================================ */
 
 ::selection {
   color: #ffffff;
-  background-color: var(--md-primary);
+  background-color: var(--primary);
 }
 
 :focus-visible {
-  outline: 3px solid rgba(79, 70, 229, 0.45);
+  outline: 3px solid var(--focus-ring, rgba(79, 70, 229, 0.45));
   outline-offset: 3px;
 }
 
-img {
-  max-width: 100%;
-}
-
 /* ============================================================
-   13. RESPONSIVE TYPOGRAPHY
+   11. RESPONSIVE TYPOGRAPHY
    ============================================================ */
 
 @media (max-width: 768px) {
@@ -623,7 +471,7 @@ img {
 }
 
 /* ============================================================
-   14. REDUCED MOTION
+   12. REDUCED MOTION
    ============================================================ */
 
 @media (prefers-reduced-motion: reduce) {
