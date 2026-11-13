@@ -1,8 +1,8 @@
+```python
 import os
 import logging
 
-from flask import Flask, jsonify
-from flask_cors import CORS
+from flask import Flask, jsonify, request, make_response
 from dotenv import load_dotenv
 
 from sqlalchemy import text
@@ -39,8 +39,7 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 
 if not DATABASE_URL:
     raise RuntimeError(
-        "DATABASE_URL is missing. "
-        "Configure it in backend/.env or Vercel environment variables."
+        "DATABASE_URL is missing."
     )
 
 if DATABASE_URL.startswith("postgres://"):
@@ -86,49 +85,78 @@ app.config.update(
 # CORS CONFIGURATION
 # ============================================================
 
-allowed_origins = {
+ALLOWED_ORIGINS = {
     "https://myduka-zeta.vercel.app",
     "http://localhost:5173"
 }
 
-# Allow additional explicitly configured frontend origins.
 configured_origins = os.getenv("CORS_ORIGINS", "")
 
 for origin in configured_origins.split(","):
     origin = origin.strip().rstrip("/")
-
     if origin:
-        allowed_origins.add(origin)
+        ALLOWED_ORIGINS.add(origin)
 
-CORS(
-    app,
 
-    resources={
-        r"/api/*": {
-            "origins": list(allowed_origins),
-            "methods": [
-                "GET",
-                "POST",
-                "PUT",
-                "PATCH",
-                "DELETE",
-                "OPTIONS"
-            ],
-            "allow_headers": [
-                "Content-Type",
-                "Authorization",
-                "X-Business-ID"
-            ],
-            "expose_headers": [
-                "Content-Type"
-            ],
-            "supports_credentials": False,
-            "max_age": 600
-        }
-    },
-
-    always_send=True
+ALLOWED_METHODS = (
+    "GET, POST, PUT, PATCH, DELETE, OPTIONS"
 )
+
+ALLOWED_HEADERS = (
+    "Authorization, Content-Type, X-Business-ID"
+)
+
+
+# ============================================================
+# HANDLE PREFLIGHT BEFORE API ROUTES
+# ============================================================
+
+@app.before_request
+def handle_preflight():
+
+    if request.method == "OPTIONS" and request.path.startswith("/api/"):
+
+        origin = request.headers.get("Origin", "")
+
+        logger.info(
+            "CORS PREFLIGHT: origin=%s path=%s",
+            origin,
+            request.path
+        )
+
+        response = make_response("", 204)
+
+        return response
+
+    return None
+
+
+# ============================================================
+# ADD CORS HEADERS TO RESPONSES
+# ============================================================
+
+@app.after_request
+def add_cors_headers(response):
+
+    origin = request.headers.get("Origin", "")
+
+    if origin in ALLOWED_ORIGINS:
+
+        response.headers["Access-Control-Allow-Origin"] = origin
+
+        response.headers["Access-Control-Allow-Methods"] = (
+            ALLOWED_METHODS
+        )
+
+        response.headers["Access-Control-Allow-Headers"] = (
+            ALLOWED_HEADERS
+        )
+
+        response.headers["Access-Control-Max-Age"] = "600"
+
+        response.headers.add("Vary", "Origin")
+
+    return response
 
 
 # ============================================================
@@ -225,8 +253,9 @@ def not_found(error):
 @app.errorhandler(500)
 def internal_server_error(error):
 
-    logger.exception(
-        "Unexpected internal server error."
+    logger.error(
+        "Unexpected internal server error: %s",
+        error
     )
 
     return jsonify({
@@ -249,3 +278,4 @@ if __name__ == "__main__":
             "false"
         ).lower() == "true"
     )
+```
