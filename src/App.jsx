@@ -1,4 +1,4 @@
-import { Routes, Route, useLocation } from "react-router-dom";
+import { Routes, Route, useLocation, Navigate } from "react-router-dom";
 
 // Business registration
 import BusinessRegister from "./pages/BusinessRegister";
@@ -56,15 +56,20 @@ function App() {
   const location = useLocation();
   const pathname = location.pathname;
 
+  // Authentication pages
   const isAdminLogin = pathname === "/admin-login";
   const isCashierLogin = pathname === "/cashier-login";
   const isBusinessRegister = pathname === "/business-register";
 
+  // Admin section
   const isAdminPage =
     pathname === "/admin" ||
     pathname.startsWith("/admin/");
 
-  const isCashierPage = pathname.startsWith("/cashier/");
+  // Cashier section, including login
+  const isCashierPage =
+    pathname === "/cashier-login" ||
+    pathname.startsWith("/cashier/");
 
   // MyDuka business context
   const hasBusinessContext = Boolean(
@@ -73,7 +78,9 @@ function App() {
 
   // Navigation visibility
   const showAdminNavbar =
-    isAdminPage && hasBusinessContext && !isAdminLogin;
+    isAdminPage &&
+    hasBusinessContext &&
+    !isAdminLogin;
 
   const showCustomerNavbar =
     !isAdminLogin &&
@@ -84,7 +91,7 @@ function App() {
 
   return (
     <>
-      {/* Navigation */}
+      {/* NAVIGATION */}
       {showAdminNavbar ? (
         <AdminNavbar />
       ) : isCashierPage ? (
@@ -94,11 +101,21 @@ function App() {
       ) : null}
 
       <Routes>
-        {/* CUSTOMER ROUTES */}
+        {/* =========================================
+            CUSTOMER STOREFRONT
+        ========================================= */}
+
         <Route path="/" element={<Home />} />
+
         <Route path="/products" element={<Products />} />
-        <Route path="/products/:id" element={<ProductDetails />} />
+
+        <Route
+          path="/products/:id"
+          element={<ProductDetails />}
+        />
+
         <Route path="/cart" element={<Cart />} />
+
         <Route path="/checkout" element={<Checkout />} />
 
         <Route
@@ -106,11 +123,22 @@ function App() {
           element={<OrderConfirmation />}
         />
 
-        <Route path="/backend-test" element={<BackendTest />} />
-        <Route path="/ask-support" element={<AskSupport />} />
+        <Route
+          path="/backend-test"
+          element={<BackendTest />}
+        />
 
-        {/* CUSTOMER AUTHENTICATION */}
+        <Route
+          path="/ask-support"
+          element={<AskSupport />}
+        />
+
+        {/* =========================================
+            CUSTOMER AUTHENTICATION
+        ========================================= */}
+
         <Route path="/login" element={<Login />} />
+
         <Route path="/register" element={<Register />} />
 
         <Route
@@ -123,7 +151,10 @@ function App() {
           element={<ResetPassword />}
         />
 
-        {/* BUSINESS OWNER AUTHENTICATION */}
+        {/* =========================================
+            BUSINESS OWNER AUTHENTICATION
+        ========================================= */}
+
         <Route
           path="/admin-login"
           element={<AdminLogin />}
@@ -134,9 +165,15 @@ function App() {
           element={<BusinessRegister />}
         />
 
-        {/* PROTECTED ADMIN ROUTES */}
+        {/* =========================================
+            PROTECTED ADMIN / BUSINESS OWNER ROUTES
+        ========================================= */}
+
         <Route element={<AdminProtectedRoute />}>
-          <Route path="/admin" element={<AdminDashboard />} />
+          <Route
+            path="/admin"
+            element={<AdminDashboard />}
+          />
 
           <Route
             path="/admin/orders/:id"
@@ -204,13 +241,19 @@ function App() {
           />
         </Route>
 
-        {/* CASHIER LOGIN */}
+        {/* =========================================
+            CASHIER LOGIN
+        ========================================= */}
+
         <Route
           path="/cashier-login"
           element={<CashierLogin />}
         />
 
-        {/* PROTECTED CASHIER ROUTES */}
+        {/* =========================================
+            PROTECTED CASHIER ROUTES
+        ========================================= */}
+
         <Route element={<CashierProtectedRoute />}>
           <Route
             path="/cashier/pos"
@@ -242,6 +285,15 @@ function App() {
             element={<CashierStock />}
           />
         </Route>
+
+        {/* =========================================
+            FALLBACK
+        ========================================= */}
+
+        <Route
+          path="*"
+          element={<Navigate to="/" replace />}
+        />
       </Routes>
     </>
   );
