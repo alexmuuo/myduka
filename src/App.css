@@ -2326,3 +2326,262 @@ animation-duration: 0.01ms !important;
   .hm-support-composer-footer button { gap: 7px; padding: 0 11px; }
 }
 
+/* =========================================================
+   MYDUKA — THEME OVERRIDES
+   Modern Premium Light + Dark Premium
+========================================================= */
+
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+
+  --md-primary: #4f46e5;
+  --md-primary-hover: #4338ca;
+  --md-primary-light: #eef2ff;
+
+  --md-background: #f8fafc;
+  --md-surface: #ffffff;
+  --md-surface-secondary: #f1f5f9;
+
+  --md-text: #0f172a;
+  --md-text-secondary: #64748b;
+  --md-border: #e2e8f0;
+
+  --md-input-bg: #ffffff;
+  --md-input-text: #0f172a;
+  --md-placeholder: #94a3b8;
+
+  --md-radius: 14px;
+  --md-shadow: 0 4px 18px rgba(15, 23, 42, 0.05);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --md-primary: #818cf8;
+  --md-primary-hover: #a5b4fc;
+  --md-primary-light: #272554;
+
+  --md-background: #0b1120;
+  --md-surface: #151e30;
+  --md-surface-secondary: #1e293b;
+
+  --md-text: #f1f5f9;
+  --md-text-secondary: #a3afc2;
+  --md-border: #334155;
+
+  --md-input-bg: #ffffff;
+  --md-input-text: #0f172a;
+  --md-placeholder: #94a3b8;
+
+  --md-radius: 14px;
+  --md-shadow: 0 4px 18px rgba(0, 0, 0, 0.2);
+}
+
+/* Automatic system appearance */
+@media (prefers-color-scheme: dark) {
+  [data-theme="system"] {
+    color-scheme: dark;
+
+    --md-primary: #818cf8;
+    --md-primary-hover: #a5b4fc;
+    --md-primary-light: #272554;
+
+    --md-background: #0b1120;
+    --md-surface: #151e30;
+    --md-surface-secondary: #1e293b;
+
+    --md-text: #f1f5f9;
+    --md-text-secondary: #a3afc2;
+    --md-border: #334155;
+
+    --md-input-bg: #ffffff;
+    --md-input-text: #0f172a;
+    --md-placeholder: #94a3b8;
+  }
+}
+
+/* Main application background */
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  background: var(--md-background);
+  color: var(--md-text);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Dashboard surfaces */
+.card,
+.dropdown-menu,
+.modal-content,
+.offcanvas,
+.list-group-item {
+  color: var(--md-text);
+  background-color: var(--md-surface);
+  border-color: var(--md-border);
+}
+
+.card-header,
+.card-footer {
+  color: var(--md-text);
+  background-color: var(--md-surface-secondary);
+  border-color: var(--md-border);
+}
+
+.card-body {
+  color: var(--md-text);
+}
+
+/* Headings and normal text */
+h1, h2, h3, h4, h5, h6,
+p, label, span {
+  /* Do not globally override component-specific colours. */
+}
+
+.text-dark {
+  color: var(--md-text) !important;
+}
+
+.text-muted {
+  color: var(--md-text-secondary) !important;
+}
+
+/* INPUTS — WHITE IN BOTH THEMES */
+.form-control,
+.form-select,
+.form-control:focus,
+.form-select:focus,
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+textarea,
+select {
+  color: var(--md-input-text);
+  background-color: var(--md-input-bg);
+  border-color: #dbe2ea;
+}
+
+.form-control::placeholder,
+textarea::placeholder,
+input::placeholder {
+  color: var(--md-placeholder);
+  opacity: 1;
+}
+
+.form-label {
+  color: var(--md-text);
+  font-weight: 600;
+}
+
+.form-control:focus,
+.form-select:focus,
+textarea:focus,
+input:focus {
+  border-color: var(--md-primary);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.13);
+  outline: none;
+}
+
+/* Browser autofill should not introduce brown/yellow backgrounds */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-text-fill-color: #0f172a;
+  box-shadow: 0 0 0 1000px #ffffff inset;
+}
+
+/* Buttons */
+.btn-primary {
+  --bs-btn-bg: var(--md-primary);
+  --bs-btn-border-color: var(--md-primary);
+  --bs-btn-hover-bg: var(--md-primary-hover);
+  --bs-btn-hover-border-color: var(--md-primary-hover);
+}
+
+/* Tables */
+.table {
+  --bs-table-color: var(--md-text);
+  --bs-table-bg: var(--md-surface);
+  --bs-table-border-color: var(--md-border);
+  color: var(--md-text);
+}
+
+.table thead th {
+  color: var(--md-text-secondary);
+  background: var(--md-surface-secondary);
+  border-color: var(--md-border);
+}
+
+.table tbody td {
+  color: var(--md-text);
+  background: var(--md-surface);
+  border-color: var(--md-border);
+}
+
+/* Dropdowns */
+.dropdown-menu {
+  color: var(--md-text);
+  background: var(--md-surface);
+  border-color: var(--md-border);
+}
+
+.dropdown-item {
+  color: var(--md-text);
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+  color: var(--md-text);
+  background: var(--md-surface-secondary);
+}
+
+/* Dashboard navigation */
+.navbar {
+  background-color: var(--md-surface);
+  border-color: var(--md-border);
+}
+
+.navbar .navbar-brand,
+.navbar .nav-link {
+  color: var(--md-text);
+}
+
+/* Links */
+a {
+  transition: color 0.2s ease;
+}
+
+/* Dark mode Bootstrap adjustments */
+[data-theme="dark"] .bg-white {
+  background-color: var(--md-surface) !important;
+}
+
+[data-theme="dark"] .bg-light {
+  background-color: var(--md-surface-secondary) !important;
+}
+
+[data-theme="dark"] .border {
+  border-color: var(--md-border) !important;
+}
+
+[data-theme="dark"] .text-secondary {
+  color: var(--md-text-secondary) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-theme="system"] .bg-white {
+    background-color: var(--md-surface) !important;
+  }
+
+  [data-theme="system"] .bg-light {
+    background-color: var(--md-surface-secondary) !important;
+  }
+
+  [data-theme="system"] .border {
+    border-color: var(--md-border) !important;
+  }
+}
