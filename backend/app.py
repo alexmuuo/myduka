@@ -11,6 +11,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from extensions import db
 from routes.business_routes import business_bp
+from routes.superadmin_routes import superadmin_bp
 
 
 
@@ -128,7 +129,7 @@ CORS(
 
 db.init_app(app)
 app.register_blueprint(business_bp)
-
+app.register_blueprint(superadmin_bp)
 # ==================================================
 # APPLICATION INFORMATION
 # ==================================================
