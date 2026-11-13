@@ -1,3 +1,4 @@
+```python
 import os
 import logging
 from functools import wraps
@@ -20,7 +21,6 @@ logger = logging.getLogger("myduka.auth")
 # ============================================================
 
 def get_supabase_config():
-
     return (
         os.getenv("SUPABASE_URL", "").rstrip("/"),
         os.getenv("SUPABASE_ANON_KEY", "")
@@ -36,80 +36,64 @@ def verify_supabase_token(token):
     supabase_url, anon_key = get_supabase_config()
 
     if not supabase_url or not anon_key:
-
-        logger.error(
-            "SUPABASE_URL or SUPABASE_ANON_KEY is missing."
-        )
-
+        logger.error("Supabase configuration is missing.")
         return None
 
+    # Construct the exact Supabase Auth endpoint.
+    auth_url = f"{supabase_url}/auth/v1/user"
+
+    logger.info("SUPABASE AUTH REQUEST URL: %s", auth_url)
+
     try:
-
         response = requests.get(
-            f"{supabase_url}/auth/v1/user",
-
+            auth_url,
             headers={
                 "apikey": anon_key,
                 "Authorization": f"Bearer {token}",
                 "Accept": "application/json"
             },
-
-            timeout=15
+            timeout=15,
+            allow_redirects=False
         )
 
-        # ----------------------------------------------------
-        # HANDLE SUPABASE AUTHENTICATION ERRORS
-        # ----------------------------------------------------
+        logger.info(
+            "SUPABASE AUTH RESPONSE: status=%s url=%s",
+            response.status_code,
+            response.url
+        )
 
         if response.status_code != 200:
-
             logger.error(
-                "Supabase token verification failed. "
+                "Supabase authentication rejected. "
                 "HTTP Status: %s | Response: %s",
                 response.status_code,
-                response.text[:500]
+                response.text[:1000]
             )
-
             return None
-
-        # ----------------------------------------------------
-        # READ VERIFIED USER
-        # ----------------------------------------------------
 
         user = response.json()
 
         if not isinstance(user, dict) or not user.get("id"):
-
-            logger.error(
-                "Supabase returned an invalid user response."
-            )
-
+            logger.error("Supabase returned an invalid user response.")
             return None
+
+        logger.info(
+            "Supabase user verified successfully: %s",
+            user.get("id")
+        )
 
         return user
 
     except requests.Timeout:
-
-        logger.error(
-            "Supabase authentication request timed out."
-        )
-
+        logger.error("Supabase authentication request timed out.")
         return None
 
     except requests.RequestException:
-
-        logger.exception(
-            "Supabase authentication request failed."
-        )
-
+        logger.exception("Supabase authentication request failed.")
         return None
 
     except ValueError:
-
-        logger.exception(
-            "Unable to decode Supabase authentication response."
-        )
-
+        logger.exception("Unable to decode Supabase response.")
         return None
 
 
@@ -122,16 +106,9 @@ def supabase_auth_required(function):
     @wraps(function)
     def decorated(*args, **kwargs):
 
-        authorization = request.headers.get(
-            "Authorization", ""
-        )
-
-        # ----------------------------------------------------
-        # CHECK AUTHORIZATION HEADER
-        # ----------------------------------------------------
+        authorization = request.headers.get("Authorization", "")
 
         if not authorization.startswith("Bearer "):
-
             return jsonify({
                 "status": "error",
                 "message": "Authentication required."
@@ -140,47 +117,29 @@ def supabase_auth_required(function):
         token = authorization.split(" ", 1)[1].strip()
 
         if not token:
-
             return jsonify({
                 "status": "error",
                 "message": "Invalid authentication token."
             }), 401
 
-        # ----------------------------------------------------
-        # VERIFY TOKEN WITH SUPABASE
-        # ----------------------------------------------------
-
         user = verify_supabase_token(token)
 
         if not user:
-
             return jsonify({
                 "status": "error",
                 "message": "Invalid or expired session."
             }), 401
 
-        # ----------------------------------------------------
-        # VALIDATE USER IDENTITY
-        # ----------------------------------------------------
-
         try:
-
             g.current_user_id = UUID(user["id"])
 
         except (ValueError, TypeError, KeyError):
-
-            logger.warning(
-                "Supabase returned an invalid user identity."
-            )
+            logger.warning("Supabase returned an invalid user identity.")
 
             return jsonify({
                 "status": "error",
                 "message": "Invalid user identity."
             }), 401
-
-        # ----------------------------------------------------
-        # STORE AUTHENTICATED USER CONTEXT
-        # ----------------------------------------------------
 
         g.current_user = user
         g.supabase_access_token = token
@@ -201,21 +160,14 @@ def platform_admin_required(function):
     def decorated(*args, **kwargs):
 
         try:
-
-            # ------------------------------------------------
-            # FIND ACTIVE PLATFORM ADMIN
-            # ------------------------------------------------
-
             admin = PlatformAdmin.query.filter_by(
                 user_id=g.current_user_id,
                 is_active=True
             ).first()
 
             if not admin:
-
                 logger.warning(
-                    "Unauthorized Super Admin access attempt "
-                    "by user ID: %s",
+                    "Unauthorized Super Admin access attempt: %s",
                     g.current_user_id
                 )
 
@@ -227,16 +179,11 @@ def platform_admin_required(function):
                     )
                 }), 403
 
-            # ------------------------------------------------
-            # STORE PLATFORM ADMIN CONTEXT
-            # ------------------------------------------------
-
             g.platform_admin = admin
 
             return function(*args, **kwargs)
 
         except Exception:
-
             db.session.rollback()
 
             logger.exception(
@@ -266,35 +213,22 @@ def business_member_required(*allowed_roles):
         @supabase_auth_required
         def decorated(*args, **kwargs):
 
-            business_id = request.headers.get(
-                "X-Business-ID"
-            )
-
-            # ------------------------------------------------
-            # VALIDATE BUSINESS ID
-            # ------------------------------------------------
+            business_id = request.headers.get("X-Business-ID")
 
             if not business_id:
-
                 return jsonify({
                     "status": "error",
                     "message": "Business ID is required."
                 }), 400
 
             try:
-
                 business_uuid = UUID(business_id)
 
             except (ValueError, TypeError):
-
                 return jsonify({
                     "status": "error",
                     "message": "Invalid business ID."
                 }), 400
-
-            # ------------------------------------------------
-            # FIND ACTIVE MEMBERSHIP
-            # ------------------------------------------------
 
             membership = BusinessMember.query.filter_by(
                 business_id=business_uuid,
@@ -303,7 +237,6 @@ def business_member_required(*allowed_roles):
             ).first()
 
             if not membership:
-
                 return jsonify({
                     "status": "error",
                     "message": (
@@ -311,15 +244,10 @@ def business_member_required(*allowed_roles):
                     )
                 }), 403
 
-            # ------------------------------------------------
-            # CHECK BUSINESS ROLE
-            # ------------------------------------------------
-
             if (
                 allowed_roles
                 and membership.role not in allowed_roles
             ):
-
                 return jsonify({
                     "status": "error",
                     "message": (
@@ -327,10 +255,6 @@ def business_member_required(*allowed_roles):
                         "to perform this action."
                     )
                 }), 403
-
-            # ------------------------------------------------
-            # STORE BUSINESS CONTEXT
-            # ------------------------------------------------
 
             g.business_id = business_uuid
             g.business_membership = membership
@@ -341,3 +265,4 @@ def business_member_required(*allowed_roles):
         return decorated
 
     return decorator
+```
