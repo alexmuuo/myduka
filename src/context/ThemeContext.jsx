@@ -13,6 +13,8 @@ const ThemeContext = createContext(null);
 const DEFAULT_THEME = "system";
 const VALID_THEMES = ["light", "dark", "system"];
 
+const SYSTEM_QUERY = "(prefers-color-scheme: dark)";
+
 function getStorageKey(userId) {
   return userId
     ? `myduka_theme_${userId}`
@@ -21,7 +23,9 @@ function getStorageKey(userId) {
 
 function getSavedTheme(userId) {
   try {
-    const saved = localStorage.getItem(getStorageKey(userId));
+    const saved = localStorage.getItem(
+      getStorageKey(userId)
+    );
 
     return VALID_THEMES.includes(saved)
       ? saved
@@ -33,7 +37,7 @@ function getSavedTheme(userId) {
 
 function getResolvedTheme(preference) {
   if (preference === "system") {
-    return window.matchMedia("(prefers-color-scheme: dark)").matches
+    return window.matchMedia(SYSTEM_QUERY).matches
       ? "dark"
       : "light";
   }
@@ -52,30 +56,46 @@ export function ThemeProvider({ children }) {
 
   const [themeReady, setThemeReady] = useState(false);
 
-  // Load the authenticated user's theme preference.
+  // =====================================================
+  // LOAD USER IDENTITY AND THEME
+  // =====================================================
+
   useEffect(() => {
     let mounted = true;
 
-    const loadUserTheme = async (user) => {
-      const currentUserId = user?.id || null;
-
+    const loadUserTheme = (user) => {
       if (!mounted) return;
+
+      const currentUserId = user?.id || null;
 
       setUserId(currentUserId);
 
-      const savedTheme = getSavedTheme(currentUserId);
+      setThemePreference(
+        getSavedTheme(currentUserId)
+      );
 
-      setThemePreference(savedTheme);
       setThemeReady(true);
     };
 
     const initializeTheme = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      try {
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession();
 
-      if (mounted) {
-        await loadUserTheme(session?.user);
+        if (error) {
+          throw error;
+        }
+
+        loadUserTheme(session?.user);
+      } catch (error) {
+        console.error(
+          "Could not initialize MyDuka theme:",
+          error
+        );
+
+        loadUserTheme(null);
       }
     };
 
@@ -95,10 +115,18 @@ export function ThemeProvider({ children }) {
     };
   }, []);
 
-  // Save the preference independently for each user.
+  // =====================================================
+  // CHANGE AND SAVE THEME
+  // =====================================================
+
   const changeTheme = useCallback(
     (theme) => {
       if (!VALID_THEMES.includes(theme)) {
+        console.warn(
+          "Invalid MyDuka theme:",
+          theme
+        );
+
         return;
       }
 
@@ -119,26 +147,41 @@ export function ThemeProvider({ children }) {
     [userId]
   );
 
-  // Resolve the selected theme.
+  // =====================================================
+  // APPLY THEME
+  // =====================================================
+
   useEffect(() => {
     if (!themeReady) return;
 
     const applyTheme = () => {
-      const resolved = getResolvedTheme(themePreference);
+      const resolved = getResolvedTheme(
+        themePreference
+      );
 
       setResolvedTheme(resolved);
 
+      // Actual appearance: light or dark.
       document.documentElement.setAttribute(
         "data-theme",
+        resolved
+      );
+
+      // User's selected preference: light, dark or system.
+      document.documentElement.setAttribute(
+        "data-theme-preference",
         themePreference
       );
+
+      document.documentElement.style.colorScheme =
+        resolved;
     };
 
     applyTheme();
 
-    // Automatically update when the device theme changes.
+    // Listen for device appearance changes.
     const mediaQuery = window.matchMedia(
-      "(prefers-color-scheme: dark)"
+      SYSTEM_QUERY
     );
 
     const handleSystemThemeChange = () => {
@@ -160,6 +203,10 @@ export function ThemeProvider({ children }) {
     };
   }, [themePreference, themeReady]);
 
+  // =====================================================
+  // CONTEXT VALUE
+  // =====================================================
+
   const value = {
     themePreference,
     resolvedTheme,
@@ -173,6 +220,10 @@ export function ThemeProvider({ children }) {
     </ThemeContext.Provider>
   );
 }
+
+// =======================================================
+// THEME HOOK
+// =======================================================
 
 export function useTheme() {
   const context = useContext(ThemeContext);
