@@ -56,6 +56,7 @@ import CashierStock from "./pages/cashier/CashierStock";
 // Super Admin
 import SuperAdminLogin from "./pages/SuperAdminLogin";
 import SuperAdminProtectedRoute from "./components/SuperAdminProtectedRoute";
+import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 
 // Route protection
 import AdminProtectedRoute from "./components/AdminProtectedRoute";
@@ -204,21 +205,22 @@ function App() {
             PROTECTED SUPER ADMIN ROUTES
         ========================================= */}
 
-        <Route element={<SuperAdminProtectedRoute />}>
+       <Route element={<SuperAdminProtectedRoute />}>
+  <Route
+    path="/superadmin"
+    element={
+      <Navigate
+        to="/superadmin/dashboard"
+        replace
+      />
+    }
+  />
 
-          <Route
-            path="/superadmin"
-            element={
-              <Navigate
-                to="/superadmin/dashboard"
-                replace
-              />
-            }
-          />
-
-          {/* Dashboard will be connected in the next step */}
-
-        </Route>
+  <Route
+    path="/superadmin/dashboard"
+    element={<SuperAdminDashboard />}
+  />
+</Route>
 
 
         {/* =========================================
