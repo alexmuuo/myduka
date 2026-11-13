@@ -1,14 +1,13 @@
-from flask import Blueprint, jsonify
-
+from flask import Blueprint, jsonify, g
 from sqlalchemy import desc
 
 from extensions import db
-
 from auth import platform_admin_required
 
 from models.business import Business
 from models.user import Profile
 from models.business_member import BusinessMember
+from models.platform_admin import PlatformAdmin
 
 
 superadmin_bp = Blueprint(
@@ -18,24 +17,24 @@ superadmin_bp = Blueprint(
 )
 
 
-# ==================================================
+# ============================================================
 # SUPER ADMIN PROFILE
-# ==================================================
+# ============================================================
 
 @superadmin_bp.route("/me", methods=["GET"])
 @platform_admin_required
 def superadmin_me():
 
-    admin = {
-        "id": str(g.platform_admin.id),
-        "user_id": str(g.platform_admin.user_id),
-        "is_active": g.platform_admin.is_active
-    }
-
     return jsonify({
         "status": "success",
         "is_superadmin": True,
-        "admin": admin,
+
+        "admin": {
+            "id": str(g.platform_admin.id),
+            "user_id": str(g.platform_admin.user_id),
+            "is_active": g.platform_admin.is_active
+        },
+
         "user": {
             "id": str(g.current_user_id),
             "email": g.current_user.get("email"),
@@ -46,19 +45,15 @@ def superadmin_me():
     }), 200
 
 
-# ==================================================
+# ============================================================
 # PLATFORM DASHBOARD OVERVIEW
-# ==================================================
+# ============================================================
 
 @superadmin_bp.route("/dashboard", methods=["GET"])
 @platform_admin_required
 def superadmin_dashboard():
 
     try:
-
-        # ------------------------------------------
-        # BUSINESS STATISTICS
-        # ------------------------------------------
 
         total_businesses = Business.query.count()
 
@@ -70,19 +65,11 @@ def superadmin_dashboard():
             is_active=False
         ).count()
 
-        # ------------------------------------------
-        # USER STATISTICS
-        # ------------------------------------------
-
         total_users = Profile.query.count()
 
         total_memberships = BusinessMember.query.filter_by(
             is_active=True
         ).count()
-
-        # ------------------------------------------
-        # RECENT BUSINESSES
-        # ------------------------------------------
 
         recent_businesses = (
             Business.query
@@ -107,22 +94,11 @@ def superadmin_dashboard():
             for business in recent_businesses
         ]
 
-        # ------------------------------------------
-        # PLATFORM ADMIN STATISTICS
-        # ------------------------------------------
-
-        from models.platform_admin import PlatformAdmin
-
         total_platform_admins = PlatformAdmin.query.filter_by(
             is_active=True
         ).count()
 
-        # ------------------------------------------
-        # RESPONSE
-        # ------------------------------------------
-
         return jsonify({
-
             "status": "success",
 
             "statistics": {
