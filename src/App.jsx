@@ -1,103 +1,165 @@
 import {
+  Suspense,
+  lazy,
+  useMemo,
+} from "react";
+
+import {
   Routes,
   Route,
-  useLocation,
   Navigate,
+  Outlet,
+  useLocation,
 } from "react-router-dom";
 
-// Business registration
-import BusinessRegister from "./pages/BusinessRegister";
-
-// Customer pages
-import Home from "./pages/Home";
-import Products from "./pages/Products";
-import ProductDetails from "./pages/ProductDetails";
-import Cart from "./pages/Cart";
-import Checkout from "./pages/Checkout";
-import OrderConfirmation from "./pages/OrderConfirmation";
-import BackendTest from "./pages/BackendTest";
-import AskSupport from "./pages/AskSupport";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-
-// Shared components
+// Shared navigation
 import Navbar from "./components/Navbar";
 import AdminNavbar from "./components/AdminNavbar";
 import CashierNavbar from "./components/CashierNavbar";
 
-// Business admin pages
-import AdminDashboard from "./pages/AdminDashboard";
-import AdminOrderDetails from "./pages/AdminOrderDetails";
-import SellerProducts from "./pages/seller/Products";
-import Inventory from "./pages/seller/Inventory";
-import SellerOrders from "./pages/seller/Orders";
-import Customers from "./pages/seller/Customers";
-import Messages from "./pages/seller/Messages";
-import Deliveries from "./pages/seller/Deliveries";
-import Reports from "./pages/seller/Reports";
-import Cashiers from "./pages/seller/Cashiers";
-import AdminLogin from "./pages/AdminLogin";
-import AdminStockHistory from "./pages/seller/StockHistory";
-import Sales from "./pages/seller/Sales";
-import Branches from "./pages/seller/Branches";
-import POSSales from "./pages/seller/POSSales";
-
-// Cashier pages
-import CashierLogin from "./pages/cashier/CashierLogin";
-import CashierPOS from "./pages/cashier/CashierPOS";
-import SalesHistory from "./pages/cashier/SalesHistory";
-import CashierOrders from "./pages/cashier/CashierOrders";
-import CashierDeliveries from "./pages/cashier/CashierDeliveries";
-import CashierStockHistory from "./pages/cashier/CashierStockHistory";
-import CashierStock from "./pages/cashier/CashierStock";
-
-// Super Admin
-import SuperAdminLogin from "./pages/SuperAdminLogin";
-import SuperAdminProtectedRoute from "./components/SuperAdminProtectedRoute";
-import SuperAdminDashboard from "./pages/SuperAdminDashboard";
-
-// Route protection
+// Existing route protection
 import AdminProtectedRoute from "./components/AdminProtectedRoute";
 import CashierProtectedRoute from "./components/CashierProtectedRoute";
+import SuperAdminProtectedRoute from "./components/SuperAdminProtectedRoute";
 
+// Automatically discover all JSX pages.
+// New page files will be discovered without adding imports here.
+const pageModules = import.meta.glob("./pages/**/*.jsx");
+
+// Frontend development mode:
+// Protected dashboards are accessible locally while we build the UI.
+// Production authentication remains enabled unless explicitly configured.
+const FRONTEND_DEMO_MODE =
+  import.meta.env.DEV ||
+  import.meta.env.VITE_FRONTEND_DEMO_MODE === "true";
+
+// =====================================================
+// PAGE LOADING
+// =====================================================
+
+function PageLoading() {
+  return (
+    <div className="page-loading">
+      <div className="page-loading-spinner" />
+      <p>Loading MyDuka...</p>
+    </div>
+  );
+}
+
+// =====================================================
+// PAGE PLACEHOLDER
+// =====================================================
+
+function PagePlaceholder({ title }) {
+  return (
+    <div className="page-placeholder">
+      <div className="page-placeholder-icon">✦</div>
+
+      <h2>{title}</h2>
+
+      <p>
+        This page is registered and ready for development.
+      </p>
+
+      <span>MYDUKA</span>
+    </div>
+  );
+}
+
+// =====================================================
+// AUTOMATIC PAGE LOADER
+// =====================================================
+
+function AutoPage({ file, title }) {
+  const importer = pageModules[file];
+
+  const PageComponent = useMemo(() => {
+    return importer ? lazy(importer) : null;
+  }, [importer]);
+
+  if (!PageComponent) {
+    return <PagePlaceholder title={title} />;
+  }
+
+  return (
+    <Suspense fallback={<PageLoading />}>
+      <PageComponent />
+    </Suspense>
+  );
+}
+
+// =====================================================
+// FRONTEND DEVELOPMENT ROUTE GATES
+// =====================================================
+
+function SuperAdminRouteGate() {
+  if (FRONTEND_DEMO_MODE) {
+    return <Outlet />;
+  }
+
+  return <SuperAdminProtectedRoute />;
+}
+
+function AdminRouteGate() {
+  if (FRONTEND_DEMO_MODE) {
+    return <Outlet />;
+  }
+
+  return <AdminProtectedRoute />;
+}
+
+function CashierRouteGate() {
+  if (FRONTEND_DEMO_MODE) {
+    return <Outlet />;
+  }
+
+  return <CashierProtectedRoute />;
+}
+
+// =====================================================
+// NOT FOUND
+// =====================================================
+
+function NotFound() {
+  return (
+    <div className="page-placeholder">
+      <h1>404</h1>
+      <h2>Page not found</h2>
+      <p>The page you requested does not exist.</p>
+      <a href="/">Return home</a>
+    </div>
+  );
+}
+
+// =====================================================
+// MAIN APP
+// =====================================================
 
 function App() {
   const location = useLocation();
   const pathname = location.pathname;
 
-  // Authentication pages
   const isAdminLogin = pathname === "/admin-login";
   const isCashierLogin = pathname === "/cashier-login";
   const isSuperAdminLogin = pathname === "/superadmin-login";
   const isBusinessRegister = pathname === "/business-register";
 
-  // Business admin section
   const isAdminPage =
     pathname === "/admin" ||
     pathname.startsWith("/admin/");
 
-  // Cashier section
-  const isCashierPage =
-    pathname === "/cashier-login" ||
+  const isCashierWorkspace =
     pathname.startsWith("/cashier/");
 
-  // Super Admin section
   const isSuperAdminPage =
     pathname === "/superadmin" ||
     pathname.startsWith("/superadmin/");
 
-  // Business context
-  const hasBusinessContext = Boolean(
-    localStorage.getItem("mydukaBusinessId")
-  );
-
-  // Navigation visibility
   const showAdminNavbar =
-    isAdminPage &&
-    hasBusinessContext &&
-    !isAdminLogin;
+    isAdminPage && !isAdminLogin;
+
+  const showCashierNavbar =
+    isCashierWorkspace;
 
   const showCustomerNavbar =
     !isAdminLogin &&
@@ -105,18 +167,16 @@ function App() {
     !isSuperAdminLogin &&
     !isBusinessRegister &&
     !isAdminPage &&
-    !isCashierPage &&
+    !isCashierWorkspace &&
     !isSuperAdminPage;
 
   return (
     <>
-      {/* =========================================
-          NAVIGATION
-      ========================================= */}
+      {/* NAVIGATION */}
 
       {showAdminNavbar ? (
         <AdminNavbar />
-      ) : isCashierPage ? (
+      ) : showCashierNavbar ? (
         <CashierNavbar />
       ) : showCustomerNavbar ? (
         <Navbar />
@@ -124,240 +184,773 @@ function App() {
 
       <Routes>
 
-        {/* =========================================
+        {/* =================================================
             CUSTOMER STOREFRONT
-        ========================================= */}
+        ================================================= */}
 
-        <Route path="/" element={<Home />} />
+        <Route
+          path="/"
+          element={
+            <AutoPage
+              file="./pages/Home.jsx"
+              title="Homepage"
+            />
+          }
+        />
 
-        <Route path="/products" element={<Products />} />
+        <Route
+          path="/store/:slug"
+          element={
+            <AutoPage
+              file="./pages/storefront/StorefrontHome.jsx"
+              title="Storefront"
+            />
+          }
+        />
+
+        <Route
+          path="/products"
+          element={
+            <AutoPage
+              file="./pages/Products.jsx"
+              title="Products"
+            />
+          }
+        />
 
         <Route
           path="/products/:id"
-          element={<ProductDetails />}
+          element={
+            <AutoPage
+              file="./pages/ProductDetails.jsx"
+              title="Product details"
+            />
+          }
         />
 
-        <Route path="/cart" element={<Cart />} />
+        <Route
+          path="/cart"
+          element={
+            <AutoPage
+              file="./pages/Cart.jsx"
+              title="Shopping cart"
+            />
+          }
+        />
 
-        <Route path="/checkout" element={<Checkout />} />
+        <Route
+          path="/checkout"
+          element={
+            <AutoPage
+              file="./pages/Checkout.jsx"
+              title="Checkout"
+            />
+          }
+        />
 
         <Route
           path="/order-confirmation"
-          element={<OrderConfirmation />}
+          element={
+            <AutoPage
+              file="./pages/OrderConfirmation.jsx"
+              title="Order confirmation"
+            />
+          }
         />
 
         <Route
-          path="/backend-test"
-          element={<BackendTest />}
+          path="/track-order"
+          element={
+            <AutoPage
+              file="./pages/TrackOrder.jsx"
+              title="Track order"
+            />
+          }
+        />
+
+        <Route
+          path="/wishlist"
+          element={
+            <AutoPage
+              file="./pages/Wishlist.jsx"
+              title="Wishlist"
+            />
+          }
         />
 
         <Route
           path="/ask-support"
-          element={<AskSupport />}
+          element={
+            <AutoPage
+              file="./pages/AskSupport.jsx"
+              title="Customer support"
+            />
+          }
         />
 
+        <Route
+          path="/contact"
+          element={
+            <AutoPage
+              file="./pages/Contact.jsx"
+              title="Contact us"
+            />
+          }
+        />
 
-        {/* =========================================
+        <Route
+          path="/about"
+          element={
+            <AutoPage
+              file="./pages/About.jsx"
+              title="About MyDuka"
+            />
+          }
+        />
+
+        <Route
+          path="/privacy"
+          element={
+            <AutoPage
+              file="./pages/Privacy.jsx"
+              title="Privacy policy"
+            />
+          }
+        />
+
+        <Route
+          path="/terms"
+          element={
+            <AutoPage
+              file="./pages/Terms.jsx"
+              title="Terms and conditions"
+            />
+          }
+        />
+
+        {/* =================================================
             CUSTOMER AUTHENTICATION
-        ========================================= */}
+        ================================================= */}
 
-        <Route path="/login" element={<Login />} />
+        <Route
+          path="/login"
+          element={
+            <AutoPage
+              file="./pages/Login.jsx"
+              title="Customer login"
+            />
+          }
+        />
 
-        <Route path="/register" element={<Register />} />
+        <Route
+          path="/register"
+          element={
+            <AutoPage
+              file="./pages/Register.jsx"
+              title="Customer registration"
+            />
+          }
+        />
 
         <Route
           path="/forgot-password"
-          element={<ForgotPassword />}
+          element={
+            <AutoPage
+              file="./pages/ForgotPassword.jsx"
+              title="Forgot password"
+            />
+          }
         />
 
         <Route
           path="/reset-password"
-          element={<ResetPassword />}
+          element={
+            <AutoPage
+              file="./pages/ResetPassword.jsx"
+              title="Reset password"
+            />
+          }
         />
 
-
-        {/* =========================================
-            BUSINESS OWNER AUTHENTICATION
-        ========================================= */}
+        {/* CUSTOMER ACCOUNT */}
 
         <Route
-          path="/admin-login"
-          element={<AdminLogin />}
+          path="/account"
+          element={
+            <AutoPage
+              file="./pages/customer/Account.jsx"
+              title="My account"
+            />
+          }
         />
+
+        <Route
+          path="/account/orders"
+          element={
+            <AutoPage
+              file="./pages/customer/Orders.jsx"
+              title="My orders"
+            />
+          }
+        />
+
+        <Route
+          path="/account/orders/:id"
+          element={
+            <AutoPage
+              file="./pages/customer/OrderDetails.jsx"
+              title="Order details"
+            />
+          }
+        />
+
+        <Route
+          path="/account/profile"
+          element={
+            <AutoPage
+              file="./pages/customer/Profile.jsx"
+              title="My profile"
+            />
+          }
+        />
+
+        {/* =================================================
+            BUSINESS REGISTRATION AND LOGIN
+        ================================================= */}
 
         <Route
           path="/business-register"
-          element={<BusinessRegister />}
+          element={
+            <AutoPage
+              file="./pages/BusinessRegister.jsx"
+              title="Register your business"
+            />
+          }
         />
 
+        <Route
+          path="/admin-login"
+          element={
+            <AutoPage
+              file="./pages/AdminLogin.jsx"
+              title="Business admin login"
+            />
+          }
+        />
 
-        {/* =========================================
-            SUPER ADMIN AUTHENTICATION
-        ========================================= */}
+        {/* =================================================
+            SUPER ADMIN LOGIN
+        ================================================= */}
 
         <Route
           path="/superadmin-login"
-          element={<SuperAdminLogin />}
+          element={
+            <AutoPage
+              file="./pages/SuperAdminLogin.jsx"
+              title="Super Admin login"
+            />
+          }
         />
 
+        {/* =================================================
+            SUPER ADMIN DASHBOARD
+        ================================================= */}
 
-        {/* =========================================
-            PROTECTED SUPER ADMIN ROUTES
-        ========================================= */}
-
-       <Route element={<SuperAdminProtectedRoute />}>
-  <Route
-    path="/superadmin"
-    element={
-      <Navigate
-        to="/superadmin/dashboard"
-        replace
-      />
-    }
-  />
-
-  <Route
-    path="/superadmin/dashboard"
-    element={<SuperAdminDashboard />}
-  />
-</Route>
-
-
-        {/* =========================================
-            PROTECTED BUSINESS ADMIN ROUTES
-        ========================================= */}
-
-        <Route element={<AdminProtectedRoute />}>
+        <Route element={<SuperAdminRouteGate />}>
 
           <Route
-            path="/admin"
-            element={<AdminDashboard />}
+            path="/superadmin"
+            element={
+              <Navigate
+                to="/superadmin/dashboard"
+                replace
+              />
+            }
           />
 
           <Route
-            path="/admin/orders/:id"
-            element={<AdminOrderDetails />}
+            path="/superadmin/dashboard"
+            element={
+              <AutoPage
+                file="./pages/SuperAdminDashboard.jsx"
+                title="Platform overview"
+              />
+            }
+          />
+
+          <Route
+            path="/superadmin/businesses"
+            element={
+              <AutoPage
+                file="./pages/superadmin/Businesses.jsx"
+                title="Businesses"
+              />
+            }
+          />
+
+          <Route
+            path="/superadmin/businesses/:id"
+            element={
+              <AutoPage
+                file="./pages/superadmin/BusinessDetails.jsx"
+                title="Business details"
+              />
+            }
+          />
+
+          <Route
+            path="/superadmin/subscriptions"
+            element={
+              <AutoPage
+                file="./pages/superadmin/Subscriptions.jsx"
+                title="Subscriptions"
+              />
+            }
+          />
+
+          <Route
+            path="/superadmin/plans"
+            element={
+              <AutoPage
+                file="./pages/superadmin/Plans.jsx"
+                title="Subscription plans"
+              />
+            }
+          />
+
+          <Route
+            path="/superadmin/users"
+            element={
+              <AutoPage
+                file="./pages/superadmin/Users.jsx"
+                title="Platform users"
+              />
+            }
+          />
+
+          <Route
+            path="/superadmin/analytics"
+            element={
+              <AutoPage
+                file="./pages/superadmin/Analytics.jsx"
+                title="Platform analytics"
+              />
+            }
+          />
+
+          <Route
+            path="/superadmin/support"
+            element={
+              <AutoPage
+                file="./pages/superadmin/Support.jsx"
+                title="Support management"
+              />
+            }
+          />
+
+          <Route
+            path="/superadmin/notifications"
+            element={
+              <AutoPage
+                file="./pages/superadmin/Notifications.jsx"
+                title="Notifications"
+              />
+            }
+          />
+
+          <Route
+            path="/superadmin/audit-logs"
+            element={
+              <AutoPage
+                file="./pages/superadmin/AuditLogs.jsx"
+                title="Audit logs"
+              />
+            }
+          />
+
+          <Route
+            path="/superadmin/settings"
+            element={
+              <AutoPage
+                file="./pages/superadmin/Settings.jsx"
+                title="Platform settings"
+              />
+            }
+          />
+
+          <Route
+            path="/superadmin/profile"
+            element={
+              <AutoPage
+                file="./pages/superadmin/Profile.jsx"
+                title="Super Admin profile"
+              />
+            }
+          />
+
+        </Route>
+
+        {/* =================================================
+            BUSINESS ADMIN DASHBOARD
+        ================================================= */}
+
+        <Route element={<AdminRouteGate />}>
+
+          <Route
+            path="/admin"
+            element={
+              <AutoPage
+                file="./pages/AdminDashboard.jsx"
+                title="Business dashboard"
+              />
+            }
           />
 
           <Route
             path="/admin/products"
-            element={<SellerProducts />}
+            element={
+              <AutoPage
+                file="./pages/seller/Products.jsx"
+                title="Products"
+              />
+            }
+          />
+
+          <Route
+            path="/admin/categories"
+            element={
+              <AutoPage
+                file="./pages/seller/Categories.jsx"
+                title="Categories"
+              />
+            }
           />
 
           <Route
             path="/admin/inventory"
-            element={<Inventory />}
-          />
-
-          <Route
-            path="/admin/orders"
-            element={<SellerOrders />}
-          />
-
-          <Route
-            path="/admin/customers"
-            element={<Customers />}
-          />
-
-          <Route
-            path="/admin/messages"
-            element={<Messages />}
-          />
-
-          <Route
-            path="/admin/deliveries"
-            element={<Deliveries />}
-          />
-
-          <Route
-            path="/admin/reports"
-            element={<Reports />}
-          />
-
-          <Route
-            path="/admin/cashiers"
-            element={<Cashiers />}
+            element={
+              <AutoPage
+                file="./pages/seller/Inventory.jsx"
+                title="Inventory"
+              />
+            }
           />
 
           <Route
             path="/admin/stock-history"
-            element={<AdminStockHistory />}
+            element={
+              <AutoPage
+                file="./pages/seller/StockHistory.jsx"
+                title="Stock history"
+              />
+            }
+          />
+
+          <Route
+            path="/admin/stock-transfers"
+            element={
+              <AutoPage
+                file="./pages/seller/StockTransfers.jsx"
+                title="Stock transfers"
+              />
+            }
+          />
+
+          <Route
+            path="/admin/orders"
+            element={
+              <AutoPage
+                file="./pages/seller/Orders.jsx"
+                title="Orders"
+              />
+            }
+          />
+
+          <Route
+            path="/admin/orders/:id"
+            element={
+              <AutoPage
+                file="./pages/AdminOrderDetails.jsx"
+                title="Order details"
+              />
+            }
+          />
+
+          <Route
+            path="/admin/customers"
+            element={
+              <AutoPage
+                file="./pages/seller/Customers.jsx"
+                title="Customers"
+              />
+            }
+          />
+
+          <Route
+            path="/admin/messages"
+            element={
+              <AutoPage
+                file="./pages/seller/Messages.jsx"
+                title="Messages"
+              />
+            }
+          />
+
+          <Route
+            path="/admin/deliveries"
+            element={
+              <AutoPage
+                file="./pages/seller/Deliveries.jsx"
+                title="Deliveries"
+              />
+            }
           />
 
           <Route
             path="/admin/sales"
-            element={<Sales />}
-          />
-
-          <Route
-            path="/admin/branches"
-            element={<Branches />}
+            element={
+              <AutoPage
+                file="./pages/seller/Sales.jsx"
+                title="Sales"
+              />
+            }
           />
 
           <Route
             path="/admin/pos-sales"
-            element={<POSSales />}
+            element={
+              <AutoPage
+                file="./pages/seller/POSSales.jsx"
+                title="POS sales"
+              />
+            }
+          />
+
+          <Route
+            path="/admin/reports"
+            element={
+              <AutoPage
+                file="./pages/seller/Reports.jsx"
+                title="Reports"
+              />
+            }
+          />
+
+          <Route
+            path="/admin/cashiers"
+            element={
+              <AutoPage
+                file="./pages/seller/Cashiers.jsx"
+                title="Cashiers"
+              />
+            }
+          />
+
+          <Route
+            path="/admin/branches"
+            element={
+              <AutoPage
+                file="./pages/seller/Branches.jsx"
+                title="Branches"
+              />
+            }
+          />
+
+          <Route
+            path="/admin/payments"
+            element={
+              <AutoPage
+                file="./pages/seller/Payments.jsx"
+                title="Payments"
+              />
+            }
+          />
+
+          <Route
+            path="/admin/subscription"
+            element={
+              <AutoPage
+                file="./pages/seller/Subscription.jsx"
+                title="Subscription"
+              />
+            }
+          />
+
+          <Route
+            path="/admin/settings"
+            element={
+              <AutoPage
+                file="./pages/seller/Settings.jsx"
+                title="Business settings"
+              />
+            }
+          />
+
+          <Route
+            path="/admin/profile"
+            element={
+              <AutoPage
+                file="./pages/seller/Profile.jsx"
+                title="Business profile"
+              />
+            }
           />
 
         </Route>
 
-
-        {/* =========================================
+        {/* =================================================
             CASHIER LOGIN
-        ========================================= */}
+        ================================================= */}
 
         <Route
           path="/cashier-login"
-          element={<CashierLogin />}
+          element={
+            <AutoPage
+              file="./pages/cashier/CashierLogin.jsx"
+              title="Cashier login"
+            />
+          }
         />
 
+        {/* =================================================
+            CASHIER WORKSPACE
+        ================================================= */}
 
-        {/* =========================================
-            PROTECTED CASHIER ROUTES
-        ========================================= */}
+        <Route element={<CashierRouteGate />}>
 
-        <Route element={<CashierProtectedRoute />}>
+          <Route
+            path="/cashier"
+            element={
+              <Navigate
+                to="/cashier/pos"
+                replace
+              />
+            }
+          />
 
           <Route
             path="/cashier/pos"
-            element={<CashierPOS />}
+            element={
+              <AutoPage
+                file="./pages/cashier/CashierPOS.jsx"
+                title="Point of Sale"
+              />
+            }
           />
 
           <Route
             path="/cashier/sales-history"
-            element={<SalesHistory />}
+            element={
+              <AutoPage
+                file="./pages/cashier/SalesHistory.jsx"
+                title="Sales history"
+              />
+            }
           />
 
           <Route
             path="/cashier/orders"
-            element={<CashierOrders />}
+            element={
+              <AutoPage
+                file="./pages/cashier/CashierOrders.jsx"
+                title="Orders"
+              />
+            }
           />
 
           <Route
             path="/cashier/deliveries"
-            element={<CashierDeliveries />}
-          />
-
-          <Route
-            path="/cashier/stock-history"
-            element={<CashierStockHistory />}
+            element={
+              <AutoPage
+                file="./pages/cashier/CashierDeliveries.jsx"
+                title="Deliveries"
+              />
+            }
           />
 
           <Route
             path="/cashier/stock"
-            element={<CashierStock />}
+            element={
+              <AutoPage
+                file="./pages/cashier/CashierStock.jsx"
+                title="Stock"
+              />
+            }
+          />
+
+          <Route
+            path="/cashier/stock-history"
+            element={
+              <AutoPage
+                file="./pages/cashier/CashierStockHistory.jsx"
+                title="Stock history"
+              />
+            }
+          />
+
+          <Route
+            path="/cashier/held-sales"
+            element={
+              <AutoPage
+                file="./pages/cashier/HeldSales.jsx"
+                title="Held sales"
+              />
+            }
+          />
+
+          <Route
+            path="/cashier/shift"
+            element={
+              <AutoPage
+                file="./pages/cashier/Shift.jsx"
+                title="Cashier shift"
+              />
+            }
+          />
+
+          <Route
+            path="/cashier/profile"
+            element={
+              <AutoPage
+                file="./pages/cashier/Profile.jsx"
+                title="Cashier profile"
+              />
+            }
+          />
+
+          <Route
+            path="/cashier/settings"
+            element={
+              <AutoPage
+                file="./pages/cashier/Settings.jsx"
+                title="Cashier settings"
+              />
+            }
           />
 
         </Route>
 
+        {/* =================================================
+            DEVELOPMENT
+        ================================================= */}
 
-        {/* =========================================
+        <Route
+          path="/backend-test"
+          element={
+            <AutoPage
+              file="./pages/BackendTest.jsx"
+              title="Backend test"
+            />
+          }
+        />
+
+        {/* =================================================
             FALLBACK
-        ========================================= */}
+        ================================================= */}
 
         <Route
           path="*"
-          element={<Navigate to="/" replace />}
+          element={<NotFound />}
         />
 
       </Routes>
