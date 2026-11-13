@@ -1,69 +1,264 @@
-:root {
-font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
+/* ============================================================
+   MYDUKA GLOBAL DESIGN SYSTEM
+   Light: Modern Premium
+   Dark: Dark Premium
+   System: Follows device preference
 
-color: #0f172a;
-background-color: #f8fafc;
+   Theme selection:
+   <html data-theme="light">
+   <html data-theme="dark">
+   <html data-theme="system">
+   ============================================================ */
 
-font-synthesis: none;
-text-rendering: optimizeLegibility;
--webkit-font-smoothing: antialiased;
--moz-osx-font-smoothing: grayscale;
 
---md-primary: #4f46e5;
---md-primary-dark: #4338ca;
---md-primary-light: #eef2ff;
+/* ============================================================
+   1. LIGHT THEME — MODERN PREMIUM
+   ============================================================ */
 
---md-text: #0f172a;
---md-muted: #6c757d;
+:root,
+:root[data-theme="light"] {
+  color-scheme: light;
 
---md-background: #f8fafc;
---md-surface: #ffffff;
---md-border: #e2e8f0;
+  font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 
---md-radius: 14px;
---md-radius-lg: 20px;
+  /* Brand colours */
+  --md-primary: #4f46e5;
+  --md-primary-dark: #4338ca;
+  --md-primary-light: #eef2ff;
 
---md-shadow:
-0 4px 18px rgba(30, 27, 75, 0.06);
+  --md-accent: #f59e0b;
+  --md-accent-soft: #fef3c7;
 
---md-shadow-hover:
-0 12px 28px rgba(30, 27, 75, 0.12);
+  /* Backgrounds */
+  --md-background: #f8fafc;
+  --md-surface: #ffffff;
+  --md-surface-secondary: #f1f5f9;
+  --md-surface-hover: #f8fafc;
+
+  /* Text */
+  --md-text: #0f172a;
+  --md-heading: #1e1b4b;
+  --md-muted: #64748b;
+  --md-text-inverse: #ffffff;
+
+  /* Borders */
+  --md-border: #e2e8f0;
+  --md-border-strong: #cbd5e1;
+
+  /* Status colours */
+  --md-success: #16a34a;
+  --md-success-soft: #dcfce7;
+  --md-danger: #dc2626;
+  --md-danger-soft: #fee2e2;
+  --md-warning: #d97706;
+  --md-warning-soft: #fef3c7;
+  --md-info: #0284c7;
+  --md-info-soft: #e0f2fe;
+
+  /* Shape */
+  --md-radius: 14px;
+  --md-radius-lg: 20px;
+
+  /* Shadows */
+  --md-shadow: 0 4px 18px rgba(30, 27, 75, 0.06);
+  --md-shadow-hover: 0 12px 28px rgba(30, 27, 75, 0.12);
+
+  /* Bootstrap integration */
+  --bs-primary: #4f46e5;
+  --bs-primary-rgb: 79, 70, 229;
+
+  --bs-success: #4f46e5;
+  --bs-success-rgb: 79, 70, 229;
+
+  --bs-link-color: #4f46e5;
+  --bs-link-color-rgb: 79, 70, 229;
+  --bs-link-hover-color: #4338ca;
+
+  --bs-body-color: #0f172a;
+  --bs-body-bg: #f8fafc;
+  --bs-secondary-color: #64748b;
+  --bs-tertiary-bg: #f1f5f9;
+
+  --bs-border-color: #e2e8f0;
+  --bs-border-radius: 0.6rem;
+  --bs-focus-ring-color: rgba(79, 70, 229, 0.25);
 }
+
+
+/* ============================================================
+   2. DARK THEME — DARK PREMIUM
+   ============================================================ */
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --md-primary: #818cf8;
+  --md-primary-dark: #6366f1;
+  --md-primary-light: #312e81;
+
+  --md-accent: #fbbf24;
+  --md-accent-soft: #422006;
+
+  --md-background: #0b1120;
+  --md-surface: #111827;
+  --md-surface-secondary: #1e293b;
+  --md-surface-hover: #263449;
+
+  --md-text: #e2e8f0;
+  --md-heading: #f1f5f9;
+  --md-muted: #94a3b8;
+  --md-text-inverse: #ffffff;
+
+  --md-border: #334155;
+  --md-border-strong: #475569;
+
+  --md-success: #4ade80;
+  --md-success-soft: #14532d;
+  --md-danger: #f87171;
+  --md-danger-soft: #7f1d1d;
+  --md-warning: #fbbf24;
+  --md-warning-soft: #78350f;
+  --md-info: #38bdf8;
+  --md-info-soft: #0c4a6e;
+
+  --md-shadow: 0 4px 18px rgba(0, 0, 0, 0.20);
+  --md-shadow-hover: 0 12px 28px rgba(0, 0, 0, 0.35);
+
+  /* Bootstrap integration */
+  --bs-primary: #818cf8;
+  --bs-primary-rgb: 129, 140, 248;
+
+  --bs-success: #818cf8;
+  --bs-success-rgb: 129, 140, 248;
+
+  --bs-link-color: #a5b4fc;
+  --bs-link-color-rgb: 165, 180, 252;
+  --bs-link-hover-color: #c7d2fe;
+
+  --bs-body-color: #e2e8f0;
+  --bs-body-bg: #0b1120;
+  --bs-secondary-color: #94a3b8;
+  --bs-tertiary-bg: #1e293b;
+
+  --bs-border-color: #334155;
+  --bs-focus-ring-color: rgba(129, 140, 248, 0.3);
+}
+
+
+/* ============================================================
+   3. SYSTEM THEME
+   Automatically follows operating system preference.
+   ============================================================ */
+
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="system"] {
+    color-scheme: dark;
+
+    --md-primary: #818cf8;
+    --md-primary-dark: #6366f1;
+    --md-primary-light: #312e81;
+
+    --md-accent: #fbbf24;
+    --md-accent-soft: #422006;
+
+    --md-background: #0b1120;
+    --md-surface: #111827;
+    --md-surface-secondary: #1e293b;
+    --md-surface-hover: #263449;
+
+    --md-text: #e2e8f0;
+    --md-heading: #f1f5f9;
+    --md-muted: #94a3b8;
+    --md-text-inverse: #ffffff;
+
+    --md-border: #334155;
+    --md-border-strong: #475569;
+
+    --md-success: #4ade80;
+    --md-success-soft: #14532d;
+    --md-danger: #f87171;
+    --md-danger-soft: #7f1d1d;
+    --md-warning: #fbbf24;
+    --md-warning-soft: #78350f;
+    --md-info: #38bdf8;
+    --md-info-soft: #0c4a6e;
+
+    --md-shadow: 0 4px 18px rgba(0, 0, 0, 0.20);
+    --md-shadow-hover: 0 12px 28px rgba(0, 0, 0, 0.35);
+
+    --bs-primary: #818cf8;
+    --bs-primary-rgb: 129, 140, 248;
+
+    --bs-success: #818cf8;
+    --bs-success-rgb: 129, 140, 248;
+
+    --bs-link-color: #a5b4fc;
+    --bs-link-color-rgb: 165, 180, 252;
+    --bs-link-hover-color: #c7d2fe;
+
+    --bs-body-color: #e2e8f0;
+    --bs-body-bg: #0b1120;
+    --bs-secondary-color: #94a3b8;
+    --bs-tertiary-bg: #1e293b;
+
+    --bs-border-color: #334155;
+    --bs-focus-ring-color: rgba(129, 140, 248, 0.3);
+  }
+}
+
+
+/* ============================================================
+   4. GLOBAL FOUNDATION
+   ============================================================ */
 
 * {
   box-sizing: border-box;
-  }
+}
 
 html {
-min-width: 320px;
-scroll-behavior: smooth;
-scroll-padding-top: 90px;
+  min-width: 320px;
+  scroll-behavior: smooth;
+  scroll-padding-top: 90px;
 }
 
 body {
-margin: 0;
-min-width: 320px;
-min-height: 100vh;
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
 
-font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
-font-size: 16px;
-line-height: 1.6;
+  font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
 
-color: var(--md-text);
-background-color: var(--md-background);
+  color: var(--md-text);
+  background-color: var(--md-background);
+
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
 
 #root {
-width: 100%;
-min-height: 100vh;
-margin: 0;
-display: flex;
-flex-direction: column;
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+
+  display: flex;
+  flex-direction: column;
 }
 
 main {
-flex: 1;
+  flex: 1;
 }
+
+
+/* ============================================================
+   5. TYPOGRAPHY
+   ============================================================ */
 
 h1,
 h2,
@@ -71,152 +266,114 @@ h3,
 h4,
 h5,
 h6 {
-color: #1e1b4b;
-font-weight: 650;
-line-height: 1.3;
+  color: var(--md-heading);
+  font-weight: 650;
+  line-height: 1.3;
 }
 
 p {
-line-height: 1.65;
+  line-height: 1.65;
+}
+
+small,
+.text-muted {
+  color: var(--md-muted) !important;
 }
 
 a {
-color: var(--md-primary);
-text-decoration: none;
-transition: color 0.2s ease;
+  color: var(--md-primary);
+  text-decoration: none;
+  transition: color 0.2s ease;
 }
 
 a:hover {
-color: var(--md-primary-dark);
+  color: var(--md-primary-dark);
 }
+
+
+/* ============================================================
+   6. FORM ELEMENTS
+   ============================================================ */
 
 button,
 input,
 select,
 textarea {
-font: inherit;
+  font: inherit;
 }
 
-button {
-transition:
-background-color 0.2s ease,
-border-color 0.2s ease,
-box-shadow 0.2s ease,
-transform 0.2s ease;
-}
-
-img {
-max-width: 100%;
-}
-
-::selection {
-color: #ffffff;
-background-color: var(--md-primary);
-}
-
-/* Consistent keyboard accessibility */
-:focus-visible {
-outline: 3px solid rgba(79, 70, 229, 0.45);
-outline-offset: 3px;
-}
-
-/* Global cards */
-.card {
-border-radius: var(--md-radius);
-}
-
-/* Consistent form controls */
 .form-control,
 .form-select {
-min-height: 44px;
-border-color: #e2e8f0;
-border-radius: 9px;
+  min-height: 44px;
+
+  color: var(--md-text);
+  background-color: var(--md-surface);
+
+  border: 1px solid var(--md-border);
+  border-radius: 9px;
+}
+
+.form-control::placeholder {
+  color: var(--md-muted);
+  opacity: 0.8;
 }
 
 .form-control:focus,
 .form-select:focus {
-border-color: var(--md-primary);
-box-shadow: 0 0 0 0.2rem rgba(79, 70, 229, 0.13);
+  color: var(--md-text);
+  background-color: var(--md-surface);
+
+  border-color: var(--md-primary);
+
+  box-shadow: 0 0 0 0.2rem
+    rgba(79, 70, 229, 0.13);
 }
 
-/* Consistent buttons */
-.btn {
-border-radius: 9px;
-font-weight: 600;
+:root[data-theme="dark"] .form-control:focus,
+:root[data-theme="dark"] .form-select:focus {
+  box-shadow: 0 0 0 0.2rem
+    rgba(129, 140, 248, 0.18);
 }
 
-.btn-success {
---bs-btn-bg: var(--md-primary);
---bs-btn-border-color: var(--md-primary);
---bs-btn-hover-bg: var(--md-primary-dark);
---bs-btn-hover-border-color: var(--md-primary-dark);
---bs-btn-active-bg: var(--md-primary-dark);
---bs-btn-active-border-color: var(--md-primary-dark);
+.form-check-input {
+  background-color: var(--md-surface);
+  border-color: var(--md-border-strong);
 }
 
-.btn:disabled {
-cursor: not-allowed;
-}
-
-/* Responsive typography */
-@media (max-width: 768px) {
-body {
-font-size: 15px;
-}
-
-h1 {
-line-height: 1.2;
-}
-}
-
-/* Respect reduced-motion preferences */
-@media (prefers-reduced-motion: reduce) {
-*,
-*::before,
-*::after {
-scroll-behavior: auto !important;
-animation-duration: 0.01ms !important;
-animation-iteration-count: 1 !important;
-transition-duration: 0.01ms !important;
-}
+.form-check-input:checked {
+  background-color: var(--md-primary);
+  border-color: var(--md-primary);
 }
 
 
 /* ============================================================
-   MYDUKA THEME LAYER
-   Indigo primary, amber accent, cool slate neutrals.
-   Bootstrap variables are re-pointed so buttons, links and
-   focus rings match the rest of the interface.
+   7. BUTTONS
    ============================================================ */
 
-:root {
-  --bs-primary: #4f46e5;
-  --bs-primary-rgb: 79, 70, 229;
-  --bs-link-color: #4f46e5;
-  --bs-link-color-rgb: 79, 70, 229;
-  --bs-link-hover-color: #4338ca;
-  --bs-link-hover-color-rgb: 67, 56, 202;
-  --bs-body-color: #0f172a;
-  --bs-body-bg: #f8fafc;
-  --bs-border-color: #e2e8f0;
-  --bs-border-radius: 0.6rem;
-  --bs-focus-ring-color: rgba(79, 70, 229, 0.25);
+button {
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
 
-  --md-accent: #f59e0b;
-  --md-accent-soft: #fef3c7;
+.btn {
+  border-radius: 9px;
+  font-weight: 600;
 }
 
 .btn-primary,
 .btn-success {
-  --bs-btn-bg: #4f46e5;
-  --bs-btn-border-color: #4f46e5;
-  --bs-btn-hover-bg: #4338ca;
-  --bs-btn-hover-border-color: #4338ca;
-  --bs-btn-active-bg: #3730a3;
-  --bs-btn-active-border-color: #3730a3;
-  --bs-btn-disabled-bg: #4f46e5;
-  --bs-btn-disabled-border-color: #4f46e5;
-  --bs-btn-focus-shadow-rgb: 79, 70, 229;
+  --bs-btn-bg: var(--md-primary);
+  --bs-btn-border-color: var(--md-primary);
+
+  --bs-btn-hover-bg: var(--md-primary-dark);
+  --bs-btn-hover-border-color: var(--md-primary-dark);
+
+  --bs-btn-active-bg: var(--md-primary-dark);
+  --bs-btn-active-border-color: var(--md-primary-dark);
+
   --bs-btn-color: #ffffff;
   --bs-btn-hover-color: #ffffff;
   --bs-btn-active-color: #ffffff;
@@ -224,27 +381,174 @@ transition-duration: 0.01ms !important;
 
 .btn-outline-primary,
 .btn-outline-success {
-  --bs-btn-color: #4f46e5;
-  --bs-btn-border-color: #4f46e5;
-  --bs-btn-hover-bg: #4f46e5;
-  --bs-btn-hover-border-color: #4f46e5;
-  --bs-btn-active-bg: #4338ca;
-  --bs-btn-active-border-color: #4338ca;
-  --bs-btn-focus-shadow-rgb: 79, 70, 229;
+  --bs-btn-color: var(--md-primary);
+  --bs-btn-border-color: var(--md-primary);
+
+  --bs-btn-hover-bg: var(--md-primary);
+  --bs-btn-hover-border-color: var(--md-primary);
+
+  --bs-btn-active-bg: var(--md-primary-dark);
+  --bs-btn-active-border-color: var(--md-primary-dark);
 }
 
-.form-control:focus,
-.form-select:focus {
-  border-color: #818cf8;
-  box-shadow: 0 0 0 0.2rem rgba(79, 70, 229, 0.18);
+.btn:disabled {
+  cursor: not-allowed;
 }
 
-.form-check-input:checked {
-  background-color: #4f46e5;
-  border-color: #4f46e5;
+
+/* ============================================================
+   8. CARDS AND SURFACES
+   ============================================================ */
+
+.card {
+  color: var(--md-text);
+  background-color: var(--md-surface);
+
+  border-color: var(--md-border);
+  border-radius: var(--md-radius);
+
+  box-shadow: var(--md-shadow);
 }
+
+.card-header,
+.card-footer {
+  color: var(--md-text);
+  background-color: var(--md-surface-secondary);
+  border-color: var(--md-border);
+}
+
+.dropdown-menu {
+  color: var(--md-text);
+  background-color: var(--md-surface);
+  border-color: var(--md-border);
+  box-shadow: var(--md-shadow);
+}
+
+.dropdown-item {
+  color: var(--md-text);
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+  color: var(--md-text);
+  background-color: var(--md-surface-secondary);
+}
+
+.modal-content {
+  color: var(--md-text);
+  background-color: var(--md-surface);
+  border-color: var(--md-border);
+}
+
+.modal-header,
+.modal-footer {
+  border-color: var(--md-border);
+}
+
+
+/* ============================================================
+   9. TABLES
+   ============================================================ */
+
+.table {
+  --bs-table-color: var(--md-text);
+  --bs-table-bg: var(--md-surface);
+  --bs-table-border-color: var(--md-border);
+  --bs-table-striped-bg: var(--md-surface-secondary);
+  --bs-table-striped-color: var(--md-text);
+  --bs-table-hover-bg: var(--md-surface-hover);
+  --bs-table-hover-color: var(--md-text);
+
+  color: var(--md-text);
+  border-color: var(--md-border);
+}
+
+.table > :not(caption) > * > * {
+  color: var(--md-text);
+  background-color: var(--bs-table-bg);
+  border-bottom-color: var(--md-border);
+}
+
+
+/* ============================================================
+   10. NAVIGATION
+   ============================================================ */
+
+.navbar,
+.nav-tabs {
+  border-color: var(--md-border);
+}
+
+.nav-tabs .nav-link {
+  color: var(--md-muted);
+}
+
+.nav-tabs .nav-link.active {
+  color: var(--md-primary);
+  background-color: var(--md-surface);
+  border-color: var(--md-border) var(--md-border)
+    var(--md-surface);
+}
+
+
+/* ============================================================
+   11. ALERTS AND STATUS BADGES
+   ============================================================ */
+
+.alert {
+  border-radius: var(--md-radius);
+}
+
+.badge {
+  font-weight: 600;
+}
+
+
+/* ============================================================
+   12. ACCESSIBILITY
+   ============================================================ */
 
 ::selection {
-  background: #c7d2fe;
-  color: #1e1b4b;
+  color: #ffffff;
+  background-color: var(--md-primary);
+}
+
+:focus-visible {
+  outline: 3px solid rgba(79, 70, 229, 0.45);
+  outline-offset: 3px;
+}
+
+img {
+  max-width: 100%;
+}
+
+
+/* ============================================================
+   13. RESPONSIVE TYPOGRAPHY
+   ============================================================ */
+
+@media (max-width: 768px) {
+  body {
+    font-size: 15px;
+  }
+
+  h1 {
+    line-height: 1.2;
+  }
+}
+
+
+/* ============================================================
+   14. REDUCED MOTION
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
