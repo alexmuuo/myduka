@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { STORE_NAME } from "../config/store";
 import api from "../api/api";
+import ThemeSwitcher from "./ThemeSwitcher";
 
 function AdminNavbar() {
   const navigate = useNavigate();
@@ -119,7 +120,14 @@ function AdminNavbar() {
   // =========================================================
 
   return (
-    <nav className="navbar navbar-expand-xl navbar-dark bg-dark sticky-top shadow-sm">
+    <nav
+      className="navbar navbar-expand-xl sticky-top shadow-sm"
+      style={{
+        backgroundColor: "var(--md-surface)",
+        color: "var(--md-text)",
+        borderBottom: "1px solid var(--md-border)",
+      }}
+    >
       <div className="container-fluid px-3 px-lg-4">
 
         {/* BRAND */}
@@ -127,6 +135,7 @@ function AdminNavbar() {
         <Link
           className="navbar-brand fw-bold d-flex align-items-center gap-2 me-4"
           to="/admin"
+          style={{ color: "var(--md-text)" }}
         >
           <i className="bi bi-shield-lock-fill text-warning fs-5" />
 
@@ -146,6 +155,7 @@ function AdminNavbar() {
           aria-controls="adminNavbar"
           aria-expanded="false"
           aria-label="Toggle administrator navigation"
+          style={{ borderColor: "var(--md-border)" }}
         >
           <span className="navbar-toggler-icon" />
         </button>
@@ -386,11 +396,20 @@ function AdminNavbar() {
 
           </ul>
 
-          {/* ADMIN ACCOUNT */}
+          {/* ADMIN ACCOUNT AND APPEARANCE */}
 
           <div className="d-flex flex-column flex-xl-row align-items-stretch align-items-xl-center gap-3 py-3 py-xl-0">
 
-            <div className="text-light small d-flex align-items-center gap-2">
+            {/* THEME SWITCHER */}
+
+            <ThemeSwitcher />
+
+            {/* ADMIN DETAILS */}
+
+            <div
+              className="small d-flex align-items-center gap-2"
+              style={{ color: "var(--md-text)" }}
+            >
               <i className="bi bi-person-circle fs-5 text-warning" />
 
               <div>
@@ -398,15 +417,20 @@ function AdminNavbar() {
                   Administrator
                 </div>
 
-                <div className="text-white-50 small">
+                <div
+                  className="small"
+                  style={{ color: "var(--md-muted)" }}
+                >
                   Management Console
                 </div>
               </div>
             </div>
 
+            {/* LOGOUT */}
+
             <button
               type="button"
-              className="btn btn-outline-light btn-sm px-3"
+              className="btn btn-outline-secondary btn-sm px-3"
               onClick={handleLogout}
             >
               <i className="bi bi-box-arrow-right me-2" />
