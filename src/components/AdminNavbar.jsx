@@ -12,16 +12,14 @@ function AdminNavbar() {
   const [unreadMessageCount, setUnreadMessageCount] = useState(0);
 
   // =========================================================
-  // LOAD ADMIN UNREAD MESSAGE COUNT
+  // LOAD UNREAD MESSAGE COUNT
   // =========================================================
 
   useEffect(() => {
     let cancelled = false;
 
     const loadUnreadMessageCount = async () => {
-      const adminToken = localStorage.getItem("adminToken");
-
-      if (!adminToken) {
+      if (!localStorage.getItem("adminToken")) {
         setUnreadMessageCount(0);
         return;
       }
@@ -42,7 +40,7 @@ function AdminNavbar() {
       } catch (error) {
         if (!cancelled) {
           console.error(
-            "Could not load admin unread message count:",
+            "Could not load unread messages:",
             error.response?.data || error.message
           );
         }
@@ -51,7 +49,7 @@ function AdminNavbar() {
 
     loadUnreadMessageCount();
 
-    const interval = setInterval(loadUnreadMessageCount, 3000);
+    const interval = setInterval(loadUnreadMessageCount, 30000);
 
     return () => {
       cancelled = true;
@@ -60,25 +58,25 @@ function AdminNavbar() {
   }, []);
 
   // =========================================================
-  // CLOSE MOBILE NAVIGATION AFTER NAVIGATION
+  // CLOSE MOBILE NAVIGATION AFTER ROUTE CHANGE
   // =========================================================
 
   useEffect(() => {
     const navbar = document.getElementById("adminNavbar");
 
-    if (navbar?.classList.contains("show")) {
-      if (window.bootstrap?.Collapse) {
-        window.bootstrap.Collapse
-          .getOrCreateInstance(navbar, { toggle: false })
-          .hide();
-      } else {
-        navbar.classList.remove("show");
-      }
+    if (!navbar?.classList.contains("show")) return;
+
+    if (window.bootstrap?.Collapse) {
+      window.bootstrap.Collapse
+        .getOrCreateInstance(navbar, { toggle: false })
+        .hide();
+    } else {
+      navbar.classList.remove("show");
     }
   }, [location.pathname]);
 
   // =========================================================
-  // ADMIN LOGOUT
+  // LOGOUT
   // =========================================================
 
   const handleLogout = () => {
@@ -106,341 +104,632 @@ function AdminNavbar() {
   };
 
   const linkClass = (path) =>
-    `dropdown-item d-flex align-items-center gap-2 ${
+    `dropdown-item md-admin-dropdown-item ${
       isActive(path) ? "active" : ""
     }`;
 
   const dropdownClass = (paths) =>
-    `nav-link dropdown-toggle ${
+    `nav-link md-admin-nav-link dropdown-toggle ${
       paths.some((path) => isActive(path)) ? "active" : ""
     }`;
 
+  const normalLinkClass = (path) =>
+    `nav-link md-admin-nav-link ${
+      isActive(path) ? "active" : ""
+    }`;
+
   // =========================================================
-  // ADMIN NAVBAR
+  // NAVBAR
   // =========================================================
 
   return (
-    <nav
-      className="navbar navbar-expand-xl sticky-top shadow-sm"
-      style={{
-        backgroundColor: "var(--md-surface)",
-        color: "var(--md-text)",
-        borderBottom: "1px solid var(--md-border)",
-      }}
-    >
-      <div className="container-fluid px-3 px-lg-4">
+    <>
+      <nav className="navbar navbar-expand-xl sticky-top md-admin-navbar">
+        <div className="container-fluid px-3 px-lg-4">
 
-        {/* BRAND */}
+          {/* BRAND */}
 
-        <Link
-          className="navbar-brand fw-bold d-flex align-items-center gap-2 me-4"
-          to="/admin"
-          style={{ color: "var(--md-text)" }}
-        >
-          <i className="bi bi-shield-lock-fill text-warning fs-5" />
+          <Link
+            className="navbar-brand md-admin-brand"
+            to="/admin"
+          >
+            <span className="md-admin-brand-icon">
+              <i className="bi bi-grid-1x2-fill" />
+            </span>
 
-          <span>
-            {STORE_NAME}
-            <span className="text-warning ms-2">Admin</span>
-          </span>
-        </Link>
+            <span className="md-admin-brand-text">
+              <span className="md-admin-brand-name">
+                {STORE_NAME}
+              </span>
 
-        {/* MOBILE TOGGLE */}
+              <span className="md-admin-brand-label">
+                ADMIN CONSOLE
+              </span>
+            </span>
+          </Link>
 
-        <button
-          className="navbar-toggler"
-          type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#adminNavbar"
-          aria-controls="adminNavbar"
-          aria-expanded="false"
-          aria-label="Toggle administrator navigation"
-          style={{ borderColor: "var(--md-border)" }}
-        >
-          <span className="navbar-toggler-icon" />
-        </button>
+          {/* MOBILE TOGGLE */}
 
-        {/* NAVIGATION */}
+          <button
+            className="navbar-toggler md-admin-toggler"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#adminNavbar"
+            aria-controls="adminNavbar"
+            aria-expanded="false"
+            aria-label="Toggle administrator navigation"
+          >
+            <span className="navbar-toggler-icon" />
+          </button>
 
-        <div
-          className="collapse navbar-collapse"
-          id="adminNavbar"
-        >
-          <ul className="navbar-nav me-auto mb-2 mb-xl-0 gap-xl-1">
+          {/* NAVIGATION */}
 
-            {/* DASHBOARD */}
+          <div
+            className="collapse navbar-collapse"
+            id="adminNavbar"
+          >
+            <ul className="navbar-nav me-auto mb-2 mb-xl-0 md-admin-nav-list">
 
-            <li className="nav-item">
-              <Link
-                className={`nav-link ${
-                  isActive("/admin") ? "active" : ""
-                }`}
-                to="/admin"
-              >
-                <i className="bi bi-speedometer2 me-1" />
-                Dashboard
-              </Link>
-            </li>
+              {/* DASHBOARD */}
 
-            {/* INVENTORY DROPDOWN */}
+              <li className="nav-item">
+                <Link
+                  className={normalLinkClass("/admin")}
+                  to="/admin"
+                >
+                  <i className="bi bi-speedometer2" />
+                  <span>Dashboard</span>
+                </Link>
+              </li>
 
-            <li className="nav-item dropdown">
-              <button
-                className={dropdownClass([
-                  "/admin/products",
-                  "/admin/inventory",
-                  "/admin/stock-history",
-                  "/admin/branches",
-                ])}
-                type="button"
-                data-bs-toggle="dropdown"
-                aria-expanded="false"
-              >
-                <i className="bi bi-box-seam me-1" />
-                Inventory
-              </button>
+              {/* INVENTORY */}
 
-              <ul className="dropdown-menu shadow border-0">
+              <li className="nav-item dropdown">
+                <button
+                  className={dropdownClass([
+                    "/admin/products",
+                    "/admin/categories",
+                    "/admin/inventory",
+                    "/admin/stock-history",
+                    "/admin/stock-transfers",
+                    "/admin/branches",
+                  ])}
+                  type="button"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                >
+                  <i className="bi bi-box-seam" />
+                  <span>Inventory</span>
+                </button>
 
-                <li>
-                  <Link
-                    className={linkClass("/admin/products")}
-                    to="/admin/products"
-                  >
-                    <i className="bi bi-box" />
-                    Products
-                  </Link>
-                </li>
+                <ul className="dropdown-menu md-admin-dropdown">
 
-                <li>
-                  <Link
-                    className={linkClass("/admin/inventory")}
-                    to="/admin/inventory"
-                  >
-                    <i className="bi bi-clipboard-data" />
-                    Stock Management
-                  </Link>
-                </li>
+                  <li>
+                    <Link
+                      className={linkClass("/admin/products")}
+                      to="/admin/products"
+                    >
+                      <i className="bi bi-box" />
+                      Products
+                    </Link>
+                  </li>
 
-                <li>
-                  <Link
-                    className={linkClass("/admin/stock-history")}
-                    to="/admin/stock-history"
-                  >
-                    <i className="bi bi-clock-history" />
-                    Stock History
-                  </Link>
-                </li>
+                  <li>
+                    <Link
+                      className={linkClass("/admin/categories")}
+                      to="/admin/categories"
+                    >
+                      <i className="bi bi-tags" />
+                      Categories
+                    </Link>
+                  </li>
 
-                <li>
-                  <hr className="dropdown-divider" />
-                </li>
+                  <li>
+                    <Link
+                      className={linkClass("/admin/inventory")}
+                      to="/admin/inventory"
+                    >
+                      <i className="bi bi-clipboard-data" />
+                      Stock Management
+                    </Link>
+                  </li>
 
-                <li>
-                  <Link
-                    className={linkClass("/admin/branches")}
-                    to="/admin/branches"
-                  >
-                    <i className="bi bi-shop" />
-                    Branches
-                  </Link>
-                </li>
+                  <li>
+                    <Link
+                      className={linkClass("/admin/stock-history")}
+                      to="/admin/stock-history"
+                    >
+                      <i className="bi bi-clock-history" />
+                      Stock History
+                    </Link>
+                  </li>
 
-              </ul>
-            </li>
+                  <li>
+                    <Link
+                      className={linkClass("/admin/stock-transfers")}
+                      to="/admin/stock-transfers"
+                    >
+                      <i className="bi bi-arrow-left-right" />
+                      Stock Transfers
+                    </Link>
+                  </li>
 
-            {/* TRANSACTIONS DROPDOWN */}
+                  <li><hr className="dropdown-divider" /></li>
 
-            <li className="nav-item dropdown">
-              <button
-                className={dropdownClass([
-                  "/admin/orders",
-                  "/admin/sales",
-                  "/admin/pos-sales",
-                  "/admin/deliveries",
-                ])}
-                type="button"
-                data-bs-toggle="dropdown"
-                aria-expanded="false"
-              >
-                <i className="bi bi-receipt me-1" />
-                Transactions
-              </button>
+                  <li>
+                    <Link
+                      className={linkClass("/admin/branches")}
+                      to="/admin/branches"
+                    >
+                      <i className="bi bi-shop" />
+                      Branches
+                    </Link>
+                  </li>
 
-              <ul className="dropdown-menu shadow border-0">
+                </ul>
+              </li>
 
-                <li>
-                  <Link
-                    className={linkClass("/admin/orders")}
-                    to="/admin/orders"
-                  >
-                    <i className="bi bi-cart3" />
-                    Website Orders
-                  </Link>
-                </li>
+              {/* TRANSACTIONS */}
 
-                <li>
-                  <Link
-                    className={linkClass("/admin/sales")}
-                    to="/admin/sales"
-                  >
-                    <i className="bi bi-globe" />
-                    Website Sales
-                  </Link>
-                </li>
+              <li className="nav-item dropdown">
+                <button
+                  className={dropdownClass([
+                    "/admin/orders",
+                    "/admin/sales",
+                    "/admin/pos-sales",
+                    "/admin/deliveries",
+                    "/admin/payments",
+                  ])}
+                  type="button"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                >
+                  <i className="bi bi-receipt" />
+                  <span>Transactions</span>
+                </button>
 
-                <li>
-                  <Link
-                    className={linkClass("/admin/pos-sales")}
-                    to="/admin/pos-sales"
-                  >
-                    <i className="bi bi-cash-register" />
-                    POS Sales
-                    <span className="badge bg-success ms-auto">
-                      POS
-                    </span>
-                  </Link>
-                </li>
+                <ul className="dropdown-menu md-admin-dropdown">
 
-                <li>
-                  <hr className="dropdown-divider" />
-                </li>
+                  <li>
+                    <Link
+                      className={linkClass("/admin/orders")}
+                      to="/admin/orders"
+                    >
+                      <i className="bi bi-cart3" />
+                      Website Orders
+                    </Link>
+                  </li>
 
-                <li>
-                  <Link
-                    className={linkClass("/admin/deliveries")}
-                    to="/admin/deliveries"
-                  >
-                    <i className="bi bi-truck" />
-                    Deliveries
-                  </Link>
-                </li>
+                  <li>
+                    <Link
+                      className={linkClass("/admin/sales")}
+                      to="/admin/sales"
+                    >
+                      <i className="bi bi-globe" />
+                      Website Sales
+                    </Link>
+                  </li>
 
-              </ul>
-            </li>
-
-            {/* BUSINESS DROPDOWN */}
-
-            <li className="nav-item dropdown">
-              <button
-                className={dropdownClass([
-                  "/admin/customers",
-                  "/admin/reports",
-                  "/admin/messages",
-                  "/admin/cashiers",
-                ])}
-                type="button"
-                data-bs-toggle="dropdown"
-                aria-expanded="false"
-              >
-                <i className="bi bi-grid me-1" />
-                Business
-              </button>
-
-              <ul className="dropdown-menu shadow border-0">
-
-                <li>
-                  <Link
-                    className={linkClass("/admin/reports")}
-                    to="/admin/reports"
-                  >
-                    <i className="bi bi-graph-up-arrow" />
-                    Reports & Analytics
-                  </Link>
-                </li>
-
-                <li>
-                  <Link
-                    className={linkClass("/admin/customers")}
-                    to="/admin/customers"
-                  >
-                    <i className="bi bi-people" />
-                    Customers
-                  </Link>
-                </li>
-
-                <li>
-                  <Link
-                    className={linkClass("/admin/cashiers")}
-                    to="/admin/cashiers"
-                  >
-                    <i className="bi bi-person-workspace" />
-                    Cashiers
-                  </Link>
-                </li>
-
-                <li>
-                  <hr className="dropdown-divider" />
-                </li>
-
-                <li>
-                  <Link
-                    className={linkClass("/admin/messages")}
-                    to="/admin/messages"
-                  >
-                    <i className="bi bi-chat-dots" />
-                    Messages
-
-                    {unreadMessageCount > 0 && (
-                      <span className="badge rounded-pill bg-danger ms-auto">
-                        {unreadMessageCount > 99
-                          ? "99+"
-                          : unreadMessageCount}
+                  <li>
+                    <Link
+                      className={linkClass("/admin/pos-sales")}
+                      to="/admin/pos-sales"
+                    >
+                      <i className="bi bi-cash-register" />
+                      POS Sales
+                      <span className="badge rounded-pill bg-success ms-auto">
+                        POS
                       </span>
-                    )}
-                  </Link>
-                </li>
+                    </Link>
+                  </li>
 
-              </ul>
-            </li>
+                  <li><hr className="dropdown-divider" /></li>
 
-          </ul>
+                  <li>
+                    <Link
+                      className={linkClass("/admin/deliveries")}
+                      to="/admin/deliveries"
+                    >
+                      <i className="bi bi-truck" />
+                      Deliveries
+                    </Link>
+                  </li>
 
-          {/* ADMIN ACCOUNT AND APPEARANCE */}
+                  <li>
+                    <Link
+                      className={linkClass("/admin/payments")}
+                      to="/admin/payments"
+                    >
+                      <i className="bi bi-credit-card" />
+                      Payments
+                    </Link>
+                  </li>
 
-          <div className="d-flex flex-column flex-xl-row align-items-stretch align-items-xl-center gap-3 py-3 py-xl-0">
+                </ul>
+              </li>
 
-            {/* THEME SWITCHER */}
+              {/* BUSINESS */}
 
-            <ThemeSwitcher />
+              <li className="nav-item dropdown">
+                <button
+                  className={dropdownClass([
+                    "/admin/customers",
+                    "/admin/reports",
+                    "/admin/messages",
+                    "/admin/cashiers",
+                  ])}
+                  type="button"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                >
+                  <i className="bi bi-grid" />
+                  <span>Business</span>
+                </button>
 
-            {/* ADMIN DETAILS */}
+                <ul className="dropdown-menu md-admin-dropdown">
 
-            <div
-              className="small d-flex align-items-center gap-2"
-              style={{ color: "var(--md-text)" }}
-            >
-              <i className="bi bi-person-circle fs-5 text-warning" />
+                  <li>
+                    <Link
+                      className={linkClass("/admin/reports")}
+                      to="/admin/reports"
+                    >
+                      <i className="bi bi-graph-up-arrow" />
+                      Reports & Analytics
+                    </Link>
+                  </li>
 
-              <div>
-                <div className="fw-semibold">
-                  Administrator
+                  <li>
+                    <Link
+                      className={linkClass("/admin/customers")}
+                      to="/admin/customers"
+                    >
+                      <i className="bi bi-people" />
+                      Customers
+                    </Link>
+                  </li>
+
+                  <li>
+                    <Link
+                      className={linkClass("/admin/cashiers")}
+                      to="/admin/cashiers"
+                    >
+                      <i className="bi bi-person-workspace" />
+                      Cashiers
+                    </Link>
+                  </li>
+
+                  <li><hr className="dropdown-divider" /></li>
+
+                  <li>
+                    <Link
+                      className={linkClass("/admin/messages")}
+                      to="/admin/messages"
+                    >
+                      <i className="bi bi-chat-dots" />
+                      Messages
+
+                      {unreadMessageCount > 0 && (
+                        <span className="badge rounded-pill bg-danger ms-auto">
+                          {unreadMessageCount > 99
+                            ? "99+"
+                            : unreadMessageCount}
+                        </span>
+                      )}
+                    </Link>
+                  </li>
+
+                </ul>
+              </li>
+
+            </ul>
+
+            {/* ACCOUNT AREA */}
+
+            <div className="md-admin-account-area">
+
+              <div className="md-admin-theme">
+                <ThemeSwitcher />
+              </div>
+
+              <div className="md-admin-profile">
+                <div className="md-admin-avatar">
+                  <i className="bi bi-person-fill" />
                 </div>
 
-                <div
-                  className="small"
-                  style={{ color: "var(--md-muted)" }}
-                >
-                  Management Console
+                <div className="md-admin-profile-details">
+                  <span className="md-admin-profile-name">
+                    Administrator
+                  </span>
+
+                  <span className="md-admin-profile-role">
+                    Business Owner
+                  </span>
                 </div>
               </div>
+
+              <button
+                type="button"
+                className="md-admin-logout"
+                onClick={handleLogout}
+              >
+                <i className="bi bi-box-arrow-right" />
+                <span>Logout</span>
+              </button>
+
             </div>
-
-            {/* LOGOUT */}
-
-            <button
-              type="button"
-              className="btn btn-outline-secondary btn-sm px-3"
-              onClick={handleLogout}
-            >
-              <i className="bi bi-box-arrow-right me-2" />
-              Logout
-            </button>
-
           </div>
         </div>
-      </div>
-    </nav>
+      </nav>
+
+      {/* NAVBAR STYLES */}
+
+      <style>{`
+        .md-admin-navbar {
+          min-height: 72px;
+          padding: 9px 0;
+          background: var(--surface);
+          color: var(--text-primary);
+          border-bottom: 1px solid var(--border);
+          box-shadow: var(--shadow-sm);
+          z-index: 1030;
+        }
+
+        .md-admin-brand {
+          display: flex;
+          align-items: center;
+          gap: 11px;
+          margin-right: 28px;
+          color: var(--text-primary);
+          text-decoration: none;
+        }
+
+        .md-admin-brand:hover {
+          color: var(--text-primary);
+        }
+
+        .md-admin-brand-icon {
+          width: 42px;
+          height: 42px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 13px;
+          background: var(--primary);
+          color: #fff;
+          font-size: 19px;
+          box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+        }
+
+        .md-admin-brand-text {
+          display: flex;
+          flex-direction: column;
+          line-height: 1.2;
+        }
+
+        .md-admin-brand-name {
+          font-size: 15px;
+          font-weight: 750;
+          letter-spacing: -0.3px;
+        }
+
+        .md-admin-brand-label {
+          margin-top: 4px;
+          color: var(--text-muted);
+          font-size: 9px;
+          font-weight: 750;
+          letter-spacing: 1.3px;
+        }
+
+        .md-admin-toggler {
+          border-color: var(--border) !important;
+          padding: 7px 10px;
+          box-shadow: none !important;
+        }
+
+        .md-admin-nav-list {
+          align-items: center;
+          gap: 3px;
+        }
+
+        .md-admin-nav-link {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          min-height: 40px;
+          padding: 9px 12px !important;
+          border-radius: 9px;
+          color: var(--text-secondary, var(--text-muted)) !important;
+          background: transparent;
+          border: 0;
+          font-size: 13px;
+          font-weight: 600;
+          white-space: nowrap;
+          transition: all 0.18s ease;
+        }
+
+        .md-admin-nav-link > i {
+          font-size: 15px;
+        }
+
+        .md-admin-nav-link:hover,
+        .md-admin-nav-link.active,
+        .md-admin-nav-link.show {
+          color: var(--primary) !important;
+          background: var(--primary-light);
+        }
+
+        .md-admin-dropdown {
+          min-width: 225px;
+          margin-top: 10px !important;
+          padding: 7px;
+          background: var(--surface);
+          border: 1px solid var(--border);
+          border-radius: 13px;
+          box-shadow: var(--shadow-lg);
+        }
+
+        .md-admin-dropdown-item {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 10px 11px;
+          border-radius: 8px;
+          color: var(--text-primary);
+          font-size: 13px;
+          font-weight: 550;
+        }
+
+        .md-admin-dropdown-item > i {
+          width: 17px;
+          color: var(--text-muted);
+          font-size: 15px;
+        }
+
+        .md-admin-dropdown-item:hover,
+        .md-admin-dropdown-item.active {
+          color: var(--primary);
+          background: var(--primary-light);
+        }
+
+        .md-admin-dropdown-item.active > i {
+          color: var(--primary);
+        }
+
+        .md-admin-dropdown .dropdown-divider {
+          border-color: var(--border);
+          opacity: 1;
+        }
+
+        .md-admin-account-area {
+          display: flex;
+          align-items: center;
+          gap: 17px;
+          padding-left: 17px;
+          border-left: 1px solid var(--border);
+        }
+
+        .md-admin-theme {
+          min-width: 0;
+        }
+
+        .md-admin-profile {
+          display: flex;
+          align-items: center;
+          gap: 9px;
+          padding: 4px 8px;
+        }
+
+        .md-admin-avatar {
+          width: 37px;
+          height: 37px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 50%;
+          background: var(--primary-light);
+          color: var(--primary);
+          font-size: 17px;
+        }
+
+        .md-admin-profile-details {
+          display: flex;
+          flex-direction: column;
+          line-height: 1.35;
+        }
+
+        .md-admin-profile-name {
+          color: var(--text-primary);
+          font-size: 12px;
+          font-weight: 700;
+        }
+
+        .md-admin-profile-role {
+          margin-top: 3px;
+          color: var(--text-muted);
+          font-size: 10px;
+        }
+
+        .md-admin-logout {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          min-height: 37px;
+          padding: 0 12px;
+          border: 1px solid var(--border);
+          border-radius: 9px;
+          background: var(--surface);
+          color: var(--text-secondary, var(--text-muted));
+          font-size: 12px;
+          font-weight: 650;
+          transition: all 0.2s ease;
+        }
+
+        .md-admin-logout:hover {
+          color: var(--danger);
+          background: var(--danger-light, var(--surface-secondary));
+          border-color: var(--danger);
+        }
+
+        @media (max-width: 1199px) {
+          .md-admin-navbar {
+            padding: 10px 0;
+          }
+
+          .md-admin-nav-list {
+            align-items: stretch;
+            padding-top: 12px;
+          }
+
+          .md-admin-nav-link {
+            width: 100%;
+            justify-content: flex-start;
+          }
+
+          .md-admin-account-area {
+            align-items: stretch;
+            flex-direction: column;
+            gap: 13px;
+            margin-top: 12px;
+            padding: 15px 0 5px;
+            border-left: 0;
+            border-top: 1px solid var(--border);
+          }
+
+          .md-admin-theme {
+            width: 100%;
+          }
+
+          .md-admin-profile {
+            padding-left: 0;
+          }
+
+          .md-admin-logout {
+            width: 100%;
+          }
+
+          .md-admin-dropdown {
+            margin-top: 3px !important;
+            box-shadow: none;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .md-admin-brand {
+            margin-right: 8px;
+          }
+
+          .md-admin-brand-name {
+            font-size: 13px;
+          }
+
+          .md-admin-brand-icon {
+            width: 38px;
+            height: 38px;
+          }
+        }
+      `}</style>
+    </>
   );
 }
 
