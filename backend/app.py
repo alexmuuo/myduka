@@ -5,7 +5,6 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
 
-
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -14,28 +13,27 @@ from routes.business_routes import business_bp
 from routes.superadmin_routes import superadmin_bp
 
 
-
-# ==================================================
+# ============================================================
 # ENVIRONMENT CONFIGURATION
-# ==================================================
+# ============================================================
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
 
-# ==================================================
+# ============================================================
 # LOGGING
-# ==================================================
+# ============================================================
 
 logging.basicConfig(level=logging.INFO)
 
 logger = logging.getLogger("myduka")
 
 
-# ==================================================
+# ============================================================
 # DATABASE URL
-# ==================================================
+# ============================================================
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
@@ -45,7 +43,6 @@ if not DATABASE_URL:
         "Configure it in backend/.env or Vercel environment variables."
     )
 
-# Normalize PostgreSQL URLs for psycopg 3.
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace(
         "postgres://",
@@ -61,15 +58,14 @@ elif DATABASE_URL.startswith("postgresql://"):
     )
 
 
-# ==================================================
+# ============================================================
 # CREATE FLASK APPLICATION
-# ==================================================
+# ============================================================
 
 app = Flask(__name__)
 
 app.config.update(
     SQLALCHEMY_DATABASE_URI=DATABASE_URL,
-
     SQLALCHEMY_TRACK_MODIFICATIONS=False,
 
     SQLALCHEMY_ENGINE_OPTIONS={
@@ -86,24 +82,30 @@ app.config.update(
 )
 
 
-# ==================================================
+# ============================================================
 # CORS CONFIGURATION
-# ==================================================
+# ============================================================
 
-allowed_origins = [
-    origin.strip().rstrip("/")
-    for origin in os.getenv(
-        "CORS_ORIGINS",
-        "http://localhost:5173"
-    ).split(",")
-    if origin.strip()
-]
+allowed_origins = {
+    "https://myduka-zeta.vercel.app",
+    "http://localhost:5173"
+}
+
+# Allow additional explicitly configured frontend origins.
+configured_origins = os.getenv("CORS_ORIGINS", "")
+
+for origin in configured_origins.split(","):
+    origin = origin.strip().rstrip("/")
+
+    if origin:
+        allowed_origins.add(origin)
 
 CORS(
     app,
+
     resources={
         r"/api/*": {
-            "origins": allowed_origins,
+            "origins": list(allowed_origins),
             "methods": [
                 "GET",
                 "POST",
@@ -117,25 +119,40 @@ CORS(
                 "Authorization",
                 "X-Business-ID"
             ],
-            "supports_credentials": False
+            "expose_headers": [
+                "Content-Type"
+            ],
+            "supports_credentials": False,
+            "max_age": 600
         }
-    }
+    },
+
+    always_send=True
 )
 
 
-# ==================================================
+# ============================================================
 # DATABASE INITIALIZATION
-# ==================================================
+# ============================================================
 
 db.init_app(app)
+
+
+# ============================================================
+# REGISTER API BLUEPRINTS
+# ============================================================
+
 app.register_blueprint(business_bp)
 app.register_blueprint(superadmin_bp)
-# ==================================================
+
+
+# ============================================================
 # APPLICATION INFORMATION
-# ==================================================
+# ============================================================
 
 @app.route("/", methods=["GET"])
 def home():
+
     return jsonify({
         "application": "MyDuka",
         "message": "MyDuka API is running.",
@@ -143,9 +160,9 @@ def home():
     }), 200
 
 
-# ==================================================
+# ============================================================
 # HEALTH CHECK
-# ==================================================
+# ============================================================
 
 @app.route("/api/health", methods=["GET"])
 def health():
@@ -157,14 +174,15 @@ def health():
     }), 200
 
 
-# ==================================================
+# ============================================================
 # DATABASE CONNECTION TEST
-# ==================================================
+# ============================================================
 
 @app.route("/api/database-test", methods=["GET"])
 def database_test():
 
     try:
+
         db.session.execute(text("SELECT 1"))
 
         return jsonify({
@@ -191,9 +209,9 @@ def database_test():
         db.session.remove()
 
 
-# ==================================================
+# ============================================================
 # ERROR HANDLERS
-# ==================================================
+# ============================================================
 
 @app.errorhandler(404)
 def not_found(error):
@@ -207,7 +225,9 @@ def not_found(error):
 @app.errorhandler(500)
 def internal_server_error(error):
 
-    logger.exception("Unexpected internal server error.")
+    logger.exception(
+        "Unexpected internal server error."
+    )
 
     return jsonify({
         "status": "error",
@@ -215,9 +235,9 @@ def internal_server_error(error):
     }), 500
 
 
-# ==================================================
+# ============================================================
 # LOCAL DEVELOPMENT
-# ==================================================
+# ============================================================
 
 if __name__ == "__main__":
 
