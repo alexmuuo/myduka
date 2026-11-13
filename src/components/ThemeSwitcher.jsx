@@ -3,71 +3,126 @@ import { useTheme } from "../context/ThemeContext";
 function ThemeSwitcher({ className = "", showLabel = true }) {
   const { themePreference, setTheme, resolvedTheme } = useTheme();
 
-  const themeIcons = {
-    light: "bi-sun-fill",
-    dark: "bi-moon-stars-fill",
-    system: "bi-display",
+  const themes = {
+    light: {
+      icon: "bi-sun-fill",
+      label: "Light",
+      description: "Modern Premium",
+    },
+    dark: {
+      icon: "bi-moon-stars-fill",
+      label: "Dark",
+      description: "Dark Premium",
+    },
+    system: {
+      icon: "bi-display",
+      label: "System",
+      description: `Following ${resolvedTheme} mode`,
+    },
   };
 
-  const themeLabels = {
-    light: "Light",
-    dark: "Dark",
-    system: "System",
-  };
+  const activeTheme = themes[themePreference] || themes.system;
 
   return (
     <div
-      className={`d-flex align-items-center gap-2 ${className}`}
-      style={{ minWidth: 0 }}
+      className={`md-theme-switcher ${className}`}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "10px",
+        minWidth: 0,
+      }}
     >
-      <i
-        className={`bi ${themeIcons[themePreference]}`}
-        style={{
-          color: "var(--md-primary)",
-          fontSize: "17px",
-        }}
+      <div
         aria-hidden="true"
-      />
-
-      {showLabel && (
-        <span
-          style={{
-            color: "var(--md-text)",
-            fontSize: "13px",
-            fontWeight: 600,
-            whiteSpace: "nowrap",
-          }}
-        >
-          Appearance
-        </span>
-      )}
-
-      <select
-        className="form-select form-select-sm"
-        value={themePreference}
-        onChange={(event) => setTheme(event.target.value)}
-        aria-label="Choose dashboard appearance"
-        title={
-          themePreference === "system"
-            ? `System preference (${resolvedTheme})`
-            : `${themeLabels[themePreference]} theme`
-        }
         style={{
-          width: "auto",
-          minWidth: "112px",
-          minHeight: "36px",
-          fontSize: "13px",
-          fontWeight: 600,
-          color: "var(--md-text)",
-          backgroundColor: "var(--md-surface)",
-          borderColor: "var(--md-border)",
-          cursor: "pointer",
+          width: "36px",
+          height: "36px",
+          flexShrink: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          borderRadius: "11px",
+          color: "var(--primary)",
+          background: "var(--primary-light)",
+          fontSize: "16px",
         }}
       >
-        <option value="light">☀️ Light</option>
-        <option value="dark">🌙 Dark</option>
-        <option value="system">💻 System</option>
-      </select>
+        <i className={`bi ${activeTheme.icon}`} />
+      </div>
+
+      {showLabel && (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            minWidth: 0,
+            lineHeight: 1.3,
+          }}
+        >
+          <span
+            style={{
+              color: "var(--text-primary)",
+              fontSize: "13px",
+              fontWeight: 650,
+            }}
+          >
+            Appearance
+          </span>
+
+          <span
+            style={{
+              color: "var(--text-muted)",
+              fontSize: "11px",
+            }}
+          >
+            {activeTheme.description}
+          </span>
+        </div>
+      )}
+
+      <div style={{ position: "relative", marginLeft: "auto" }}>
+        <select
+          className="md-theme-select"
+          value={themePreference}
+          onChange={(event) => setTheme(event.target.value)}
+          aria-label="Choose dashboard appearance"
+          title={`Current appearance: ${activeTheme.label}`}
+          style={{
+            appearance: "none",
+            WebkitAppearance: "none",
+            minWidth: "112px",
+            minHeight: "38px",
+            padding: "0 30px 0 12px",
+            border: "1px solid var(--border)",
+            borderRadius: "10px",
+            backgroundColor: "var(--surface)",
+            color: "var(--text-primary)",
+            fontSize: "12px",
+            fontWeight: 650,
+            cursor: "pointer",
+            outline: "none",
+          }}
+        >
+          <option value="light">☀️ Light</option>
+          <option value="dark">🌙 Dark</option>
+          <option value="system">💻 System</option>
+        </select>
+
+        <i
+          className="bi bi-chevron-down"
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            right: "11px",
+            top: "50%",
+            transform: "translateY(-50%)",
+            fontSize: "10px",
+            color: "var(--text-muted)",
+            pointerEvents: "none",
+          }}
+        />
+      </div>
     </div>
   );
 }
