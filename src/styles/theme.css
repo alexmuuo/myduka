@@ -1,0 +1,706 @@
+/* =========================================================
+   MYDUKA DESIGN SYSTEM
+   Modern Premium Light + Dark Premium
+   Central theme configuration
+========================================================= */
+
+/* =========================================================
+   1. LIGHT THEME — MODERN PREMIUM
+========================================================= */
+
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* BRAND */
+  --primary: #635bff;
+  --primary-hover: #5148e5;
+  --primary-light: #eeedff;
+  --primary-rgb: 99, 91, 255;
+
+  --secondary: #0f172a;
+  --accent: #06b6d4;
+
+  /* BACKGROUNDS */
+  --background: #f6f7fb;
+  --surface: #ffffff;
+  --surface-secondary: #f8fafc;
+  --surface-hover: #f1f5f9;
+  --surface-active: #eeedff;
+
+  /* SIDEBAR */
+  --sidebar-background: #ffffff;
+  --sidebar-text: #64748b;
+  --sidebar-text-active: #635bff;
+  --sidebar-hover: #f1f0ff;
+  --sidebar-border: #edf0f5;
+
+  /* TEXT */
+  --text-primary: #172033;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+  --text-inverse: #ffffff;
+
+  /* BORDERS */
+  --border: #e7eaf0;
+  --border-strong: #d8dee9;
+  --input-border: #dce1eb;
+  --focus-ring: rgba(99, 91, 255, 0.18);
+
+  /* STATUS */
+  --success: #16a36a;
+  --success-bg: #e9f8f0;
+
+  --warning: #d97706;
+  --warning-bg: #fff7e8;
+
+  --danger: #dc4545;
+  --danger-bg: #fff0f0;
+
+  --info: #2684d9;
+  --info-bg: #edf6ff;
+
+  /* SHADOWS */
+  --shadow-sm:
+    0 1px 2px rgba(15, 23, 42, 0.04);
+
+  --shadow-md:
+    0 4px 12px rgba(15, 23, 42, 0.05);
+
+  --shadow-lg:
+    0 12px 32px rgba(15, 23, 42, 0.08);
+
+  --shadow-xl:
+    0 20px 50px rgba(15, 23, 42, 0.12);
+
+  /* INPUTS */
+  --input-background: #ffffff;
+  --input-text: #172033;
+  --placeholder: #94a3b8;
+
+  /* TABLES */
+  --table-header: #f8fafc;
+  --table-row-hover: #f8f9ff;
+  --table-border: #edf0f5;
+
+  /* OVERLAYS */
+  --overlay: rgba(15, 23, 42, 0.45);
+
+  /* RADIUS */
+  --radius-sm: 7px;
+  --radius-md: 11px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+  --radius-full: 999px;
+
+  /* SPACING */
+  --page-padding: 28px;
+  --card-padding: 22px;
+
+  /* TYPOGRAPHY */
+  --font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+  /* TRANSITIONS */
+  --transition-fast: 150ms ease;
+  --transition-normal: 220ms ease;
+}
+
+
+/* =========================================================
+   2. DARK THEME — DARK PREMIUM
+========================================================= */
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* BRAND */
+  --primary: #918aff;
+  --primary-hover: #a9a3ff;
+  --primary-light: #29264b;
+  --primary-rgb: 145, 138, 255;
+
+  --secondary: #f1f5f9;
+  --accent: #22d3ee;
+
+  /* BACKGROUNDS */
+  --background: #0b1020;
+  --surface: #131b2d;
+  --surface-secondary: #192337;
+  --surface-hover: #202c42;
+  --surface-active: #29264b;
+
+  /* SIDEBAR */
+  --sidebar-background: #10182a;
+  --sidebar-text: #9aa9bf;
+  --sidebar-text-active: #a9a3ff;
+  --sidebar-hover: #20233f;
+  --sidebar-border: #253149;
+
+  /* TEXT */
+  --text-primary: #f1f5f9;
+  --text-secondary: #a7b4c8;
+  --text-muted: #78879e;
+  --text-inverse: #101827;
+
+  /* BORDERS */
+  --border: #27344a;
+  --border-strong: #36445c;
+  --input-border: #36445c;
+  --focus-ring: rgba(145, 138, 255, 0.25);
+
+  /* STATUS */
+  --success: #34d399;
+  --success-bg: #12382f;
+
+  --warning: #fbbf24;
+  --warning-bg: #3b2e13;
+
+  --danger: #fb7185;
+  --danger-bg: #401e2b;
+
+  --info: #60a5fa;
+  --info-bg: #172e4c;
+
+  /* SHADOWS */
+  --shadow-sm:
+    0 1px 2px rgba(0, 0, 0, 0.18);
+
+  --shadow-md:
+    0 4px 12px rgba(0, 0, 0, 0.20);
+
+  --shadow-lg:
+    0 12px 32px rgba(0, 0, 0, 0.28);
+
+  --shadow-xl:
+    0 20px 50px rgba(0, 0, 0, 0.35);
+
+  /* INPUTS */
+  --input-background: #192337;
+  --input-text: #f1f5f9;
+  --placeholder: #78879e;
+
+  /* TABLES */
+  --table-header: #192337;
+  --table-row-hover: #202c42;
+  --table-border: #27344a;
+
+  /* OVERLAYS */
+  --overlay: rgba(0, 0, 0, 0.65);
+}
+
+
+/* =========================================================
+   3. GLOBAL BASE STYLES
+========================================================= */
+
+html {
+  min-height: 100%;
+  background: var(--background);
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+
+  background: var(--background);
+  color: var(--text-primary);
+
+  font-family: var(--font-family);
+  font-size: 14px;
+  line-height: 1.6;
+
+  transition:
+    background var(--transition-normal),
+    color var(--transition-normal);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--primary-hover);
+}
+
+img {
+  max-width: 100%;
+}
+
+
+/* =========================================================
+   4. PAGE STRUCTURE
+========================================================= */
+
+.page-container {
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: var(--page-padding);
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 26px;
+}
+
+.page-title {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 25px;
+  font-weight: 750;
+  letter-spacing: -0.7px;
+}
+
+.page-description {
+  margin: 5px 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+
+/* =========================================================
+   5. CARDS
+========================================================= */
+
+.md-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--card-padding);
+  box-shadow: var(--shadow-sm);
+
+  transition:
+    background var(--transition-normal),
+    border-color var(--transition-normal),
+    box-shadow var(--transition-normal);
+}
+
+.md-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.md-card-title {
+  margin: 0 0 6px;
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.md-card-description {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+
+/* =========================================================
+   6. BUTTONS
+========================================================= */
+
+.md-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  min-height: 40px;
+  padding: 9px 16px;
+
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+
+  font-size: 13px;
+  font-weight: 650;
+
+  transition: all var(--transition-fast);
+}
+
+.md-btn-primary {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.md-btn-primary:hover {
+  background: var(--primary-hover);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.md-btn-secondary {
+  background: var(--surface);
+  color: var(--text-primary);
+  border-color: var(--border);
+}
+
+.md-btn-secondary:hover {
+  background: var(--surface-hover);
+}
+
+.md-btn-danger {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.md-btn-success {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+
+/* =========================================================
+   7. FORMS
+========================================================= */
+
+.md-input,
+.md-select,
+.md-textarea {
+  width: 100%;
+  min-height: 42px;
+
+  padding: 10px 13px;
+
+  color: var(--input-text);
+  background: var(--input-background);
+
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-md);
+
+  outline: none;
+
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.md-textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+.md-input::placeholder,
+.md-textarea::placeholder {
+  color: var(--placeholder);
+}
+
+.md-input:focus,
+.md-select:focus,
+.md-textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px var(--focus-ring);
+}
+
+
+/* =========================================================
+   8. TABLES
+========================================================= */
+
+.md-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.md-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.md-table th {
+  padding: 14px 16px;
+  background: var(--table-header);
+  color: var(--text-secondary);
+  text-align: left;
+  font-size: 11px;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  border-bottom: 1px solid var(--table-border);
+  white-space: nowrap;
+}
+
+.md-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--table-border);
+}
+
+.md-table tbody tr:hover {
+  background: var(--table-row-hover);
+}
+
+.md-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+
+/* =========================================================
+   9. STATUS BADGES
+========================================================= */
+
+.md-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+
+  padding: 5px 10px;
+
+  border-radius: var(--radius-full);
+
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.md-badge-success {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.md-badge-warning {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+
+.md-badge-danger {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.md-badge-info {
+  background: var(--info-bg);
+  color: var(--info);
+}
+
+
+/* =========================================================
+   10. SIDEBAR DESIGN
+========================================================= */
+
+.md-sidebar {
+  background: var(--sidebar-background);
+  color: var(--sidebar-text);
+  border-right: 1px solid var(--sidebar-border);
+}
+
+.md-sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  padding: 11px 14px;
+  margin: 3px 0;
+
+  color: var(--sidebar-text);
+  border-radius: var(--radius-md);
+
+  font-size: 13px;
+  font-weight: 600;
+
+  transition: all var(--transition-fast);
+}
+
+.md-sidebar-link:hover {
+  background: var(--sidebar-hover);
+  color: var(--sidebar-text-active);
+}
+
+.md-sidebar-link.active {
+  background: var(--sidebar-hover);
+  color: var(--sidebar-text-active);
+  font-weight: 750;
+}
+
+
+/* =========================================================
+   11. TOP NAVIGATION
+========================================================= */
+
+.md-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  min-height: 68px;
+  padding: 12px 24px;
+
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+
+/* =========================================================
+   12. DROPDOWNS AND MODALS
+========================================================= */
+
+.md-dropdown,
+.md-modal {
+  background: var(--surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+.md-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: var(--overlay);
+  backdrop-filter: blur(3px);
+}
+
+
+/* =========================================================
+   13. LOADING AND EMPTY STATES
+========================================================= */
+
+.page-loading {
+  min-height: 60vh;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  gap: 14px;
+
+  color: var(--text-secondary);
+}
+
+.page-loading-spinner {
+  width: 34px;
+  height: 34px;
+
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+
+  animation: md-spin 0.8s linear infinite;
+}
+
+@keyframes md-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.page-placeholder {
+  min-height: 65vh;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  padding: 30px;
+  text-align: center;
+
+  background: var(--background);
+  color: var(--text-primary);
+}
+
+.page-placeholder-icon {
+  display: grid;
+  place-items: center;
+
+  width: 65px;
+  height: 65px;
+  margin-bottom: 18px;
+
+  background: var(--primary-light);
+  color: var(--primary);
+
+  border-radius: 20px;
+  font-size: 28px;
+}
+
+.page-placeholder p {
+  color: var(--text-secondary);
+}
+
+.page-placeholder span {
+  margin-top: 15px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+
+
+/* =========================================================
+   14. ACCESSIBILITY
+========================================================= */
+
+:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 3px;
+}
+
+::selection {
+  background: var(--primary-light);
+  color: var(--text-primary);
+}
+
+
+/* =========================================================
+   15. RESPONSIVE DESIGN
+========================================================= */
+
+@media (max-width: 768px) {
+  :root {
+    --page-padding: 16px;
+    --card-padding: 16px;
+  }
+
+  .page-title {
+    font-size: 21px;
+  }
+
+  .page-header {
+    align-items: flex-start;
+  }
+
+  .md-topbar {
+    padding: 12px 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --page-padding: 12px;
+    --card-padding: 14px;
+  }
+
+  .md-btn {
+    min-height: 38px;
+    padding: 8px 12px;
+  }
+}
