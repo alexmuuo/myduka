@@ -7,15 +7,17 @@ import requests
 
 from flask import request, jsonify, g
 
+from extensions import db
 from models.business_member import BusinessMember
+from models.platform_admin import PlatformAdmin
 
 
 logger = logging.getLogger("myduka.auth")
 
 
-# ==================================================
+# ============================================================
 # SUPABASE CONFIGURATION
-# ==================================================
+# ============================================================
 
 def get_supabase_config():
     return (
@@ -24,9 +26,9 @@ def get_supabase_config():
     )
 
 
-# ==================================================
+# ============================================================
 # VERIFY SUPABASE ACCESS TOKEN
-# ==================================================
+# ============================================================
 
 def verify_supabase_token(token):
 
@@ -49,6 +51,10 @@ def verify_supabase_token(token):
         )
 
         if response.status_code != 200:
+            logger.warning(
+                "Supabase token verification failed: HTTP %s",
+                response.status_code
+            )
             return None
 
         user = response.json()
@@ -59,13 +65,15 @@ def verify_supabase_token(token):
         return user
 
     except requests.RequestException:
-        logger.exception("Supabase authentication request failed.")
+        logger.exception(
+            "Supabase authentication request failed."
+        )
         return None
 
 
-# ==================================================
-# AUTHENTICATION DECORATOR
-# ==================================================
+# ============================================================
+# SHARED AUTHENTICATION
+# ============================================================
 
 def supabase_auth_required(function):
 
@@ -115,9 +123,52 @@ def supabase_auth_required(function):
     return decorated
 
 
-# ==================================================
-# BUSINESS MEMBERSHIP DECORATOR
-# ==================================================
+# ============================================================
+# PLATFORM SUPER ADMIN AUTHORIZATION
+# ============================================================
+
+def platform_admin_required(function):
+
+    @wraps(function)
+    @supabase_auth_required
+    def decorated(*args, **kwargs):
+
+        try:
+
+            admin = PlatformAdmin.query.filter_by(
+                user_id=g.current_user_id,
+                is_active=True
+            ).first()
+
+            if not admin:
+                return jsonify({
+                    "status": "error",
+                    "message": "You are not authorized as a platform administrator."
+                }), 403
+
+            g.platform_admin = admin
+
+            return function(*args, **kwargs)
+
+        except Exception:
+
+            db.session.rollback()
+
+            logger.exception(
+                "Platform administrator authorization failed."
+            )
+
+            return jsonify({
+                "status": "error",
+                "message": "Unable to verify platform administrator access."
+            }), 500
+
+    return decorated
+
+
+# ============================================================
+# BUSINESS MEMBERSHIP AUTHORIZATION
+# ============================================================
 
 def business_member_required(*allowed_roles):
 
