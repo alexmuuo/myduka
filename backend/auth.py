@@ -1,4 +1,4 @@
-```python
+
 import os
 import logging
 from functools import wraps
@@ -265,4 +265,3 @@ def business_member_required(*allowed_roles):
         return decorated
 
     return decorator
-```
