@@ -23,12 +23,9 @@ import CashierProtectedRoute from "./components/CashierProtectedRoute";
 import SuperAdminProtectedRoute from "./components/SuperAdminProtectedRoute";
 
 // Automatically discover all JSX pages.
-// New page files will be discovered without adding imports here.
 const pageModules = import.meta.glob("./pages/**/*.jsx");
 
-// Frontend development mode:
-// Protected dashboards are accessible locally while we build the UI.
-// Production authentication remains enabled unless explicitly configured.
+// Frontend development mode
 const FRONTEND_DEMO_MODE =
   import.meta.env.DEV ||
   import.meta.env.VITE_FRONTEND_DEMO_MODE === "true";
@@ -68,16 +65,30 @@ function PagePlaceholder({ title }) {
 
 // =====================================================
 // AUTOMATIC PAGE LOADER
+// Supports one path or multiple possible file paths.
 // =====================================================
 
 function AutoPage({ file, title }) {
-  const importer = pageModules[file];
+  const importer = useMemo(() => {
+    const possibleFiles = Array.isArray(file)
+      ? file
+      : [file];
+
+    return possibleFiles
+      .map((path) => pageModules[path])
+      .find(Boolean);
+  }, [file]);
 
   const PageComponent = useMemo(() => {
     return importer ? lazy(importer) : null;
   }, [importer]);
 
   if (!PageComponent) {
+    console.error(
+      `MyDuka page not found: ${title}`,
+      file
+    );
+
     return <PagePlaceholder title={title} />;
   }
 
@@ -172,7 +183,9 @@ function App() {
 
   return (
     <>
-      {/* NAVIGATION */}
+      {/* =================================================
+          GLOBAL NAVIGATION
+      ================================================= */}
 
       {showAdminNavbar ? (
         <AdminNavbar />
@@ -372,7 +385,9 @@ function App() {
           }
         />
 
-        {/* CUSTOMER ACCOUNT */}
+        {/* =================================================
+            CUSTOMER ACCOUNT
+        ================================================= */}
 
         <Route
           path="/account"
@@ -453,10 +468,12 @@ function App() {
         />
 
         {/* =================================================
-            SUPER ADMIN DASHBOARD
+            SUPER ADMIN WORKSPACE
         ================================================= */}
 
         <Route element={<SuperAdminRouteGate />}>
+
+          {/* Default Super Admin route */}
 
           <Route
             path="/superadmin"
@@ -468,6 +485,8 @@ function App() {
             }
           />
 
+          {/* 1. Dashboard */}
+
           <Route
             path="/superadmin/dashboard"
             element={
@@ -478,111 +497,166 @@ function App() {
             }
           />
 
+          {/* 2. Businesses */}
+
           <Route
             path="/superadmin/businesses"
             element={
               <AutoPage
-                file="./pages/superadmin/Businesses.jsx"
+                file={[
+                  "./pages/SuperAdminBusinesses.jsx",
+                  "./pages/superadmin/Businesses.jsx",
+                ]}
                 title="Businesses"
               />
             }
           />
 
+          {/* 3. Business details */}
+
           <Route
             path="/superadmin/businesses/:id"
             element={
               <AutoPage
-                file="./pages/superadmin/BusinessDetails.jsx"
+                file={[
+                  "./pages/superadmin/BusinessDetails.jsx",
+                  "./pages/SuperAdminBusinessDetails.jsx",
+                ]}
                 title="Business details"
               />
             }
           />
 
+          {/* 4. Subscriptions */}
+
           <Route
             path="/superadmin/subscriptions"
             element={
               <AutoPage
-                file="./pages/superadmin/Subscriptions.jsx"
+                file={[
+                  "./pages/superadmin/Subscriptions.jsx",
+                  "./pages/SuperAdminSubscriptions.jsx",
+                ]}
                 title="Subscriptions"
               />
             }
           />
 
+          {/* 5. Subscription plans */}
+
           <Route
             path="/superadmin/plans"
             element={
               <AutoPage
-                file="./pages/superadmin/Plans.jsx"
+                file={[
+                  "./pages/superadmin/Plans.jsx",
+                  "./pages/SuperAdminPlans.jsx",
+                ]}
                 title="Subscription plans"
               />
             }
           />
 
+          {/* 6. Platform users */}
+
           <Route
             path="/superadmin/users"
             element={
               <AutoPage
-                file="./pages/superadmin/Users.jsx"
+                file={[
+                  "./pages/superadmin/Users.jsx",
+                  "./pages/SuperAdminUsers.jsx",
+                ]}
                 title="Platform users"
               />
             }
           />
 
+          {/* 7. Analytics */}
+
           <Route
             path="/superadmin/analytics"
             element={
               <AutoPage
-                file="./pages/superadmin/Analytics.jsx"
+                file={[
+                  "./pages/superadmin/Analytics.jsx",
+                  "./pages/SuperAdminAnalytics.jsx",
+                ]}
                 title="Platform analytics"
               />
             }
           />
 
+          {/* 8. Support */}
+
           <Route
             path="/superadmin/support"
             element={
               <AutoPage
-                file="./pages/superadmin/Support.jsx"
+                file={[
+                  "./pages/superadmin/Support.jsx",
+                  "./pages/SuperAdminSupport.jsx",
+                ]}
                 title="Support management"
               />
             }
           />
 
+          {/* 9. Notifications */}
+
           <Route
             path="/superadmin/notifications"
             element={
               <AutoPage
-                file="./pages/superadmin/Notifications.jsx"
+                file={[
+                  "./pages/superadmin/Notifications.jsx",
+                  "./pages/SuperAdminNotifications.jsx",
+                ]}
                 title="Notifications"
               />
             }
           />
 
+          {/* 10. Audit logs */}
+
           <Route
             path="/superadmin/audit-logs"
             element={
               <AutoPage
-                file="./pages/superadmin/AuditLogs.jsx"
+                file={[
+                  "./pages/superadmin/AuditLogs.jsx",
+                  "./pages/SuperAdminAuditLogs.jsx",
+                ]}
                 title="Audit logs"
               />
             }
           />
 
+          {/* 11. Platform settings */}
+
           <Route
             path="/superadmin/settings"
             element={
               <AutoPage
-                file="./pages/superadmin/Settings.jsx"
+                file={[
+                  "./pages/superadmin/Settings.jsx",
+                  "./pages/SuperAdminSettings.jsx",
+                ]}
                 title="Platform settings"
               />
             }
           />
 
+          {/* 12. Super Admin profile */}
+
           <Route
             path="/superadmin/profile"
             element={
               <AutoPage
-                file="./pages/superadmin/Profile.jsx"
+                file={[
+                  "./pages/superadmin/Profile.jsx",
+                  "./pages/SuperAdminProfile.jsx",
+                ]}
                 title="Super Admin profile"
               />
             }
@@ -591,7 +665,7 @@ function App() {
         </Route>
 
         {/* =================================================
-            BUSINESS ADMIN DASHBOARD
+            BUSINESS ADMIN WORKSPACE
         ================================================= */}
 
         <Route element={<AdminRouteGate />}>
