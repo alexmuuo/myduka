@@ -335,6 +335,20 @@ const styles = `
   gap: 19px;
 }
 
+.md-storefront .store-product-title-link {
+  color: inherit;
+  text-decoration: none;
+}
+.md-storefront .store-product-title-link:hover {
+  color: var(--store-primary, #4f46e5);
+}
+.md-storefront a.add-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
 .md-storefront .product-card {
   background: white;
   border: 1px solid #e9edf3;
@@ -568,7 +582,7 @@ const styles = `
 
 export default function StorefrontHome() {
   const { slug } = useParams();
-  const { addToCart, cartCount } = useCart();
+  const { cartCount } = useCart();
 
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
@@ -787,7 +801,15 @@ export default function StorefrontHome() {
                       {product.category || "Product"}
                     </span>
 
-                    <h3>{product.name}</h3>
+                    <h3>
+                      <Link
+                        className="store-product-title-link"
+                        to={`/store/${encodeURIComponent(slug)}/products/${encodeURIComponent(product.id)}`}
+                        state={{ product, store }}
+                      >
+                        {product.name}
+                      </Link>
+                    </h3>
 
                     <p className="product-description">
                       {product.description || "Available from this store."}
@@ -810,14 +832,14 @@ export default function StorefrontHome() {
                         </span>
                       )}
 
-                    <button
-                      type="button"
+                    <Link
                       className="add-button"
-                      onClick={() => addToCart(product)}
+                      to={`/store/${encodeURIComponent(slug)}/products/${encodeURIComponent(product.id)}`}
+                      state={{ product, store }}
                     >
-                      <i className="bi bi-plus-lg me-2" />
-                      Add to cart
-                    </button>
+                      View product
+                      <i className="bi bi-arrow-right ms-2" />
+                    </Link>
                   </div>
                 </article>
               ))}
