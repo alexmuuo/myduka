@@ -1,290 +1,367 @@
-import { useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { useCart } from "../context/CartContext";
 
-const STORAGE_KEY = "mydukaWishlists";
+const WISHLIST_STORAGE_KEY = "mydukaWishlists";
+
+const styles = `
+.md-wishlist {
+  min-height:70vh;
+  padding:38px 20px 70px;
+  background:#f8fafc;
+  color:#172033;
+}
+.md-wishlist * { box-sizing:border-box; }
+.md-wishlist-inner { width:min(1120px,100%); margin:0 auto; }
+.md-wishlist-heading {
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:18px;
+  margin-bottom:28px;
+}
+.md-wishlist-heading h1 {
+  margin:0;
+  font-size:clamp(27px,4vw,36px);
+  font-weight:850;
+  letter-spacing:-1px;
+}
+.md-wishlist-heading p {
+  margin:8px 0 0;
+  color:#7b8798;
+  font-size:14px;
+}
+.md-wishlist-count {
+  padding:8px 13px;
+  border:1px solid #e5e9f0;
+  border-radius:30px;
+  background:#fff;
+  color:#64748b;
+  font-size:12px;
+  font-weight:750;
+  white-space:nowrap;
+}
+.md-wishlist-grid {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:20px;
+}
+.md-wishlist-card {
+  overflow:hidden;
+  border:1px solid #e7ebf2;
+  border-radius:16px;
+  background:#fff;
+  transition:transform .2s,box-shadow .2s;
+}
+.md-wishlist-card:hover {
+  transform:translateY(-3px);
+  box-shadow:0 12px 28px rgba(15,23,42,.07);
+}
+.md-wishlist-image {
+  position:relative;
+  display:grid;
+  place-items:center;
+  height:220px;
+  padding:18px;
+  background:#f8fafc;
+}
+.md-wishlist-image img {
+  width:100%;
+  height:100%;
+  object-fit:contain;
+}
+.md-wishlist-image-placeholder {
+  color:#b5bfcc;
+  font-size:48px;
+}
+.md-wishlist-remove {
+  position:absolute;
+  top:12px;
+  right:12px;
+  display:grid;
+  place-items:center;
+  width:36px;
+  height:36px;
+  border:1px solid #f1d5dc;
+  border-radius:50%;
+  background:#fff;
+  color:#df4565;
+  cursor:pointer;
+  font-size:16px;
+}
+.md-wishlist-remove:hover {
+  background:#fff0f3;
+}
+.md-wishlist-content { padding:17px; }
+.md-wishlist-category {
+  color:var(--wishlist-primary);
+  font-size:11px;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.5px;
+}
+.md-wishlist-content h2 {
+  margin:8px 0;
+  color:#172033;
+  font-size:16px;
+  font-weight:800;
+  line-height:1.4;
+}
+.md-wishlist-price {
+  margin:0 0 16px;
+  color:var(--wishlist-primary);
+  font-size:19px;
+  font-weight:850;
+}
+.md-wishlist-view {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  width:100%;
+  min-height:43px;
+  border-radius:9px;
+  background:var(--wishlist-primary);
+  color:#fff;
+  font-size:13px;
+  font-weight:800;
+  text-decoration:none;
+}
+.md-wishlist-view:hover {
+  color:#fff;
+  opacity:.92;
+}
+.md-wishlist-empty {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  min-height:380px;
+  padding:35px 20px;
+  border:1px solid #e7ebf2;
+  border-radius:18px;
+  background:#fff;
+  text-align:center;
+}
+.md-wishlist-empty-icon {
+  display:grid;
+  place-items:center;
+  width:76px;
+  height:76px;
+  margin-bottom:20px;
+  border-radius:50%;
+  background:#f1f0ff;
+  color:var(--wishlist-primary);
+  font-size:30px;
+}
+.md-wishlist-empty h2 {
+  margin:0 0 9px;
+  color:#172033;
+  font-size:23px;
+  font-weight:850;
+}
+.md-wishlist-empty p {
+  max-width:420px;
+  margin:0 0 22px;
+  color:#7b8798;
+  font-size:14px;
+  line-height:1.7;
+}
+.md-wishlist-shop {
+  display:inline-flex;
+  align-items:center;
+  gap:9px;
+  padding:12px 18px;
+  border-radius:9px;
+  background:var(--wishlist-primary);
+  color:#fff;
+  font-size:13px;
+  font-weight:800;
+  text-decoration:none;
+}
+.md-wishlist-shop:hover { color:#fff; opacity:.92; }
+@media(max-width:850px) {
+  .md-wishlist-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media(max-width:560px) {
+  .md-wishlist { padding:25px 14px 48px; }
+  .md-wishlist-heading { align-items:flex-start; }
+  .md-wishlist-grid { grid-template-columns:1fr; gap:14px; }
+  .md-wishlist-card {
+    display:grid;
+    grid-template-columns:118px minmax(0,1fr);
+    min-height:145px;
+  }
+  .md-wishlist-image { height:100%; min-height:145px; padding:10px; }
+  .md-wishlist-remove { top:7px; right:7px; width:30px; height:30px; }
+  .md-wishlist-content { padding:13px; }
+  .md-wishlist-content h2 { font-size:14px; margin:6px 0; }
+  .md-wishlist-price { margin-bottom:10px; font-size:16px; }
+  .md-wishlist-count { font-size:11px; padding:7px 10px; }
+}
+`;
+
+const formatPrice = (amount, currency = "KES") => {
+  try {
+    return new Intl.NumberFormat("en-KE", {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 2,
+    }).format(Number(amount || 0));
+  } catch {
+    return `${currency} ${Number(amount || 0).toLocaleString("en-KE")}`;
+  }
+};
 
 function readWishlists() {
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+    const saved = localStorage.getItem(WISHLIST_STORAGE_KEY);
+    return saved ? JSON.parse(saved) : {};
   } catch {
     return {};
   }
 }
 
 export default function Wishlist() {
-  const location = useLocation();
-  const slug = location.pathname.match(/^\/store\/([^/]+)/)?.[1] || "";
-  const [items, setItems] = useState([]);
+  const { activeStoreSlug } = useCart();
+  const [wishlists, setWishlists] = useState(readWishlists);
 
-  const storeSlug = slug ? decodeURIComponent(slug) : "default";
-  const storePath = slug ? `/store/${encodeURIComponent(slug)}` : "/";
+  const storeSlug =
+    activeStoreSlug ||
+    localStorage.getItem("mydukaActiveStore") ||
+    "default";
 
-  const loadItems = () => {
-    const wishlists = readWishlists();
-    setItems(Array.isArray(wishlists[storeSlug]) ? wishlists[storeSlug] : []);
-  };
+  const products = useMemo(() => {
+    const items = wishlists?.[storeSlug];
+    return Array.isArray(items) ? items : [];
+  }, [wishlists, storeSlug]);
+
+  const refreshWishlist = useCallback(() => {
+    setWishlists(readWishlists());
+  }, []);
 
   useEffect(() => {
-    loadItems();
-
-    const handleStorage = () => loadItems();
-    window.addEventListener("storage", handleStorage);
-    window.addEventListener("mydukaWishlistUpdated", handleStorage);
+    window.addEventListener("storage", refreshWishlist);
+    window.addEventListener("mydukaWishlistUpdated", refreshWishlist);
 
     return () => {
-      window.removeEventListener("storage", handleStorage);
-      window.removeEventListener("mydukaWishlistUpdated", handleStorage);
+      window.removeEventListener("storage", refreshWishlist);
+      window.removeEventListener("mydukaWishlistUpdated", refreshWishlist);
     };
-  }, [storeSlug]);
+  }, [refreshWishlist]);
 
-  const removeItem = (productId) => {
-    const wishlists = readWishlists();
-    const updated = (wishlists[storeSlug] || []).filter(
-      (item) => String(item.id) !== String(productId)
-    );
+  const removeProduct = (productId) => {
+    const current = readWishlists();
+    const currentItems = Array.isArray(current?.[storeSlug])
+      ? current[storeSlug]
+      : [];
 
-    wishlists[storeSlug] = updated;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(wishlists));
-    setItems(updated);
+    const updated = {
+      ...current,
+      [storeSlug]: currentItems.filter(
+        (item) => String(item.id) !== String(productId)
+      ),
+    };
+
+    localStorage.setItem(WISHLIST_STORAGE_KEY, JSON.stringify(updated));
+    setWishlists(updated);
     window.dispatchEvent(new Event("mydukaWishlistUpdated"));
   };
 
-  const formatPrice = (amount) =>
-    `KSh ${Number(amount || 0).toLocaleString("en-KE", {
-      maximumFractionDigits: 2,
-    })}`;
-
-  const styles = `
-    .md-wishlist {
-      min-height: 75vh;
-      padding: 40px 17px 70px;
-      background: #f6f7fb;
-      color: #172033;
-    }
-    .md-wishlist * { box-sizing: border-box; }
-    .md-wishlist-container { width: min(1120px, 100%); margin: auto; }
-    .md-wishlist-header { margin-bottom: 30px; }
-    .md-wishlist-eyebrow {
-      color: #635bff;
-      font-size: 11px;
-      font-weight: 850;
-      letter-spacing: 1.6px;
-      text-transform: uppercase;
-    }
-    .md-wishlist-title {
-      margin: 10px 0;
-      font-size: clamp(30px, 5vw, 42px);
-      font-weight: 850;
-      letter-spacing: -1.5px;
-    }
-    .md-wishlist-subtitle { color: #8791a1; font-size: 14px; }
-    .md-wishlist-count {
-      display: inline-flex;
-      padding: 7px 12px;
-      border-radius: 30px;
-      background: #eeedff;
-      color: #635bff;
-      font-size: 11px;
-      font-weight: 800;
-    }
-    .md-wishlist-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 20px;
-    }
-    .md-wishlist-card {
-      overflow: hidden;
-      border: 1px solid #e7eaf0;
-      border-radius: 15px;
-      background: #fff;
-      box-shadow: 0 6px 22px rgba(23,32,51,.04);
-    }
-    .md-wishlist-image {
-      position: relative;
-      display: grid;
-      height: 210px;
-      place-items: center;
-      overflow: hidden;
-      background: #f8f9fc;
-    }
-    .md-wishlist-image img {
-      width: 100%;
-      height: 100%;
-      padding: 15px;
-      object-fit: contain;
-    }
-    .md-wishlist-image i { color: #b0b8c6; font-size: 38px; }
-    .md-wishlist-remove {
-      position: absolute;
-      top: 11px;
-      right: 11px;
-      display: grid;
-      width: 35px;
-      height: 35px;
-      place-items: center;
-      border: 1px solid #f1dddd;
-      border-radius: 50%;
-      background: #fff;
-      color: #c44b4b;
-      cursor: pointer;
-    }
-    .md-wishlist-content { padding: 17px; }
-    .md-wishlist-category {
-      color: #8a93a3;
-      font-size: 10px;
-      font-weight: 800;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-    }
-    .md-wishlist-name {
-      margin: 7px 0;
-      color: #172033;
-      font-size: 16px;
-      font-weight: 800;
-      overflow-wrap: anywhere;
-    }
-    .md-wishlist-price {
-      margin: 12px 0 15px;
-      color: #635bff;
-      font-size: 19px;
-      font-weight: 900;
-    }
-    .md-wishlist-view {
-      display: flex;
-      min-height: 43px;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      border-radius: 8px;
-      background: #635bff;
-      color: white;
-      font-size: 12px;
-      font-weight: 800;
-      text-decoration: none;
-    }
-    .md-wishlist-empty {
-      padding: 55px 22px;
-      border: 1px solid #e7eaf0;
-      border-radius: 17px;
-      background: white;
-      text-align: center;
-    }
-    .md-wishlist-empty-icon {
-      display: grid;
-      width: 75px;
-      height: 75px;
-      place-items: center;
-      margin: 0 auto 18px;
-      border-radius: 50%;
-      background: #f0efff;
-      color: #635bff;
-      font-size: 30px;
-    }
-    .md-wishlist-empty h2 { margin: 0 0 10px; font-size: 22px; font-weight: 850; }
-    .md-wishlist-empty p {
-      max-width: 430px;
-      margin: 0 auto 22px;
-      color: #8791a1;
-      font-size: 13px;
-      line-height: 1.8;
-    }
-    .md-wishlist-browse {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 12px 18px;
-      border-radius: 9px;
-      background: #635bff;
-      color: #fff;
-      font-size: 12px;
-      font-weight: 800;
-      text-decoration: none;
-    }
-    @media(max-width:850px) {
-      .md-wishlist-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    }
-    @media(max-width:520px) {
-      .md-wishlist { padding: 28px 13px 50px; }
-      .md-wishlist-grid { grid-template-columns: 1fr; gap: 13px; }
-      .md-wishlist-card { display: grid; grid-template-columns: 115px minmax(0, 1fr); }
-      .md-wishlist-image { height: 100%; min-height: 155px; }
-      .md-wishlist-content { padding: 13px; }
-      .md-wishlist-name { font-size: 14px; }
-    }
-  `;
+  const primaryColor = "#635bff";
 
   return (
-    <main className="md-wishlist">
+    <main
+      className="md-wishlist"
+      style={{ "--wishlist-primary": primaryColor }}
+    >
       <style>{styles}</style>
 
-      <div className="md-wishlist-container">
-        <header className="md-wishlist-header">
-          <div className="md-wishlist-eyebrow">Your saved products</div>
-          <h1 className="md-wishlist-title">My Wishlist</h1>
-          <p className="md-wishlist-subtitle">
-            Keep the products you love in one place.
-          </p>
+      <div className="md-wishlist-inner">
+        <header className="md-wishlist-heading">
+          <div>
+            <h1>My Wishlist</h1>
+            <p>Keep the products you love close at hand.</p>
+          </div>
+
           <span className="md-wishlist-count">
-            {items.length} saved {items.length === 1 ? "item" : "items"}
+            {products.length} {products.length === 1 ? "item" : "items"}
           </span>
         </header>
 
-        {items.length === 0 ? (
+        {products.length === 0 ? (
           <section className="md-wishlist-empty">
             <div className="md-wishlist-empty-icon">
-              <i className="bi bi-heart"></i>
+              <i className="bi bi-heart" aria-hidden="true" />
             </div>
+
             <h2>Your wishlist is empty</h2>
+
             <p>
-              Save products you like while browsing this shop. You can
-              come back to them whenever you are ready.
+              When you find something you like, tap the heart on its product
+              page and it will appear here.
             </p>
-            <Link to={storePath} className="md-wishlist-browse">
-              <i className="bi bi-shop"></i>
-              Explore this shop
+
+            <Link
+              to={
+                storeSlug && storeSlug !== "default"
+                  ? `/store/${encodeURIComponent(storeSlug)}`
+                  : "/"
+              }
+              className="md-wishlist-shop"
+            >
+              <i className="bi bi-bag" />
+              Continue shopping
             </Link>
           </section>
         ) : (
           <div className="md-wishlist-grid">
-            {items.map((item) => (
-              <article className="md-wishlist-card" key={item.id}>
+            {products.map((product) => (
+              <article
+                className="md-wishlist-card"
+                key={product.id}
+              >
                 <div className="md-wishlist-image">
-                  {item.image ? (
-                    <img src={item.image} alt={item.name} />
+                  {product.image ? (
+                    <img src={product.image} alt={product.name || "Product"} />
                   ) : (
-                    <i className="bi bi-image"></i>
+                    <i
+                      className="bi bi-image md-wishlist-image-placeholder"
+                      aria-hidden="true"
+                    />
                   )}
 
                   <button
                     type="button"
                     className="md-wishlist-remove"
-                    onClick={() => removeItem(item.id)}
-                    aria-label={`Remove ${item.name} from wishlist`}
+                    onClick={() => removeProduct(product.id)}
+                    aria-label={`Remove ${product.name || "product"} from wishlist`}
+                    title="Remove from wishlist"
                   >
-                    <i className="bi bi-trash3"></i>
+                    <i className="bi bi-trash3" />
                   </button>
                 </div>
 
                 <div className="md-wishlist-content">
-                  {item.category && (
+                  {product.category && (
                     <div className="md-wishlist-category">
-                      {item.category}
+                      {product.category}
                     </div>
                   )}
 
-                  <h2 className="md-wishlist-name">{item.name}</h2>
+                  <h2>{product.name || "Unnamed product"}</h2>
 
                   <div className="md-wishlist-price">
-                    {formatPrice(item.price)}
+                    {formatPrice(product.price, product.currency || "KES")}
                   </div>
 
                   <Link
-                    to={`/store/${encodeURIComponent(storeSlug)}/products/${encodeURIComponent(item.id)}`}
-                    state={{ product: item }}
                     className="md-wishlist-view"
+                    to={`/store/${encodeURIComponent(storeSlug)}/products/${encodeURIComponent(product.id)}`}
+                    state={{ product }}
                   >
                     View product
-                    <i className="bi bi-arrow-right"></i>
+                    <i className="bi bi-arrow-right" />
                   </Link>
                 </div>
               </article>
