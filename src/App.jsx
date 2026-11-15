@@ -248,6 +248,16 @@ function App() {
         />
 
         <Route
+          path="/store/:slug/products/:productId"
+          element={
+            <AutoPage
+              file="./pages/storefront/StorefrontProductDetails.jsx"
+              title="Storefront product details"
+            />
+          }
+        />
+
+        <Route
           path="/products"
           element={
             <AutoPage
