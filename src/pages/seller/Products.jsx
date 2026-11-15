@@ -1,721 +1,1865 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import api from "../../api/api";
+import { useMemo, useState } from "react";
 
-function Products() {
+const EMPTY_FORM = {
+  name: "",
+  sku: "",
+  barcode: "",
+  category: "",
+  description: "",
+  image: "",
+  buying_price: "",
+  price: "",
+  unit: "piece",
+  allow_portion_sales: false,
+  portions_per_unit: "",
+  portion_price: "",
+  is_active: true,
+};
+
+const money = (value) =>
+  Number(value || 0).toLocaleString("en-KE", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+export default function Products() {
   const [products, setProducts] = useState([]);
-  const [branches, setBranches] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [loadingBranches, setLoadingBranches] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [showForm, setShowForm] = useState(false);
-  const [editingProduct, setEditingProduct] = useState(null);
-  const [selectedImage, setSelectedImage] = useState(null);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [editingId, setEditingId] = useState(null);
+
+  const [showModal, setShowModal] = useState(false);
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("newest");
+
+  const [error, setError] = useState("");
   const [imagePreview, setImagePreview] = useState("");
-  const [imageError, setImageError] = useState("");
-  const fileInputRef = useRef(null);
+  const [showFilters, setShowFilters] = useState(false);
 
-  const emptyForm = {
-    name: "", category: "", description: "", buying_price: "", price: "",
-    unit: "", stock: "", branch_id: "", initial_branch_stock: "", image: "",
-    allow_portion_sales: false, portions_per_unit: "", portion_price: "",
-  };
-  const [formData, setFormData] = useState(emptyForm);
+  const [portionFilter, setPortionFilter] = useState("all");
+  const [profitFilter, setProfitFilter] = useState("all");
 
-  const emptyFilters = {
-    search: "", category: "all", stockStatus: "all", minStock: "", maxStock: "",
-    status: "all", minSellingPrice: "", maxSellingPrice: "",
-    minBuyingPrice: "", maxBuyingPrice: "", profitability: "all",
-    portions: "all", datePreset: "all", dateFrom: "", dateTo: "", sortBy: "newest",
-  };
-  const [filters, setFilters] = useState(emptyFilters);
-
-  const toInputValue = (value) =>
-    value === null || value === undefined ? "" : String(value);
-
-  const formatMoney = (value) => {
-    const amount = Number(value);
-    if (!Number.isFinite(amount)) return "0.00";
-    return amount.toLocaleString("en-KE", {
-      minimumFractionDigits: 2, maximumFractionDigits: 2,
-    });
-  };
-
-  const formatStock = (value) => {
-    const amount = Number(value);
-    if (!Number.isFinite(amount)) return "0.000";
-    return amount.toLocaleString("en-KE", {
-      minimumFractionDigits: 0, maximumFractionDigits: 3,
-    });
-  };
-
-  const getCreatedDate = (product) => {
-    const value = product.created_at ?? product.createdAt ??
-      product.date_created ?? product.date_added ?? product.created;
-    if (!value) return null;
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? null : date;
-  };
-
-  const fetchProducts = async () => {
-    try {
-      setLoading(true);
-      const response = await api.get("/products");
-      const data = response.data;
-      const fetchedProducts = Array.isArray(data) ? data :
-        Array.isArray(data?.products) ? data.products :
-        Array.isArray(data?.data) ? data.data : [];
-      setProducts(fetchedProducts);
-    } catch (error) {
-      console.error("Failed to fetch products:", error);
-      alert(error.response?.data?.message || "Failed to load products. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchBranches = async () => {
-    try {
-      setLoadingBranches(true);
-      const response = await api.get("/admin/branches");
-      const data = response.data;
-      const fetchedBranches = Array.isArray(data) ? data :
-        Array.isArray(data?.branches) ? data.branches :
-        Array.isArray(data?.data) ? data.data : [];
-      const activeBranches = fetchedBranches.filter((branch) =>
-        branch.is_active === true || branch.is_active === 1 || branch.is_active === "true"
-      );
-      setBranches(activeBranches);
-      setFormData((previous) => {
-        const selectedBranchExists = activeBranches.some(
-          (branch) => String(branch.id) === String(previous.branch_id)
-        );
-        return {
-          ...previous,
-          branch_id: selectedBranchExists ? previous.branch_id :
-            activeBranches.length === 1 ? String(activeBranches[0].id) : "",
-        };
-      });
-    } catch (error) {
-      console.error("Failed to fetch branches:", error);
-      setBranches([]);
-      alert(error.response?.data?.message ||
-        "Failed to load branches. Check your admin access and try again.");
-    } finally {
-      setLoadingBranches(false);
-    }
-  };
-
-  useEffect(() => { fetchProducts(); }, []);
-
-  useEffect(() => {
-    return () => {
-      if (imagePreview.startsWith("blob:")) URL.revokeObjectURL(imagePreview);
-    };
-  }, [imagePreview]);
-
-  const handleChange = (event) => {
-    const { name, value, type, checked } = event.target;
-    setFormData((previous) => ({ ...previous, [name]: type === "checkbox" ? checked : value }));
-    if (name === "image" && !selectedImage) {
-      setImagePreview(value.trim());
-      setImageError("");
-    }
-  };
-
-  const handleImageSelect = (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setImageError("");
-    if (!file.type.startsWith("image/")) {
-      setImageError("Please select a valid image file.");
-      event.target.value = "";
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setImageError("The image is too large. Please select an image under 5 MB.");
-      event.target.value = "";
-      return;
-    }
-    setSelectedImage(file);
-    setImagePreview(URL.createObjectURL(file));
-  };
-
-  const removeSelectedImage = () => {
-    setSelectedImage(null);
-    setImageError("");
-    if (fileInputRef.current) fileInputRef.current.value = "";
-    setImagePreview(toInputValue(formData.image).trim());
-  };
-
-  const resetForm = () => {
-    setFormData({
-      ...emptyForm,
-      branch_id: branches.length === 1 ? String(branches[0].id) : "",
-    });
-    setSelectedImage(null);
-    setImagePreview("");
-    setImageError("");
-    setEditingProduct(null);
-    setShowForm(false);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
-
-  const openAddForm = async () => {
-    resetForm();
-    setShowForm(true);
-    await fetchBranches();
-  };
-
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    if (saving) return;
-
-    const name = toInputValue(formData.name).trim();
-    const category = toInputValue(formData.category).trim();
-    const description = toInputValue(formData.description);
-    const unit = toInputValue(formData.unit).trim();
-    const priceText = toInputValue(formData.price).trim();
-    const buyingPriceText = toInputValue(formData.buying_price).trim();
-    const stockText = toInputValue(formData.stock).trim();
-    const sellingPrice = Number(priceText);
-    const buyingPrice = buyingPriceText === "" ? null : Number(buyingPriceText);
-    const stock = Number(stockText);
-
-    if (!name || !category) return alert("Please enter the product name and category.");
-    if (!unit) return alert("Please enter the product unit.");
-
-    const validMoney = (value) =>
-      Number.isFinite(value) && value >= 0 &&
-      Number.isFinite(value * 100) &&
-      Math.abs(value * 100 - Math.round(value * 100)) <= 0.000001;
-
-    if (priceText === "" || !validMoney(sellingPrice)) {
-      return alert("Please enter a valid selling price with up to two decimal places.");
-    }
-    if (buyingPrice !== null && !validMoney(buyingPrice)) {
-      return alert("Please enter a valid buying price with up to two decimal places.");
-    }
-    if (!editingProduct && buyingPrice === null) {
-      return alert("Please enter the buying price for this product.");
-    }
-
-    const validStock = (value) => {
-      const text = toInputValue(value).trim();
-      if (!/^\d+(\.\d{1,3})?$/.test(text)) return false;
-      const number = Number(text);
-      return Number.isFinite(number) && number >= 0;
-    };
-
-    if (!validStock(stockText)) {
-      return alert("Please enter a valid stock quantity with up to three decimal places.");
-    }
-
-    let branchId = null;
-    let initialBranchStock = null;
-    if (!editingProduct) {
-      const branchIdText = toInputValue(formData.branch_id).trim();
-      const branchStockText = toInputValue(formData.initial_branch_stock).trim();
-      branchId = Number(branchIdText);
-      initialBranchStock = Number(branchStockText);
-
-      if (branchIdText === "" || !Number.isInteger(branchId) || branchId <= 0) {
-        return alert("Please select a branch for this product.");
-      }
-      if (!branches.some((branch) => String(branch.id) === String(formData.branch_id))) {
-        return alert("The selected branch is unavailable. Please select an active branch.");
-      }
-      if (!validStock(branchStockText)) {
-        return alert("Please enter a valid initial branch stock quantity with up to three decimal places.");
-      }
-    }
-
-    let portionsPerUnit = null;
-    let portionPrice = null;
-    if (formData.allow_portion_sales) {
-      const portionsText = toInputValue(formData.portions_per_unit).trim();
-      const portionPriceText = toInputValue(formData.portion_price).trim();
-      portionsPerUnit = Number(portionsText);
-      portionPrice = Number(portionPriceText);
-
-      if (portionsText === "" || !Number.isInteger(portionsPerUnit) || portionsPerUnit <= 0) {
-        return alert("Enter a positive whole number for portions per stock unit.");
-      }
-      if (portionPriceText === "" || !validMoney(portionPrice)) {
-        return alert("Enter a valid portion price with up to two decimal places.");
-      }
-    }
-
-    try {
-      setSaving(true);
-      const productData = new FormData();
-      productData.append("name", name);
-      productData.append("category", category);
-      productData.append("description", description);
-      productData.append("buying_price", buyingPrice === null ? "" : String(buyingPrice));
-      productData.append("price", String(sellingPrice));
-      productData.append("unit", unit);
-      productData.append("stock", String(stock));
-      productData.append("allow_portion_sales", String(formData.allow_portion_sales));
-      productData.append("portions_per_unit", portionsPerUnit === null ? "" : String(portionsPerUnit));
-      productData.append("portion_price", portionPrice === null ? "" : String(portionPrice));
-      productData.append("image", toInputValue(formData.image).trim());
-      if (selectedImage) productData.append("image_file", selectedImage);
-
-      if (editingProduct) {
-        await api.put(`/products/${editingProduct.id}`, productData);
-        alert("Product updated successfully.");
-      } else {
-        productData.append("branch_id", String(branchId));
-        productData.append("initial_branch_stock", String(initialBranchStock));
-        await api.post("/products", productData);
-        alert("Product and initial branch stock added successfully.");
-      }
-      resetForm();
-      await fetchProducts();
-    } catch (error) {
-      console.error("Failed to save product:", error);
-      alert(error.response?.data?.message || error.response?.data?.error ||
-        "Failed to save product. Please try again.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleEdit = (product) => {
-    if (!product || product.id === null || product.id === undefined) {
-      alert("Unable to edit this product because its ID is missing.");
-      return;
-    }
-    setEditingProduct(product);
-    setFormData({
-      name: toInputValue(product.name),
-      category: toInputValue(product.category),
-      description: toInputValue(product.description),
-      buying_price: toInputValue(product.buying_price),
-      price: toInputValue(product.price),
-      unit: toInputValue(product.unit),
-      stock: toInputValue(product.stock),
-      branch_id: "",
-      initial_branch_stock: "",
-      image: toInputValue(product.image),
-      allow_portion_sales: Boolean(product.allow_portion_sales),
-      portions_per_unit: toInputValue(product.portions_per_unit),
-      portion_price: toInputValue(product.portion_price),
-    });
-    setSelectedImage(null);
-    setImagePreview(toInputValue(product.image));
-    setImageError("");
-    setShowForm(true);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
-
-  const handleDeactivate = async (product) => {
-    if (!window.confirm(`Are you sure you want to deactivate "${product.name}"?`)) return;
-    try {
-      await api.delete(`/products/${product.id}`);
-      alert("Product deactivated successfully.");
-      await fetchProducts();
-    } catch (error) {
-      console.error("Failed to deactivate product:", error);
-      alert(error.response?.data?.message || "Failed to deactivate product.");
-    }
-  };
-
-  const updateFilter = (event) => {
-    const { name, value } = event.target;
-    setFilters((previous) => ({ ...previous, [name]: value }));
-  };
+  const categories = useMemo(() => {
+    return [
+      ...new Set(
+        products
+          .map((product) => product.category?.trim())
+          .filter(Boolean)
+      ),
+    ].sort((a, b) => a.localeCompare(b));
+  }, [products]);
 
   const filteredProducts = useMemo(() => {
-    const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    let presetStart = null;
-    if (filters.datePreset === "today") presetStart = startOfToday;
-    if (filters.datePreset === "7days") presetStart = new Date(startOfToday.getTime() - 6 * 86400000);
-    if (filters.datePreset === "30days") presetStart = new Date(startOfToday.getTime() - 29 * 86400000);
+    let result = [...products];
 
-    const fromDate = filters.dateFrom ? new Date(`${filters.dateFrom}T00:00:00`) : presetStart;
-    const toDate = filters.dateTo ? new Date(`${filters.dateTo}T23:59:59.999`) : null;
-    const search = filters.search.trim().toLowerCase();
+    const query = search.trim().toLowerCase();
 
-    const result = products.filter((product) => {
-      const name = toInputValue(product.name).toLowerCase();
-      const category = toInputValue(product.category).toLowerCase();
-      const description = toInputValue(product.description).toLowerCase();
-      const unit = toInputValue(product.unit).toLowerCase();
-      const stock = Number(product.stock);
-      const selling = Number(product.price);
-      const hasBuying = product.buying_price !== null &&
-        product.buying_price !== undefined && product.buying_price !== "";
-      const buying = hasBuying ? Number(product.buying_price) : null;
-      const created = getCreatedDate(product);
-      const active = product.is_active === true || product.is_active === 1 ||
-        product.is_active === "true" || product.is_active === "1";
-      const portionsEnabled = Boolean(product.allow_portion_sales);
+    if (query) {
+      result = result.filter((product) =>
+        [
+          product.name,
+          product.sku,
+          product.barcode,
+          product.category,
+          product.description,
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(query)
+      );
+    }
 
-      if (search && ![name, category, description, unit].some((field) => field.includes(search))) return false;
-      if (filters.category !== "all" && category !== filters.category.toLowerCase()) return false;
-      if (filters.status === "active" && !active) return false;
-      if (filters.status === "inactive" && active) return false;
+    if (categoryFilter !== "all") {
+      result = result.filter(
+        (product) => product.category === categoryFilter
+      );
+    }
 
-      if (filters.stockStatus === "out" && stock > 0) return false;
-      if (filters.stockStatus === "low" && !(stock > 0 && stock <= 5)) return false;
-      if (filters.stockStatus === "normal" && !(stock > 5 && stock <= 10)) return false;
-      if (filters.stockStatus === "healthy" && stock <= 10) return false;
-      if (filters.minStock !== "" && (!Number.isFinite(stock) || stock < Number(filters.minStock))) return false;
-      if (filters.maxStock !== "" && (!Number.isFinite(stock) || stock > Number(filters.maxStock))) return false;
+    if (statusFilter === "active") {
+      result = result.filter((product) => product.is_active);
+    }
 
-      if (filters.minSellingPrice !== "" && (!Number.isFinite(selling) || selling < Number(filters.minSellingPrice))) return false;
-      if (filters.maxSellingPrice !== "" && (!Number.isFinite(selling) || selling > Number(filters.maxSellingPrice))) return false;
-      if (filters.minBuyingPrice !== "" && (!hasBuying || !Number.isFinite(buying) || buying < Number(filters.minBuyingPrice))) return false;
-      if (filters.maxBuyingPrice !== "" && (!hasBuying || !Number.isFinite(buying) || buying > Number(filters.maxBuyingPrice))) return false;
+    if (statusFilter === "inactive") {
+      result = result.filter((product) => !product.is_active);
+    }
 
-      const profit = hasBuying ? selling - buying : null;
-      if (filters.profitability === "profitable" && !(profit !== null && profit > 0)) return false;
-      if (filters.profitability === "break-even" && !(profit !== null && profit === 0)) return false;
-      if (filters.profitability === "loss" && !(profit !== null && profit < 0)) return false;
-      if (filters.profitability === "missing" && hasBuying) return false;
+    if (portionFilter === "enabled") {
+      result = result.filter((product) => product.allow_portion_sales);
+    }
 
-      if (filters.portions === "enabled" && !portionsEnabled) return false;
-      if (filters.portions === "disabled" && portionsEnabled) return false;
+    if (portionFilter === "disabled") {
+      result = result.filter((product) => !product.allow_portion_sales);
+    }
 
-      if (filters.datePreset !== "all" || filters.dateFrom || filters.dateTo) {
-        if (!created) return false;
-        if (fromDate && created < fromDate) return false;
-        if (toDate && created > toDate) return false;
-      }
-      return true;
-    });
+    if (profitFilter === "profitable") {
+      result = result.filter(
+        (product) =>
+          Number(product.price) > Number(product.buying_price)
+      );
+    }
 
-    result.sort((a, b) => {
-      const aName = toInputValue(a.name).toLowerCase();
-      const bName = toInputValue(b.name).toLowerCase();
-      const aStock = Number(a.stock) || 0;
-      const bStock = Number(b.stock) || 0;
-      const aPrice = Number(a.price) || 0;
-      const bPrice = Number(b.price) || 0;
-      const aBuying = a.buying_price === null || a.buying_price === undefined || a.buying_price === "" ? null : Number(a.buying_price);
-      const bBuying = b.buying_price === null || b.buying_price === undefined || b.buying_price === "" ? null : Number(b.buying_price);
-      const aProfit = aBuying === null ? -Infinity : aPrice - aBuying;
-      const bProfit = bBuying === null ? -Infinity : bPrice - bBuying;
-      const aDate = getCreatedDate(a)?.getTime() ?? 0;
-      const bDate = getCreatedDate(b)?.getTime() ?? 0;
-      switch (filters.sortBy) {
-        case "oldest": return aDate - bDate;
-        case "name-asc": return aName.localeCompare(bName);
-        case "name-desc": return bName.localeCompare(aName);
-        case "stock-asc": return aStock - bStock;
-        case "stock-desc": return bStock - aStock;
-        case "price-asc": return aPrice - bPrice;
-        case "price-desc": return bPrice - aPrice;
-        case "profit-desc": return bProfit - aProfit;
-        case "newest":
-        default: return bDate - aDate;
-      }
-    });
+    if (profitFilter === "loss") {
+      result = result.filter(
+        (product) =>
+          Number(product.price) <= Number(product.buying_price)
+      );
+    }
+
+    switch (sortBy) {
+      case "name":
+        result.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+
+      case "price-high":
+        result.sort((a, b) => b.price - a.price);
+        break;
+
+      case "price-low":
+        result.sort((a, b) => a.price - b.price);
+        break;
+
+      case "profit-high":
+        result.sort(
+          (a, b) =>
+            b.price -
+            b.buying_price -
+            (a.price - a.buying_price)
+        );
+        break;
+
+      case "oldest":
+        result.sort((a, b) => a.id - b.id);
+        break;
+
+      default:
+        result.sort((a, b) => b.id - a.id);
+    }
+
     return result;
-  }, [products, filters]);
+  }, [
+    products,
+    search,
+    categoryFilter,
+    statusFilter,
+    sortBy,
+    portionFilter,
+    profitFilter,
+  ]);
 
-  const categories = useMemo(() =>
-    [...new Set(products.map((product) => toInputValue(product.category).trim()).filter(Boolean))]
-      .sort((a, b) => a.localeCompare(b)), [products]);
+  const activeCount = products.filter((p) => p.is_active).length;
+  const inactiveCount = products.length - activeCount;
+  const portionCount = products.filter(
+    (p) => p.allow_portion_sales
+  ).length;
 
-  const productsWithDates = products.filter((product) => getCreatedDate(product)).length;
-  const buyingPriceText = toInputValue(formData.buying_price).trim();
-  const sellingPriceText = toInputValue(formData.price).trim();
-  const hasValidPrices = buyingPriceText !== "" && sellingPriceText !== "" &&
-    Number.isFinite(Number(buyingPriceText)) && Number.isFinite(Number(sellingPriceText));
-  const grossProfitPreview = hasValidPrices ? Number(sellingPriceText) - Number(buyingPriceText) : null;
-  const portionPriceText = toInputValue(formData.portion_price).trim();
-  const portionPriceNumber = Number(portionPriceText);
-  const portionCount = Number(formData.portions_per_unit);
-  const validPortionPreview = formData.allow_portion_sales &&
-    Number.isInteger(portionCount) && portionCount > 0 && portionPriceText !== "" &&
-    Number.isFinite(portionPriceNumber) && portionPriceNumber >= 0;
+  const averageProfit =
+    products.length > 0
+      ? products.reduce(
+          (total, product) =>
+            total +
+            (Number(product.price) -
+              Number(product.buying_price)),
+          0
+        ) / products.length
+      : 0;
+
+  const openCreateModal = () => {
+    setForm({ ...EMPTY_FORM });
+    setEditingId(null);
+    setImagePreview("");
+    setError("");
+    setShowModal(true);
+  };
+
+  const openEditModal = (product) => {
+    setForm({
+      ...product,
+      buying_price: String(product.buying_price),
+      price: String(product.price),
+      portions_per_unit: String(
+        product.portions_per_unit || ""
+      ),
+      portion_price: String(product.portion_price || ""),
+    });
+
+    setEditingId(product.id);
+    setImagePreview(product.image || "");
+    setError("");
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setForm({ ...EMPTY_FORM });
+    setEditingId(null);
+    setImagePreview("");
+    setError("");
+  };
+
+  const updateField = (field, value) => {
+    setForm((previous) => ({
+      ...previous,
+      [field]: value,
+    }));
+  };
+
+  const handleImageUpload = (event) => {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setError("Please select a valid image.");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Image size must not exceed 5MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      setImagePreview(reader.result);
+      updateField("image", reader.result);
+      setError("");
+    };
+
+    reader.readAsDataURL(file);
+  };
+
+  const validateForm = () => {
+    if (!form.name.trim()) {
+      return "Product name is required.";
+    }
+
+    if (!form.category.trim()) {
+      return "Please enter a product category.";
+    }
+
+    if (
+      form.buying_price === "" ||
+      !Number.isFinite(Number(form.buying_price)) ||
+      Number(form.buying_price) < 0
+    ) {
+      return "Enter a valid buying price.";
+    }
+
+    if (
+      form.price === "" ||
+      !Number.isFinite(Number(form.price)) ||
+      Number(form.price) < 0
+    ) {
+      return "Enter a valid selling price.";
+    }
+
+    if (
+      form.allow_portion_sales &&
+      (!Number.isFinite(Number(form.portions_per_unit)) ||
+        Number(form.portions_per_unit) <= 0)
+    ) {
+      return "Enter a valid number of portions per unit.";
+    }
+
+    if (
+      form.allow_portion_sales &&
+      (!Number.isFinite(Number(form.portion_price)) ||
+        Number(form.portion_price) <= 0)
+    ) {
+      return "Enter a valid portion selling price.";
+    }
+
+    const duplicateSku = products.some(
+      (product) =>
+        product.sku?.trim().toLowerCase() ===
+          form.sku.trim().toLowerCase() &&
+        form.sku.trim() &&
+        product.id !== editingId
+    );
+
+    if (duplicateSku) {
+      return "This SKU is already assigned to another product.";
+    }
+
+    const duplicateBarcode = products.some(
+      (product) =>
+        product.barcode?.trim() === form.barcode.trim() &&
+        form.barcode.trim() &&
+        product.id !== editingId
+    );
+
+    if (duplicateBarcode) {
+      return "This barcode is already assigned to another product.";
+    }
+
+    return "";
+  };
+
+  const saveProduct = (event) => {
+    event.preventDefault();
+
+    const validationError = validateForm();
+
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    const productData = {
+      ...form,
+      id: editingId || Date.now(),
+      name: form.name.trim(),
+      sku: form.sku.trim(),
+      barcode: form.barcode.trim(),
+      category: form.category.trim(),
+      description: form.description.trim(),
+      buying_price: Number(form.buying_price),
+      price: Number(form.price),
+      portions_per_unit: form.allow_portion_sales
+        ? Number(form.portions_per_unit)
+        : 0,
+      portion_price: form.allow_portion_sales
+        ? Number(form.portion_price)
+        : 0,
+      is_active: Boolean(form.is_active),
+    };
+
+    if (editingId) {
+      setProducts((previous) =>
+        previous.map((product) =>
+          product.id === editingId ? productData : product
+        )
+      );
+    } else {
+      setProducts((previous) => [
+        productData,
+        ...previous,
+      ]);
+    }
+
+    closeModal();
+  };
+
+  const toggleStatus = (product) => {
+    setProducts((previous) =>
+      previous.map((item) =>
+        item.id === product.id
+          ? { ...item, is_active: !item.is_active }
+          : item
+      )
+    );
+  };
+
+  const removeProduct = (product) => {
+    const confirmed = window.confirm(
+      `Remove "${product.name}" from this preview catalogue?`
+    );
+
+    if (!confirmed) return;
+
+    setProducts((previous) =>
+      previous.filter((item) => item.id !== product.id)
+    );
+  };
+
+  const clearFilters = () => {
+    setSearch("");
+    setCategoryFilter("all");
+    setStatusFilter("all");
+    setSortBy("newest");
+    setPortionFilter("all");
+    setProfitFilter("all");
+  };
+
+  const hasFilters =
+    search ||
+    categoryFilter !== "all" ||
+    statusFilter !== "all" ||
+    portionFilter !== "all" ||
+    profitFilter !== "all";
+
+  const inputStyle = {
+    width: "100%",
+    padding: "11px 13px",
+    border: "1px solid var(--border-color, #e2e8f0)",
+    borderRadius: "9px",
+    background: "var(--input-bg, var(--card-bg, #fff))",
+    color: "var(--text-primary, #0f172a)",
+    fontSize: "13px",
+    outline: "none",
+    boxSizing: "border-box",
+  };
+
+  const labelStyle = {
+    display: "block",
+    fontSize: "12px",
+    fontWeight: 650,
+    marginBottom: "7px",
+    color: "var(--text-secondary, #475569)",
+  };
+
+  const profit = Number(form.price || 0) -
+    Number(form.buying_price || 0);
+
+  const margin =
+    Number(form.price || 0) > 0
+      ? (profit / Number(form.price)) * 100
+      : 0;
 
   return (
-    <div className="container py-4">
-      <div className="d-flex justify-content-between align-items-center mb-4 gap-3 flex-wrap">
+    <div className="md-products">
+      <style>{`
+        .md-products {
+          color: var(--text-primary, #0f172a);
+          width: 100%;
+          min-width: 0;
+        }
+
+        .md-products * {
+          box-sizing: border-box;
+        }
+
+        .md-products button,
+        .md-products input,
+        .md-products select,
+        .md-products textarea {
+          font: inherit;
+        }
+
+        .md-products button {
+          cursor: pointer;
+        }
+
+        .md-products .md-card {
+          background: var(--card-bg, #fff);
+          border: 1px solid var(--border-color, #e2e8f0);
+          border-radius: 13px;
+        }
+
+        .md-products .md-primary {
+          background: var(--primary-color, #2563eb);
+          color: white;
+          border: 1px solid var(--primary-color, #2563eb);
+        }
+
+        .md-products .md-secondary {
+          background: var(--card-bg, #fff);
+          color: var(--text-primary, #0f172a);
+          border: 1px solid var(--border-color, #e2e8f0);
+        }
+
+        .md-products .md-button {
+          padding: 10px 15px;
+          border-radius: 9px;
+          font-size: 13px;
+          font-weight: 650;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          transition: .18s ease;
+        }
+
+        .md-products .md-button:hover {
+          filter: brightness(.96);
+          transform: translateY(-1px);
+        }
+
+        .md-products .md-stat {
+          padding: 17px;
+          min-width: 0;
+        }
+
+        .md-products .md-stat-label {
+          color: var(--text-secondary, #64748b);
+          font-size: 12px;
+          font-weight: 600;
+        }
+
+        .md-products .md-stat-value {
+          font-size: 25px;
+          font-weight: 750;
+          margin-top: 9px;
+          letter-spacing: -1px;
+        }
+
+        .md-products .md-stat-icon {
+          width: 37px;
+          height: 37px;
+          display: grid;
+          place-items: center;
+          border-radius: 10px;
+          font-size: 17px;
+        }
+
+        .md-products .md-field {
+          margin-bottom: 17px;
+          min-width: 0;
+        }
+
+        .md-products .md-field input:focus,
+        .md-products .md-field select:focus,
+        .md-products .md-field textarea:focus {
+          border-color: var(--primary-color, #2563eb);
+          box-shadow: 0 0 0 3px rgba(37,99,235,.09);
+        }
+
+        .md-products .md-table-wrap {
+          width: 100%;
+          overflow-x: auto;
+        }
+
+        .md-products table {
+          width: 100%;
+          border-collapse: collapse;
+          min-width: 850px;
+        }
+
+        .md-products th {
+          text-align: left;
+          padding: 13px 16px;
+          font-size: 11px;
+          text-transform: uppercase;
+          letter-spacing: .45px;
+          color: var(--text-secondary, #64748b);
+          background: var(--table-header-bg, #f8fafc);
+          border-bottom: 1px solid var(--border-color, #e2e8f0);
+          white-space: nowrap;
+        }
+
+        .md-products td {
+          padding: 14px 16px;
+          border-bottom: 1px solid var(--border-color, #e2e8f0);
+          font-size: 13px;
+          vertical-align: middle;
+        }
+
+        .md-products tbody tr:last-child td {
+          border-bottom: none;
+        }
+
+        .md-products tbody tr:hover {
+          background: var(--hover-bg, #f8fafc);
+        }
+
+        .md-products .md-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          border-radius: 30px;
+          padding: 5px 9px;
+          font-size: 11px;
+          font-weight: 700;
+          white-space: nowrap;
+        }
+
+        .md-products .md-action {
+          border: 1px solid var(--border-color, #e2e8f0);
+          background: var(--card-bg, #fff);
+          color: var(--text-primary, #0f172a);
+          padding: 7px 10px;
+          border-radius: 7px;
+          font-size: 12px;
+          font-weight: 600;
+        }
+
+        .md-products .md-action:hover {
+          background: var(--hover-bg, #f1f5f9);
+        }
+
+        .md-products .md-overlay {
+          position: fixed;
+          inset: 0;
+          z-index: 1000;
+          background: rgba(15,23,42,.58);
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          padding: 18px;
+          overflow-y: auto;
+        }
+
+        .md-products .md-modal {
+          width: 100%;
+          max-width: 760px;
+          max-height: 94vh;
+          overflow-y: auto;
+          background: var(--card-bg, #fff);
+          border: 1px solid var(--border-color, #e2e8f0);
+          border-radius: 16px;
+          box-shadow: 0 25px 80px rgba(0,0,0,.22);
+        }
+
+        .md-products .md-modal-header {
+          padding: 20px 23px;
+          border-bottom: 1px solid var(--border-color, #e2e8f0);
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 12px;
+          position: sticky;
+          top: 0;
+          background: var(--card-bg, #fff);
+          z-index: 2;
+        }
+
+        .md-products .md-modal-body {
+          padding: 22px 23px;
+        }
+
+        .md-products .md-modal-footer {
+          padding: 16px 23px;
+          border-top: 1px solid var(--border-color, #e2e8f0);
+          display: flex;
+          justify-content: flex-end;
+          gap: 10px;
+          position: sticky;
+          bottom: 0;
+          background: var(--card-bg, #fff);
+        }
+
+        .md-products .md-grid-2 {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 15px;
+        }
+
+        .md-products .md-grid-3 {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 15px;
+        }
+
+        .md-products .md-empty {
+          padding: 55px 20px;
+          text-align: center;
+        }
+
+        .md-products .md-empty-icon {
+          width: 65px;
+          height: 65px;
+          border-radius: 18px;
+          background: var(--hover-bg, #f1f5f9);
+          display: grid;
+          place-items: center;
+          margin: 0 auto 16px;
+          font-size: 27px;
+        }
+
+        .md-products .md-upload {
+          width: 100%;
+          min-height: 125px;
+          border: 1.5px dashed var(--border-color, #cbd5e1);
+          border-radius: 11px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-direction: column;
+          gap: 7px;
+          cursor: pointer;
+          color: var(--text-secondary, #64748b);
+          background: var(--hover-bg, #f8fafc);
+          overflow: hidden;
+        }
+
+        .md-products .md-upload img {
+          max-width: 100%;
+          max-height: 145px;
+          object-fit: contain;
+        }
+
+        .md-products .md-alert {
+          padding: 11px 13px;
+          border-radius: 9px;
+          background: #fef2f2;
+          border: 1px solid #fecaca;
+          color: #b91c1c;
+          font-size: 12px;
+          margin-bottom: 16px;
+        }
+
+        .md-products .md-preview-banner {
+          display: flex;
+          gap: 10px;
+          align-items: flex-start;
+          padding: 12px 14px;
+          border: 1px solid #bfdbfe;
+          border-radius: 10px;
+          background: #eff6ff;
+          color: #1e40af;
+          font-size: 12px;
+          line-height: 1.5;
+        }
+
+        @media (max-width: 850px) {
+          .md-products .md-stats {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          }
+
+          .md-products .md-toolbar {
+            flex-wrap: wrap;
+          }
+        }
+
+        @media (max-width: 600px) {
+          .md-products .md-grid-2,
+          .md-products .md-grid-3 {
+            grid-template-columns: 1fr;
+          }
+
+          .md-products .md-modal-body {
+            padding: 17px;
+          }
+
+          .md-products .md-modal-header,
+          .md-products .md-modal-footer {
+            padding: 15px 17px;
+          }
+
+          .md-products .md-overlay {
+            padding: 8px;
+            align-items: flex-start;
+          }
+
+          .md-products .md-modal {
+            max-height: 98vh;
+          }
+
+          .md-products .md-page-heading {
+            align-items: flex-start !important;
+            flex-direction: column;
+          }
+
+          .md-products .md-page-heading button {
+            width: 100%;
+          }
+        }
+      `}</style>
+
+      {/* PAGE HEADER */}
+      <div
+        className="md-page-heading"
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 15,
+          marginBottom: 20,
+        }}
+      >
         <div>
-          <h2 className="fw-bold mb-1">Product Management</h2>
-          <p className="text-muted mb-0">Manage products, costs, selling prices, inventory and portion sales.</p>
+          <h1
+            style={{
+              fontSize: 23,
+              fontWeight: 750,
+              letterSpacing: "-.6px",
+              margin: 0,
+            }}
+          >
+            Products
+          </h1>
+
+          <p
+            style={{
+              fontSize: 13,
+              color: "var(--text-secondary, #64748b)",
+              margin: "6px 0 0",
+            }}
+          >
+            Manage your business product catalogue, pricing and product details.
+          </p>
         </div>
-        <button type="button" className="btn btn-success" onClick={openAddForm}>
-          <i className="bi bi-plus-lg me-2"></i>Add Product
+
+        <button
+          className="md-button md-primary"
+          onClick={openCreateModal}
+        >
+          <span style={{ fontSize: 17 }}>＋</span>
+          Add product
         </button>
       </div>
 
-      {showForm && (
-        <div className="card shadow-sm mb-4">
-          <div className="card-body p-4">
-            <h5 className="fw-bold mb-4">{editingProduct ? "Edit Product" : "Add New Product"}</h5>
-            <form onSubmit={handleSubmit}>
-              <div className="row g-3">
-                <div className="col-md-6">
-                  <label className="form-label">Product Name</label>
-                  <input type="text" name="name" className="form-control" value={formData.name} onChange={handleChange} required />
-                </div>
-                <div className="col-md-6">
-                  <label className="form-label">Category</label>
-                  <input type="text" name="category" className="form-control" value={formData.category} onChange={handleChange} placeholder="e.g. whiskey, beer, wine, spirits" required />
-                </div>
-                <div className="col-md-4">
-                  <label className="form-label">Buying Price (KSh)</label>
-                  <input type="number" name="buying_price" className="form-control" value={formData.buying_price} onChange={handleChange} min="0" step="0.01" placeholder="Cost per whole stock unit" required={!editingProduct} />
-                  <small className="text-muted">Cost of purchasing one whole stock unit.</small>
-                </div>
-                <div className="col-md-4">
-                  <label className="form-label">Selling Price (KSh)</label>
-                  <input type="number" name="price" className="form-control" value={formData.price} onChange={handleChange} min="0" step="0.01" required />
-                  <small className="text-muted">Price charged for one whole stock unit.</small>
-                </div>
-                <div className="col-md-4">
-                  <label className="form-label">Stock Unit</label>
-                  <input type="text" name="unit" className="form-control" value={formData.unit} onChange={handleChange} placeholder="e.g. bottle, crate, 750ml" required />
-                  <small className="text-muted">The unit used to track branch inventory.</small>
-                </div>
-                <div className="col-md-4">
-                  <label className="form-label">General Product Stock</label>
-                  <input type="number" name="stock" className="form-control" value={formData.stock} onChange={handleChange} min="0" step="0.001" required />
-                  <small className="text-muted">General inventory, separate from branch stock.</small>
+      {/* PREVIEW NOTICE */}
+      <div className="md-preview-banner" style={{ marginBottom: 19 }}>
+        <span style={{ fontSize: 17 }}>ⓘ</span>
+        <div>
+          <strong>Frontend preview mode.</strong>{" "}
+          Products added here are temporary and exist only in this page
+          session. Database saving and business-specific product storage
+          will be connected during backend integration.
+        </div>
+      </div>
+
+      {/* STATISTICS */}
+      <div
+        className="md-stats"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+          gap: 13,
+          marginBottom: 21,
+        }}
+      >
+        <div className="md-card md-stat">
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <span className="md-stat-label">Total products</span>
+            <span
+              className="md-stat-icon"
+              style={{ background: "#eff6ff", color: "#2563eb" }}
+            >
+              ◈
+            </span>
+          </div>
+          <div className="md-stat-value">{products.length}</div>
+        </div>
+
+        <div className="md-card md-stat">
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <span className="md-stat-label">Active products</span>
+            <span
+              className="md-stat-icon"
+              style={{ background: "#ecfdf5", color: "#059669" }}
+            >
+              ✓
+            </span>
+          </div>
+          <div className="md-stat-value">{activeCount}</div>
+        </div>
+
+        <div className="md-card md-stat">
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <span className="md-stat-label">Portion selling</span>
+            <span
+              className="md-stat-icon"
+              style={{ background: "#f5f3ff", color: "#7c3aed" }}
+            >
+              ◫
+            </span>
+          </div>
+          <div className="md-stat-value">{portionCount}</div>
+        </div>
+
+        <div className="md-card md-stat">
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <span className="md-stat-label">Average gross profit</span>
+            <span
+              className="md-stat-icon"
+              style={{ background: "#fff7ed", color: "#ea580c" }}
+            >
+              ↗
+            </span>
+          </div>
+          <div className="md-stat-value" style={{ fontSize: 21 }}>
+            KSh {money(averageProfit)}
+          </div>
+        </div>
+      </div>
+
+      {/* SEARCH AND FILTERS */}
+      <div
+        className="md-card"
+        style={{ padding: 15, marginBottom: 17 }}
+      >
+        <div
+          className="md-toolbar"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+          }}
+        >
+          <div style={{ flex: 1, minWidth: 180, position: "relative" }}>
+            <span
+              style={{
+                position: "absolute",
+                left: 12,
+                top: 10,
+                color: "var(--text-secondary, #64748b)",
+              }}
+            >
+              ⌕
+            </span>
+
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search products, SKU, barcode..."
+              style={{
+                ...inputStyle,
+                paddingLeft: 35,
+              }}
+            />
+          </div>
+
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            style={{ ...inputStyle, width: "auto", minWidth: 135 }}
+          >
+            <option value="all">All categories</option>
+            {categories.map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            style={{ ...inputStyle, width: "auto", minWidth: 140 }}
+          >
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+            <option value="name">Name A–Z</option>
+            <option value="price-high">Price: high to low</option>
+            <option value="price-low">Price: low to high</option>
+            <option value="profit-high">Highest gross profit</option>
+          </select>
+
+          <button
+            className="md-button md-secondary"
+            onClick={() => setShowFilters((previous) => !previous)}
+          >
+            ⚙ Filters
+          </button>
+        </div>
+
+        {showFilters && (
+          <div
+            className="md-grid-3"
+            style={{
+              marginTop: 15,
+              paddingTop: 15,
+              borderTop: "1px solid var(--border-color, #e2e8f0)",
+            }}
+          >
+            <div>
+              <label style={labelStyle}>Product status</label>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                style={inputStyle}
+              >
+                <option value="all">All products</option>
+                <option value="active">Active only</option>
+                <option value="inactive">Inactive only</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={labelStyle}>Portion selling</label>
+              <select
+                value={portionFilter}
+                onChange={(e) => setPortionFilter(e.target.value)}
+                style={inputStyle}
+              >
+                <option value="all">All products</option>
+                <option value="enabled">Enabled</option>
+                <option value="disabled">Disabled</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={labelStyle}>Profitability</label>
+              <select
+                value={profitFilter}
+                onChange={(e) => setProfitFilter(e.target.value)}
+                style={inputStyle}
+              >
+                <option value="all">All products</option>
+                <option value="profitable">Positive gross profit</option>
+                <option value="loss">No gross profit / loss</option>
+              </select>
+            </div>
+          </div>
+        )}
+
+        {hasFilters && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginTop: 12,
+              fontSize: 12,
+              color: "var(--text-secondary, #64748b)",
+            }}
+          >
+            <span>
+              Showing {filteredProducts.length} of {products.length} products
+            </span>
+
+            <button
+              onClick={clearFilters}
+              style={{
+                border: 0,
+                background: "transparent",
+                color: "var(--primary-color, #2563eb)",
+                fontWeight: 650,
+                fontSize: 12,
+              }}
+            >
+              Clear filters
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* PRODUCT TABLE */}
+      <div className="md-card" style={{ overflow: "hidden" }}>
+        <div
+          style={{
+            padding: "16px 18px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 10,
+            borderBottom: "1px solid var(--border-color, #e2e8f0)",
+          }}
+        >
+          <div>
+            <h3 style={{ margin: 0, fontSize: 14, fontWeight: 750 }}>
+              Product catalogue
+            </h3>
+            <p
+              style={{
+                margin: "5px 0 0",
+                fontSize: 12,
+                color: "var(--text-secondary, #64748b)",
+              }}
+            >
+              {filteredProducts.length} products displayed
+            </p>
+          </div>
+
+          <span
+            style={{
+              fontSize: 11,
+              color: "var(--text-secondary, #64748b)",
+            }}
+          >
+            {inactiveCount} inactive
+          </span>
+        </div>
+
+        {filteredProducts.length === 0 ? (
+          <div className="md-empty">
+            <div className="md-empty-icon">◈</div>
+
+            <h3 style={{ margin: "0 0 7px", fontSize: 16 }}>
+              {products.length === 0
+                ? "Your catalogue is empty"
+                : "No matching products"}
+            </h3>
+
+            <p
+              style={{
+                fontSize: 13,
+                color: "var(--text-secondary, #64748b)",
+                maxWidth: 360,
+                lineHeight: 1.6,
+                margin: "0 auto 18px",
+              }}
+            >
+              {products.length === 0
+                ? "Start building your catalogue by adding your first product. Stock quantities and branch inventory will be managed separately."
+                : "Try changing your search or filters to find the products you are looking for."}
+            </p>
+
+            {products.length === 0 ? (
+              <button
+                className="md-button md-primary"
+                onClick={openCreateModal}
+              >
+                ＋ Add your first product
+              </button>
+            ) : (
+              <button
+                className="md-button md-secondary"
+                onClick={clearFilters}
+              >
+                Clear filters
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="md-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Category</th>
+                  <th>Buying price</th>
+                  <th>Selling price</th>
+                  <th>Gross profit</th>
+                  <th>Unit</th>
+                  <th>Portions</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {filteredProducts.map((product) => {
+                  const grossProfit =
+                    Number(product.price) -
+                    Number(product.buying_price);
+
+                  return (
+                    <tr key={product.id}>
+                      <td>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 10,
+                            minWidth: 180,
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: 43,
+                              height: 43,
+                              flexShrink: 0,
+                              borderRadius: 9,
+                              background: "var(--hover-bg, #f1f5f9)",
+                              overflow: "hidden",
+                              display: "grid",
+                              placeItems: "center",
+                              color: "var(--text-secondary, #64748b)",
+                            }}
+                          >
+                            {product.image ? (
+                              <img
+                                src={product.image}
+                                alt={product.name}
+                                style={{
+                                  width: "100%",
+                                  height: "100%",
+                                  objectFit: "cover",
+                                }}
+                              />
+                            ) : (
+                              <span style={{ fontSize: 20 }}>◈</span>
+                            )}
+                          </div>
+
+                          <div>
+                            <div style={{ fontWeight: 700 }}>
+                              {product.name}
+                            </div>
+
+                            <div
+                              style={{
+                                fontSize: 11,
+                                color: "var(--text-secondary, #64748b)",
+                                marginTop: 4,
+                              }}
+                            >
+                              {product.sku || "No SKU"}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td>{product.category || "—"}</td>
+
+                      <td>KSh {money(product.buying_price)}</td>
+
+                      <td style={{ fontWeight: 650 }}>
+                        KSh {money(product.price)}
+                      </td>
+
+                      <td>
+                        <span
+                          style={{
+                            fontWeight: 700,
+                            color:
+                              grossProfit > 0
+                                ? "#059669"
+                                : grossProfit < 0
+                                  ? "#dc2626"
+                                  : "var(--text-secondary, #64748b)",
+                          }}
+                        >
+                          KSh {money(grossProfit)}
+                        </span>
+                      </td>
+
+                      <td>{product.unit}</td>
+
+                      <td>
+                        {product.allow_portion_sales ? (
+                          <span
+                            className="md-badge"
+                            style={{
+                              background: "#f5f3ff",
+                              color: "#7c3aed",
+                            }}
+                          >
+                            {product.portions_per_unit} portions
+                          </span>
+                        ) : (
+                          <span style={{ color: "#94a3b8" }}>—</span>
+                        )}
+                      </td>
+
+                      <td>
+                        <span
+                          className="md-badge"
+                          style={{
+                            background: product.is_active
+                              ? "#ecfdf5"
+                              : "#f1f5f9",
+                            color: product.is_active
+                              ? "#047857"
+                              : "#64748b",
+                          }}
+                        >
+                          <span>
+                            {product.is_active ? "●" : "○"}
+                          </span>
+                          {product.is_active ? "Active" : "Inactive"}
+                        </span>
+                      </td>
+
+                      <td>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <button
+                            className="md-action"
+                            onClick={() => openEditModal(product)}
+                          >
+                            Edit
+                          </button>
+
+                          <button
+                            className="md-action"
+                            onClick={() => toggleStatus(product)}
+                            title={
+                              product.is_active
+                                ? "Deactivate product"
+                                : "Activate product"
+                            }
+                          >
+                            {product.is_active ? "Disable" : "Enable"}
+                          </button>
+
+                          <button
+                            className="md-action"
+                            onClick={() => removeProduct(product)}
+                            style={{ color: "#dc2626" }}
+                            title="Remove product"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* ADD / EDIT MODAL */}
+      {showModal && (
+        <div
+          className="md-overlay"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              closeModal();
+            }
+          }}
+        >
+          <div className="md-modal">
+            <div className="md-modal-header">
+              <div>
+                <h2
+                  style={{
+                    margin: 0,
+                    fontSize: 17,
+                    fontWeight: 750,
+                  }}
+                >
+                  {editingId ? "Edit product" : "Add new product"}
+                </h2>
+
+                <p
+                  style={{
+                    margin: "5px 0 0",
+                    color: "var(--text-secondary, #64748b)",
+                    fontSize: 12,
+                  }}
+                >
+                  Enter the product catalogue information.
+                </p>
+              </div>
+
+              <button
+                onClick={closeModal}
+                style={{
+                  border: 0,
+                  background: "var(--hover-bg, #f1f5f9)",
+                  color: "var(--text-primary, #0f172a)",
+                  borderRadius: 8,
+                  width: 33,
+                  height: 33,
+                  fontSize: 20,
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={saveProduct}>
+              <div className="md-modal-body">
+                {error && (
+                  <div className="md-alert">
+                    {error}
+                  </div>
+                )}
+
+                {/* BASIC INFORMATION */}
+                <h3
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 750,
+                    margin: "0 0 15px",
+                  }}
+                >
+                  Basic information
+                </h3>
+
+                <div className="md-grid-2">
+                  <div className="md-field">
+                    <label style={labelStyle}>
+                      Product name *
+                    </label>
+
+                    <input
+                      value={form.name}
+                      onChange={(e) =>
+                        updateField("name", e.target.value)
+                      }
+                      placeholder="e.g. Tusker Lager"
+                      style={inputStyle}
+                      autoFocus
+                    />
+                  </div>
+
+                  <div className="md-field">
+                    <label style={labelStyle}>
+                      Category *
+                    </label>
+
+                    <input
+                      value={form.category}
+                      onChange={(e) =>
+                        updateField("category", e.target.value)
+                      }
+                      placeholder="e.g. Beverages"
+                      list="md-product-categories"
+                      style={inputStyle}
+                    />
+
+                    <datalist id="md-product-categories">
+                      {categories.map((category) => (
+                        <option key={category} value={category} />
+                      ))}
+                    </datalist>
+                  </div>
+
+                  <div className="md-field">
+                    <label style={labelStyle}>
+                      SKU
+                    </label>
+
+                    <input
+                      value={form.sku}
+                      onChange={(e) =>
+                        updateField("sku", e.target.value)
+                      }
+                      placeholder="e.g. BEV-001"
+                      style={inputStyle}
+                    />
+                  </div>
+
+                  <div className="md-field">
+                    <label style={labelStyle}>
+                      Barcode
+                    </label>
+
+                    <input
+                      value={form.barcode}
+                      onChange={(e) =>
+                        updateField("barcode", e.target.value)
+                      }
+                      placeholder="Enter or scan barcode"
+                      style={inputStyle}
+                    />
+                  </div>
                 </div>
 
-                {!editingProduct && <>
-                  <div className="col-md-4">
-                    <label className="form-label">Branch <span className="text-danger">*</span></label>
-                    <select name="branch_id" className="form-select" value={formData.branch_id} onChange={handleChange} disabled={loadingBranches || saving} required>
-                      <option value="">{loadingBranches ? "Loading branches..." : "Select a branch"}</option>
-                      {branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}{branch.code ? ` (${branch.code})` : ""}</option>)}
-                    </select>
-                    {!loadingBranches && branches.length === 0 && <small className="text-danger d-block mt-1">No active branches found. Check your branch setup and admin access.</small>}
-                  </div>
-                  <div className="col-md-4">
-                    <label className="form-label">Initial Branch Stock <span className="text-danger">*</span></label>
-                    <input type="number" name="initial_branch_stock" className="form-control" value={formData.initial_branch_stock} onChange={handleChange} min="0" step="0.001" placeholder="Quantity available at this branch" required />
-                    <small className="text-muted">Stock available to sell at this branch's POS.</small>
-                  </div>
-                  <div className="col-12"><div className="alert alert-info mb-0"><i className="bi bi-info-circle me-2"></i>Only the selected branch receives this initial stock. Other branches are not updated automatically.</div></div>
-                </>}
+                <div className="md-field">
+                  <label style={labelStyle}>
+                    Product description
+                  </label>
 
-                <div className={editingProduct ? "col-md-8" : "col-md-12"}>
-                  <label className="form-label">Gross Profit per Whole Unit</label>
-                  <div className="form-control bg-light">{grossProfitPreview !== null ? `KSh ${formatMoney(grossProfitPreview)}` : "Enter both prices to calculate"}</div>
-                  <small className="text-muted">Selling price minus buying price. This is not net profit.</small>
+                  <textarea
+                    value={form.description}
+                    onChange={(e) =>
+                      updateField("description", e.target.value)
+                    }
+                    placeholder="Describe this product..."
+                    rows={3}
+                    style={{
+                      ...inputStyle,
+                      resize: "vertical",
+                    }}
+                  />
                 </div>
 
-                <div className="col-12">
-                  <hr /><h6 className="fw-bold">Portion Selling</h6>
-                  <div className="form-check form-switch mb-3">
-                    <input className="form-check-input" type="checkbox" role="switch" id="allow_portion_sales" name="allow_portion_sales" checked={formData.allow_portion_sales} onChange={handleChange} />
-                    <label className="form-check-label" htmlFor="allow_portion_sales">Allow this product to be sold in portions</label>
-                  </div>
-                  {formData.allow_portion_sales && <div className="row g-3">
-                    <div className="col-md-4">
-                      <label className="form-label">Portions per Whole Unit</label>
-                      <input type="number" name="portions_per_unit" className="form-control" min="1" step="1" value={formData.portions_per_unit} onChange={handleChange} placeholder="e.g. 4" required />
-                      <small className="text-muted">How many portions come from one stock unit.</small>
+                {/* IMAGE */}
+                <div className="md-field">
+                  <label style={labelStyle}>
+                    Product image
+                  </label>
+
+                  <label className="md-upload">
+                    {imagePreview ? (
+                      <img
+                        src={imagePreview}
+                        alt="Product preview"
+                      />
+                    ) : (
+                      <>
+                        <span style={{ fontSize: 25 }}>▧</span>
+                        <strong style={{ fontSize: 12 }}>
+                          Click to upload an image
+                        </strong>
+                        <span style={{ fontSize: 11 }}>
+                          PNG, JPG or WEBP · Maximum 5MB
+                        </span>
+                      </>
+                    )}
+
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      style={{ display: "none" }}
+                    />
+                  </label>
+
+                  {imagePreview && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setImagePreview("");
+                        updateField("image", "");
+                      }}
+                      style={{
+                        marginTop: 7,
+                        background: "transparent",
+                        border: 0,
+                        color: "#dc2626",
+                        fontSize: 12,
+                        fontWeight: 650,
+                      }}
+                    >
+                      Remove image
+                    </button>
+                  )}
+                </div>
+
+                {/* PRICING */}
+                <div
+                  style={{
+                    borderTop: "1px solid var(--border-color, #e2e8f0)",
+                    paddingTop: 19,
+                    marginTop: 20,
+                  }}
+                >
+                  <h3
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 750,
+                      margin: "0 0 15px",
+                    }}
+                  >
+                    Pricing information
+                  </h3>
+
+                  <div className="md-grid-3">
+                    <div className="md-field">
+                      <label style={labelStyle}>
+                        Buying price (KSh) *
+                      </label>
+
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={form.buying_price}
+                        onChange={(e) =>
+                          updateField(
+                            "buying_price",
+                            e.target.value
+                          )
+                        }
+                        placeholder="0.00"
+                        style={inputStyle}
+                      />
                     </div>
-                    <div className="col-md-4">
-                      <label className="form-label">Selling Price per Portion (KSh)</label>
-                      <input type="number" name="portion_price" className="form-control" min="0" step="0.01" value={formData.portion_price} onChange={handleChange} placeholder="e.g. 90" required />
-                    </div>
-                    <div className="col-md-4">
-                      <label className="form-label">Revenue if All Portions Sell</label>
-                      <div className="form-control bg-light">{validPortionPreview ? `KSh ${formatMoney(portionCount * portionPriceNumber)}` : "Enter portion count and price"}</div>
-                      <small className="text-muted">Compared with the whole-unit price of KSh {formatMoney(formData.price)}.</small>
-                    </div>
-                    {validPortionPreview && <div className="col-12"><div className="alert alert-info mb-0">One whole stock unit provides <strong>{portionCount} portions</strong>. At <strong>KSh {formatMoney(portionPriceNumber)}</strong> each, selling all portions generates <strong>KSh {formatMoney(portionCount * portionPriceNumber)}</strong>. Inventory will be tracked in whole-unit equivalents.</div></div>}
-                  </div>}
-                </div>
 
-                <div className="col-12">
-                  <label className="form-label">Description</label>
-                  <textarea name="description" className="form-control" rows="3" value={formData.description} onChange={handleChange} />
-                </div>
-                <div className="col-12">
-                  <label className="form-label fw-semibold">Upload Product Image</label>
-                  <div className="border rounded-3 p-3">
-                    <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="form-control" onChange={handleImageSelect} />
-                    <small className="text-muted d-block mt-2">Supported formats: JPG, PNG, WEBP and GIF. Maximum size: 5 MB.</small>
-                    {selectedImage && <div className="mt-2 small text-success"><i className="bi bi-check-circle me-1"></i>Selected: {selectedImage.name}</div>}
-                    {imagePreview && <div className="mt-3">
-                      <p className="small fw-semibold mb-2">Image Preview</p>
-                      <img src={imagePreview} alt="Product preview" onError={() => setImageError("The image preview could not be loaded. Check the selected file or image URL.")} onLoad={() => setImageError("")} style={{ width: "180px", height: "180px", objectFit: "contain", background: "#f8f9fa", border: "1px solid #dee2e6", borderRadius: "10px", padding: "8px" }} />
-                      {selectedImage && <div className="mt-2"><button type="button" className="btn btn-sm btn-outline-danger" onClick={removeSelectedImage}><i className="bi bi-x-circle me-1"></i>Remove Selected Image</button></div>}
-                    </div>}
-                    {imageError && <div className="text-danger small mt-2">{imageError}</div>}
+                    <div className="md-field">
+                      <label style={labelStyle}>
+                        Selling price (KSh) *
+                      </label>
+
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={form.price}
+                        onChange={(e) =>
+                          updateField("price", e.target.value)
+                        }
+                        placeholder="0.00"
+                        style={inputStyle}
+                      />
+                    </div>
+
+                    <div className="md-field">
+                      <label style={labelStyle}>
+                        Selling unit *
+                      </label>
+
+                      <select
+                        value={form.unit}
+                        onChange={(e) =>
+                          updateField("unit", e.target.value)
+                        }
+                        style={inputStyle}
+                      >
+                        <option value="piece">Piece</option>
+                        <option value="bottle">Bottle</option>
+                        <option value="carton">Carton</option>
+                        <option value="crate">Crate</option>
+                        <option value="packet">Packet</option>
+                        <option value="box">Box</option>
+                        <option value="kg">Kilogram (kg)</option>
+                        <option value="g">Gram (g)</option>
+                        <option value="litre">Litre</option>
+                        <option value="ml">Millilitre (ml)</option>
+                        <option value="metre">Metre</option>
+                        <option value="dozen">Dozen</option>
+                        <option value="pair">Pair</option>
+                        <option value="service">Service</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      padding: 13,
+                      borderRadius: 10,
+                      background: "var(--hover-bg, #f8fafc)",
+                      border: "1px solid var(--border-color, #e2e8f0)",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: 12,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <div>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: "var(--text-secondary, #64748b)",
+                        }}
+                      >
+                        Gross profit per unit
+                      </div>
+
+                      <strong
+                        style={{
+                          display: "block",
+                          marginTop: 5,
+                          fontSize: 17,
+                          color:
+                            profit > 0
+                              ? "#059669"
+                              : profit < 0
+                                ? "#dc2626"
+                                : "var(--text-primary, #0f172a)",
+                        }}
+                      >
+                        KSh {money(profit)}
+                      </strong>
+                    </div>
+
+                    <div>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: "var(--text-secondary, #64748b)",
+                        }}
+                      >
+                        Gross profit margin
+                      </div>
+
+                      <strong
+                        style={{
+                          display: "block",
+                          marginTop: 5,
+                          fontSize: 17,
+                        }}
+                      >
+                        {margin.toFixed(2)}%
+                      </strong>
+                    </div>
                   </div>
                 </div>
-                <div className="col-12">
-                  <label className="form-label fw-semibold">Or Use an Image URL</label>
-                  <input type="url" name="image" className="form-control" value={formData.image} onChange={handleChange} placeholder="https://example.com/product-image.jpg" />
-                  <small className="text-muted">If you select an image from your device, that image takes priority.</small>
+
+                {/* PORTION SELLING */}
+                <div
+                  style={{
+                    borderTop: "1px solid var(--border-color, #e2e8f0)",
+                    paddingTop: 19,
+                    marginTop: 20,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: 12,
+                      marginBottom: 13,
+                    }}
+                  >
+                    <div>
+                      <h3
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 750,
+                          margin: 0,
+                        }}
+                      >
+                        Portion selling
+                      </h3>
+
+                      <p
+                        style={{
+                          fontSize: 11,
+                          color: "var(--text-secondary, #64748b)",
+                          margin: "5px 0 0",
+                        }}
+                      >
+                        Allow this product to be sold in smaller portions.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateField(
+                          "allow_portion_sales",
+                          !form.allow_portion_sales
+                        )
+                      }
+                      style={{
+                        border: 0,
+                        borderRadius: 20,
+                        padding: "7px 12px",
+                        background: form.allow_portion_sales
+                          ? "#dcfce7"
+                          : "var(--hover-bg, #f1f5f9)",
+                        color: form.allow_portion_sales
+                          ? "#15803d"
+                          : "var(--text-secondary, #64748b)",
+                        fontSize: 11,
+                        fontWeight: 750,
+                      }}
+                    >
+                      {form.allow_portion_sales ? "Enabled" : "Disabled"}
+                    </button>
+                  </div>
+
+                  {form.allow_portion_sales && (
+                    <>
+                      <div className="md-grid-2">
+                        <div className="md-field">
+                          <label style={labelStyle}>
+                            Portions per full unit *
+                          </label>
+
+                          <input
+                            type="number"
+                            min="1"
+                            step="1"
+                            value={form.portions_per_unit}
+                            onChange={(e) =>
+                              updateField(
+                                "portions_per_unit",
+                                e.target.value
+                              )
+                            }
+                            placeholder="e.g. 4"
+                            style={inputStyle}
+                          />
+                        </div>
+
+                        <div className="md-field">
+                          <label style={labelStyle}>
+                            Selling price per portion (KSh) *
+                          </label>
+
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={form.portion_price}
+                            onChange={(e) =>
+                              updateField(
+                                "portion_price",
+                                e.target.value
+                              )
+                            }
+                            placeholder="e.g. 90"
+                            style={inputStyle}
+                          />
+                        </div>
+                      </div>
+
+                      {Number(form.portions_per_unit) > 0 &&
+                        Number(form.portion_price) > 0 && (
+                          <div
+                            style={{
+                              background: "#f5f3ff",
+                              color: "#6d28d9",
+                              borderRadius: 9,
+                              padding: 12,
+                              fontSize: 12,
+                              lineHeight: 1.6,
+                            }}
+                          >
+                            <strong>Portion pricing preview</strong>
+                            <br />
+                            {form.portions_per_unit} portions × KSh{" "}
+                            {money(form.portion_price)} ={" "}
+                            <strong>
+                              KSh{" "}
+                              {money(
+                                Number(form.portions_per_unit) *
+                                  Number(form.portion_price)
+                              )}
+                            </strong>{" "}
+                            total portion revenue per full unit.
+                          </div>
+                        )}
+                    </>
+                  )}
+                </div>
+
+                {/* STATUS */}
+                <div
+                  style={{
+                    borderTop: "1px solid var(--border-color, #e2e8f0)",
+                    paddingTop: 18,
+                    marginTop: 20,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
+                  }}
+                >
+                  <div>
+                    <strong style={{ fontSize: 13 }}>
+                      Product status
+                    </strong>
+
+                    <p
+                      style={{
+                        fontSize: 11,
+                        color: "var(--text-secondary, #64748b)",
+                        margin: "4px 0 0",
+                      }}
+                    >
+                      Inactive products can be hidden from selling interfaces.
+                    </p>
+                  </div>
+
+                  <select
+                    value={form.is_active ? "active" : "inactive"}
+                    onChange={(e) =>
+                      updateField(
+                        "is_active",
+                        e.target.value === "active"
+                      )
+                    }
+                    style={{
+                      ...inputStyle,
+                      width: 130,
+                    }}
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
                 </div>
               </div>
-              <div className="mt-4 d-flex gap-2 flex-wrap">
-                <button type="submit" className="btn btn-success" disabled={saving || (!editingProduct && (loadingBranches || branches.length === 0))}>
-                  {saving ? <><span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Saving...</> : <><i className="bi bi-check-lg me-2"></i>{editingProduct ? "Update Product" : "Save Product"}</>}
+
+              <div className="md-modal-footer">
+                <button
+                  type="button"
+                  className="md-button md-secondary"
+                  onClick={closeModal}
+                >
+                  Cancel
                 </button>
-                <button type="button" className="btn btn-secondary" onClick={resetForm} disabled={saving}>Cancel</button>
+
+                <button
+                  type="submit"
+                  className="md-button md-primary"
+                >
+                  {editingId ? "Save changes" : "Create product"}
+                </button>
               </div>
             </form>
           </div>
         </div>
       )}
-
-      <div className="card shadow-sm mb-4">
-        <div className="card-body">
-          <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-            <div>
-              <h5 className="fw-bold mb-1">Filter Products</h5>
-              <small className="text-muted">Narrow the list by stock, status, price, profitability, category or date added.</small>
-            </div>
-            <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => setFilters(emptyFilters)}>
-              <i className="bi bi-arrow-counterclockwise me-1"></i>Reset Filters
-            </button>
-          </div>
-          <div className="row g-3">
-            <div className="col-lg-4 col-md-6">
-              <label className="form-label">Search</label>
-              <input type="search" name="search" className="form-control" value={filters.search} onChange={updateFilter} placeholder="Name, category, description or unit" />
-            </div>
-            <div className="col-lg-2 col-md-6">
-              <label className="form-label">Category</label>
-              <select name="category" className="form-select" value={filters.category} onChange={updateFilter}>
-                <option value="all">All categories</option>
-                {categories.map((category) => <option key={category} value={category}>{category}</option>)}
-              </select>
-            </div>
-            <div className="col-lg-2 col-md-6">
-              <label className="form-label">Product Status</label>
-              <select name="status" className="form-select" value={filters.status} onChange={updateFilter}>
-                <option value="all">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option>
-              </select>
-            </div>
-            <div className="col-lg-2 col-md-6">
-              <label className="form-label">Stock Status</label>
-              <select name="stockStatus" className="form-select" value={filters.stockStatus} onChange={updateFilter}>
-                <option value="all">All stock levels</option><option value="out">Out of stock (0)</option><option value="low">Low (above 0–5)</option><option value="normal">Moderate (above 5–10)</option><option value="healthy">Healthy (above 10)</option>
-              </select>
-            </div>
-            <div className="col-lg-2 col-md-6">
-              <label className="form-label">Portion Selling</label>
-              <select name="portions" className="form-select" value={filters.portions} onChange={updateFilter}>
-                <option value="all">All products</option><option value="enabled">Enabled</option><option value="disabled">Disabled</option>
-              </select>
-            </div>
-
-            <div className="col-md-3">
-              <label className="form-label">Minimum Stock</label>
-              <input type="number" name="minStock" className="form-control" min="0" step="0.001" value={filters.minStock} onChange={updateFilter} placeholder="e.g. 0.5" />
-            </div>
-            <div className="col-md-3">
-              <label className="form-label">Maximum Stock</label>
-              <input type="number" name="maxStock" className="form-control" min="0" step="0.001" value={filters.maxStock} onChange={updateFilter} placeholder="e.g. 20" />
-            </div>
-            <div className="col-md-3">
-              <label className="form-label">Profitability</label>
-              <select name="profitability" className="form-select" value={filters.profitability} onChange={updateFilter}>
-                <option value="all">All profitability</option><option value="profitable">Profitable</option><option value="break-even">Break-even</option><option value="loss">Selling at a loss</option><option value="missing">Buying price not set</option>
-              </select>
-            </div>
-            <div className="col-md-3">
-              <label className="form-label">Date Added</label>
-              <select name="datePreset" className="form-select" value={filters.datePreset} onChange={updateFilter}>
-                <option value="all">Any date</option><option value="today">Today</option><option value="7days">Last 7 days</option><option value="30days">Last 30 days</option><option value="custom">Custom date range</option>
-              </select>
-            </div>
-
-            {(filters.datePreset === "custom" || filters.dateFrom || filters.dateTo) && <><div className="col-md-3">
-              <label className="form-label">Added From</label>
-              <input type="date" name="dateFrom" className="form-control" value={filters.dateFrom} onChange={updateFilter} />
-            </div><div className="col-md-3">
-              <label className="form-label">Added To</label>
-              <input type="date" name="dateTo" className="form-control" value={filters.dateTo} onChange={updateFilter} />
-            </div></>}
-
-            <div className="col-md-3">
-              <label className="form-label">Minimum Selling Price (KSh)</label>
-              <input type="number" name="minSellingPrice" className="form-control" min="0" step="0.01" value={filters.minSellingPrice} onChange={updateFilter} placeholder="Minimum" />
-            </div>
-            <div className="col-md-3">
-              <label className="form-label">Maximum Selling Price (KSh)</label>
-              <input type="number" name="maxSellingPrice" className="form-control" min="0" step="0.01" value={filters.maxSellingPrice} onChange={updateFilter} placeholder="Maximum" />
-            </div>
-            <div className="col-md-3">
-              <label className="form-label">Minimum Buying Price (KSh)</label>
-              <input type="number" name="minBuyingPrice" className="form-control" min="0" step="0.01" value={filters.minBuyingPrice} onChange={updateFilter} placeholder="Minimum" />
-            </div>
-            <div className="col-md-3">
-              <label className="form-label">Maximum Buying Price (KSh)</label>
-              <input type="number" name="maxBuyingPrice" className="form-control" min="0" step="0.01" value={filters.maxBuyingPrice} onChange={updateFilter} placeholder="Maximum" />
-            </div>
-            <div className="col-md-3">
-              <label className="form-label">Sort Results</label>
-              <select name="sortBy" className="form-select" value={filters.sortBy} onChange={updateFilter}>
-                <option value="newest">Newest added</option><option value="oldest">Oldest added</option><option value="name-asc">Name (A–Z)</option><option value="name-desc">Name (Z–A)</option><option value="stock-asc">Stock (lowest first)</option><option value="stock-desc">Stock (highest first)</option><option value="price-asc">Selling price (lowest first)</option><option value="price-desc">Selling price (highest first)</option><option value="profit-desc">Gross profit (highest first)</option>
-              </select>
-            </div>
-          </div>
-          {filters.datePreset !== "all" && productsWithDates === 0 && <div className="alert alert-warning mt-3 mb-0">
-            Product creation dates are not included in the data returned by the API, so date filtering cannot match products until the backend returns a field such as <code>created_at</code>.
-          </div>}
-          <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3 pt-3 border-top">
-            <span className="fw-semibold">Showing {filteredProducts.length} of {products.length} products</span>
-            <small className="text-muted">Filters update automatically as you change them.</small>
-          </div>
-        </div>
-      </div>
-
-      <div className="card shadow-sm">
-        <div className="card-body">
-          <div className="d-flex justify-content-between align-items-center mb-3 gap-2 flex-wrap">
-            <h5 className="fw-bold mb-0">Products</h5>
-            <span className="badge bg-secondary">{filteredProducts.length} matching</span>
-          </div>
-          {loading ? <div className="text-center py-5">
-            <div className="spinner-border text-success" role="status"></div><p className="mt-2 text-muted">Loading products...</p>
-          </div> : filteredProducts.length === 0 ? <div className="text-center py-5">
-            <i className="bi bi-search fs-1 text-muted"></i><p className="text-muted mt-3">{products.length === 0 ? "No products found." : "No products match these filters."}</p>
-            {products.length === 0 ? <button type="button" className="btn btn-success" onClick={openAddForm}>Add Your First Product</button> : <button type="button" className="btn btn-outline-secondary" onClick={() => setFilters(emptyFilters)}>Clear Filters</button>}
-          </div> : <div className="table-responsive">
-            <table className="table table-hover align-middle">
-              <thead><tr>
-                <th>Product</th><th>Category</th><th>Buying Price</th><th>Selling Price</th><th>Gross Profit / Unit</th><th>Unit</th><th>General Stock</th><th>Portion Selling</th><th>Status</th><th>Actions</th>
-              </tr></thead>
-              <tbody>{filteredProducts.map((product) => {
-                const hasBuyingPrice = product.buying_price !== null && product.buying_price !== undefined && product.buying_price !== "";
-                const sellingPrice = Number(product.price);
-                const buyingPrice = Number(product.buying_price);
-                const grossProfit = hasBuyingPrice && Number.isFinite(sellingPrice) && Number.isFinite(buyingPrice) ? sellingPrice - buyingPrice : null;
-                const stock = Number(product.stock);
-                const active = product.is_active === true || product.is_active === 1 || product.is_active === "true" || product.is_active === "1";
-                return <tr key={product.id}>
-                  <td><div className="d-flex align-items-center gap-2">
-                    {product.image ? <img src={product.image} alt={product.name || "Product"} onError={(event) => { event.currentTarget.style.visibility = "hidden"; }} style={{ width: "50px", height: "50px", objectFit: "cover", borderRadius: "8px" }} /> :
-                      <div className="bg-light d-flex align-items-center justify-content-center" style={{ width: "50px", height: "50px", borderRadius: "8px" }}><i className="bi bi-box"></i></div>}
-                    <div><strong>{product.name}</strong>{getCreatedDate(product) && <div className="small text-muted">Added {getCreatedDate(product).toLocaleDateString()}</div>}</div>
-                  </div></td>
-                  <td>{product.category}</td>
-                  <td>{hasBuyingPrice ? `KSh ${formatMoney(product.buying_price)}` : <span className="badge bg-warning text-dark">Not set</span>}</td>
-                  <td>KSh {formatMoney(product.price)}</td>
-                  <td>{grossProfit === null ? <span className="text-muted">—</span> : <span className={grossProfit < 0 ? "text-danger fw-semibold" : grossProfit > 0 ? "text-success fw-semibold" : "text-muted fw-semibold"}>KSh {formatMoney(grossProfit)}</span>}</td>
-                  <td>{product.unit}</td>
-                  <td><span className={!Number.isFinite(stock) || stock <= 5 ? "badge bg-danger" : stock <= 10 ? "badge bg-warning text-dark" : "badge bg-success"}>{formatStock(product.stock)}</span></td>
-                  <td>{product.allow_portion_sales ? <div><span className="badge bg-info text-dark">Enabled</span><div className="small text-muted mt-1">{product.portions_per_unit} portions<br />KSh {formatMoney(product.portion_price)} each</div></div> : <span className="text-muted">Not enabled</span>}</td>
-                  <td>{active ? <span className="badge bg-success">Active</span> : <span className="badge bg-secondary">Inactive</span>}</td>
-                  <td><div className="d-flex gap-2">
-                    <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => handleEdit(product)} title="Edit product"><i className="bi bi-pencil"></i></button>
-                    <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => handleDeactivate(product)} title="Deactivate product"><i className="bi bi-trash"></i></button>
-                  </div></td>
-                </tr>;
-              })}</tbody>
-            </table>
-          </div>}
-        </div>
-      </div>
     </div>
   );
 }
-
-export default Products;
