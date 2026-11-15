@@ -43,6 +43,7 @@ function BusinessRegister() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+
     setError("");
     setSuccess("");
 
@@ -61,44 +62,74 @@ function BusinessRegister() {
       return;
     }
 
+    if (!form.ownerName.trim() || !form.email.trim()) {
+      setError("Please provide your name and email address.");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const { data, error: signupError } = await supabase.auth.signUp({
+      // Use the configured production URL.
+      // If not configured, use the current website origin.
+      const appUrl = (
+        import.meta.env.VITE_APP_URL || window.location.origin
+      ).replace(/\/+$/, "");
+
+      const confirmationRedirect = `${appUrl}/admin-login`;
+
+      const pendingBusiness = {
+        name: form.businessName.trim(),
+        slug: form.slug.trim(),
+        phone: form.phone.trim(),
+        address: form.address.trim(),
+        ownerName: form.ownerName.trim(),
         email: form.email.trim().toLowerCase(),
-        password: form.password,
-        options: {
-          data: {
-            full_name: form.ownerName.trim(),
-            business_name: form.businessName.trim(),
-          },
-        },
-      });
+        createdAt: new Date().toISOString(),
+      };
 
-      if (signupError) throw signupError;
-
-      sessionStorage.setItem(
+      // Save before signup so the information survives
+      // opening the confirmation email in another tab.
+      localStorage.setItem(
         "mydukaPendingBusiness",
-        JSON.stringify({
-          name: form.businessName.trim(),
-          slug: form.slug.trim(),
-          phone: form.phone.trim(),
-          address: form.address.trim(),
-        })
+        JSON.stringify(pendingBusiness)
       );
 
+      const { data, error: signupError } =
+        await supabase.auth.signUp({
+          email: form.email.trim().toLowerCase(),
+          password: form.password,
+          options: {
+            emailRedirectTo: confirmationRedirect,
+            data: {
+              full_name: form.ownerName.trim(),
+              business_name: form.businessName.trim(),
+            },
+          },
+        });
+
+      if (signupError) {
+        localStorage.removeItem("mydukaPendingBusiness");
+        throw signupError;
+      }
+
       if (data.session) {
-        setSuccess("Your account has been created. Taking you to sign in...");
-        setTimeout(() => navigate("/admin-login"), 1200);
+        setSuccess(
+          "Your account has been created. Setting up your business..."
+        );
+
+        setTimeout(() => {
+          navigate("/admin-login", { replace: true });
+        }, 1200);
       } else {
         setSuccess(
-          "Your account has been created. Check your email for the confirmation link, then sign in to finish setting up your business."
+          "Your account has been created. Check your email and confirm your email address. After confirmation, return to MyDuka and sign in to finish setting up your business."
         );
       }
     } catch (err) {
       setError(
         err.message ||
-        "We could not create your account. Please try again."
+          "We could not create your account. Please try again."
       );
     } finally {
       setLoading(false);
@@ -132,6 +163,7 @@ function BusinessRegister() {
           font-size: 24px;
           font-weight: 800;
           color: var(--text-primary);
+          text-decoration: none;
         }
 
         .md-register-logo-icon {
@@ -230,6 +262,7 @@ function BusinessRegister() {
           border: 0;
           background: transparent;
           color: var(--text-secondary);
+          cursor: pointer;
         }
 
         .md-register-alert {
@@ -237,6 +270,7 @@ function BusinessRegister() {
           border-radius: var(--radius-md);
           margin-bottom: 18px;
           font-size: 13px;
+          line-height: 1.6;
         }
 
         .md-register-error {
@@ -258,6 +292,7 @@ function BusinessRegister() {
           background: var(--primary);
           color: white;
           font-weight: 750;
+          cursor: pointer;
         }
 
         .md-register-submit:hover {
@@ -313,21 +348,30 @@ function BusinessRegister() {
       </header>
 
       <main className="md-register-card">
-        <h1 className="md-register-heading">Create your business account</h1>
+        <h1 className="md-register-heading">
+          Create your business account
+        </h1>
+
         <p className="md-register-description">
           Set up your MyDuka account and register your business workspace.
         </p>
 
         {error && (
-          <div className="md-register-alert md-register-error">{error}</div>
+          <div className="md-register-alert md-register-error">
+            {error}
+          </div>
         )}
 
         {success && (
-          <div className="md-register-alert md-register-success">{success}</div>
+          <div className="md-register-alert md-register-success">
+            {success}
+          </div>
         )}
 
         <form onSubmit={handleSubmit}>
-          <div className="md-register-section">Account information</div>
+          <div className="md-register-section">
+            Account information
+          </div>
 
           <div className="md-register-grid">
             <div className="md-register-field">
@@ -335,7 +379,9 @@ function BusinessRegister() {
               <input
                 className="md-register-input"
                 value={form.ownerName}
-                onChange={(e) => updateField("ownerName", e.target.value)}
+                onChange={(e) =>
+                  updateField("ownerName", e.target.value)
+                }
                 placeholder="Full name"
                 autoComplete="name"
                 required
@@ -348,7 +394,9 @@ function BusinessRegister() {
                 className="md-register-input"
                 type="email"
                 value={form.email}
-                onChange={(e) => updateField("email", e.target.value)}
+                onChange={(e) =>
+                  updateField("email", e.target.value)
+                }
                 placeholder="you@example.com"
                 autoComplete="email"
                 required
@@ -357,22 +405,32 @@ function BusinessRegister() {
 
             <div className="md-register-field">
               <label>Password *</label>
+
               <div className="md-register-password">
                 <input
                   className="md-register-input"
                   type={showPassword ? "text" : "password"}
                   value={form.password}
-                  onChange={(e) => updateField("password", e.target.value)}
+                  onChange={(e) =>
+                    updateField("password", e.target.value)
+                  }
                   placeholder="At least 8 characters"
                   autoComplete="new-password"
                   required
                 />
+
                 <button
                   type="button"
-                  onClick={() => setShowPassword((value) => !value)}
+                  onClick={() =>
+                    setShowPassword((value) => !value)
+                  }
                   aria-label="Toggle password visibility"
                 >
-                  <i className={`bi ${showPassword ? "bi-eye-slash" : "bi-eye"}`} />
+                  <i
+                    className={`bi ${
+                      showPassword ? "bi-eye-slash" : "bi-eye"
+                    }`}
+                  />
                 </button>
               </div>
             </div>
@@ -383,7 +441,9 @@ function BusinessRegister() {
                 className="md-register-input"
                 type={showPassword ? "text" : "password"}
                 value={form.confirmPassword}
-                onChange={(e) => updateField("confirmPassword", e.target.value)}
+                onChange={(e) =>
+                  updateField("confirmPassword", e.target.value)
+                }
                 placeholder="Confirm password"
                 autoComplete="new-password"
                 required
@@ -391,7 +451,9 @@ function BusinessRegister() {
             </div>
           </div>
 
-          <div className="md-register-section">Business information</div>
+          <div className="md-register-section">
+            Business information
+          </div>
 
           <div className="md-register-grid">
             <div className="md-register-field">
@@ -399,8 +461,10 @@ function BusinessRegister() {
               <input
                 className="md-register-input"
                 value={form.businessName}
-                onChange={(e) => handleBusinessName(e.target.value)}
-                placeholder="e.g. xxxx Retail Store"
+                onChange={(e) =>
+                  handleBusinessName(e.target.value)
+                }
+                placeholder="e.g. Retail Store"
                 required
               />
             </div>
@@ -410,10 +474,13 @@ function BusinessRegister() {
               <input
                 className="md-register-input"
                 value={form.slug}
-                onChange={(e) => updateField("slug", createSlug(e.target.value))}
-                placeholder="xxxx-retail-store"
+                onChange={(e) =>
+                  updateField("slug", createSlug(e.target.value))
+                }
+                placeholder="retail-store"
                 required
               />
+
               <div className="md-register-hint">
                 Used to identify your store. You can customise it later.
               </div>
@@ -425,7 +492,9 @@ function BusinessRegister() {
                 className="md-register-input"
                 type="tel"
                 value={form.phone}
-                onChange={(e) => updateField("phone", e.target.value)}
+                onChange={(e) =>
+                  updateField("phone", e.target.value)
+                }
                 placeholder="Business phone number"
                 required
               />
@@ -436,19 +505,28 @@ function BusinessRegister() {
               <input
                 className="md-register-input"
                 value={form.address}
-                onChange={(e) => updateField("address", e.target.value)}
+                onChange={(e) =>
+                  updateField("address", e.target.value)
+                }
                 placeholder="Town, location or address"
               />
             </div>
           </div>
 
-          <button className="md-register-submit" disabled={loading}>
-            {loading ? "Creating your account..." : "Create business account"}
+          <button
+            className="md-register-submit"
+            disabled={loading}
+            type="submit"
+          >
+            {loading
+              ? "Creating your account..."
+              : "Create business account"}
           </button>
         </form>
 
         <div className="md-register-footer">
-          Already have an account? <Link to="/admin-login">Sign in</Link>
+          Already have an account?{" "}
+          <Link to="/admin-login">Sign in</Link>
         </div>
       </main>
     </div>
