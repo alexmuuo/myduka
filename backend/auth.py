@@ -1,4 +1,3 @@
-
 import os
 import logging
 from functools import wraps
@@ -7,6 +6,7 @@ from uuid import UUID
 import requests
 
 from flask import request, jsonify, g
+from sqlalchemy.exc import SQLAlchemyError
 
 from extensions import db
 from models.business_member import BusinessMember
@@ -39,10 +39,7 @@ def verify_supabase_token(token):
         logger.error("Supabase configuration is missing.")
         return None
 
-    # Construct the exact Supabase Auth endpoint.
     auth_url = f"{supabase_url}/auth/v1/user"
-
-    logger.info("SUPABASE AUTH REQUEST URL: %s", auth_url)
 
     try:
         response = requests.get(
@@ -54,12 +51,6 @@ def verify_supabase_token(token):
             },
             timeout=15,
             allow_redirects=False
-        )
-
-        logger.info(
-            "SUPABASE AUTH RESPONSE: status=%s url=%s",
-            response.status_code,
-            response.url
         )
 
         if response.status_code != 200:
@@ -76,11 +67,6 @@ def verify_supabase_token(token):
         if not isinstance(user, dict) or not user.get("id"):
             logger.error("Supabase returned an invalid user response.")
             return None
-
-        logger.info(
-            "Supabase user verified successfully: %s",
-            user.get("id")
-        )
 
         return user
 
@@ -131,7 +117,7 @@ def supabase_auth_required(function):
             }), 401
 
         try:
-            g.current_user_id = UUID(user["id"])
+            g.current_user_id = UUID(str(user["id"]))
 
         except (ValueError, TypeError, KeyError):
             logger.warning("Supabase returned an invalid user identity.")
@@ -183,6 +169,20 @@ def platform_admin_required(function):
 
             return function(*args, **kwargs)
 
+        except SQLAlchemyError:
+            db.session.rollback()
+
+            logger.exception(
+                "Platform administrator authorization database error."
+            )
+
+            return jsonify({
+                "status": "error",
+                "message": (
+                    "Unable to verify platform administrator access."
+                )
+            }), 500
+
         except Exception:
             db.session.rollback()
 
@@ -193,8 +193,7 @@ def platform_admin_required(function):
             return jsonify({
                 "status": "error",
                 "message": (
-                    "Unable to verify platform "
-                    "administrator access."
+                    "Unable to verify platform administrator access."
                 )
             }), 500
 
@@ -205,31 +204,30 @@ def platform_admin_required(function):
 # BUSINESS MEMBERSHIP AUTHORIZATION
 # ============================================================
 
-def business_member_required(*allowed_roles):
+def _build_business_member_decorator(function, allowed_roles):
 
-    def decorator(function):
+    @wraps(function)
+    @supabase_auth_required
+    def decorated(*args, **kwargs):
 
-        @wraps(function)
-        @supabase_auth_required
-        def decorated(*args, **kwargs):
+        business_id = request.headers.get("X-Business-ID")
 
-            business_id = request.headers.get("X-Business-ID")
+        if not business_id:
+            return jsonify({
+                "status": "error",
+                "message": "Business ID is required."
+            }), 400
 
-            if not business_id:
-                return jsonify({
-                    "status": "error",
-                    "message": "Business ID is required."
-                }), 400
+        try:
+            business_uuid = UUID(str(business_id))
 
-            try:
-                business_uuid = UUID(business_id)
+        except (ValueError, TypeError):
+            return jsonify({
+                "status": "error",
+                "message": "Invalid business ID."
+            }), 400
 
-            except (ValueError, TypeError):
-                return jsonify({
-                    "status": "error",
-                    "message": "Invalid business ID."
-                }), 400
-
+        try:
             membership = BusinessMember.query.filter_by(
                 business_id=business_uuid,
                 user_id=g.current_user_id,
@@ -239,9 +237,7 @@ def business_member_required(*allowed_roles):
             if not membership:
                 return jsonify({
                     "status": "error",
-                    "message": (
-                        "You do not have access to this business."
-                    )
+                    "message": "You do not have access to this business."
                 }), 403
 
             if (
@@ -262,6 +258,68 @@ def business_member_required(*allowed_roles):
 
             return function(*args, **kwargs)
 
-        return decorated
+        except SQLAlchemyError:
+            db.session.rollback()
+
+            logger.exception(
+                "Business membership database lookup failed. "
+                "User=%s Business=%s",
+                g.current_user_id,
+                business_uuid
+            )
+
+            return jsonify({
+                "status": "error",
+                "message": "Unable to verify business membership."
+            }), 500
+
+        except Exception:
+            db.session.rollback()
+
+            logger.exception(
+                "Business membership authorization failed."
+            )
+
+            return jsonify({
+                "status": "error",
+                "message": "Unable to verify business access."
+            }), 500
+
+    return decorated
+
+
+def business_member_required(*allowed_roles):
+    """
+    Supports both decorator styles:
+
+        @business_member_required
+
+        @business_member_required()
+
+        @business_member_required("owner", "admin")
+
+    The first two allow any active business member.
+    The third restricts access to the specified roles.
+    """
+
+    # Support direct decorator usage without parentheses.
+    if (
+        len(allowed_roles) == 1
+        and callable(allowed_roles[0])
+    ):
+        function = allowed_roles[0]
+
+        return _build_business_member_decorator(
+            function,
+            ()
+        )
+
+    # Support decorator usage with parentheses.
+    def decorator(function):
+
+        return _build_business_member_decorator(
+            function,
+            allowed_roles
+        )
 
     return decorator
