@@ -1,978 +1,717 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useCart } from "../context/CartContext";
-import api from "../api/api";
+
+const formatPrice = (amount, currency = "KES") => {
+  try {
+    return new Intl.NumberFormat("en-KE", {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 2,
+    }).format(Number(amount || 0));
+  } catch {
+    return `${currency} ${Number(amount || 0).toLocaleString("en-KE")}`;
+  }
+};
+
+const readableSlug = (slug = "") =>
+  slug
+    .split("-")
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 
 const styles = `
-  .hm-cart-page {
-    --hm-bg: #171d19;
-    --hm-panel: #202923;
-    --hm-panel-light: #28342b;
-    --hm-green: #326747;
-    --hm-gold: #d6b36a;
-    --hm-cream: #f7f5ef;
-    --hm-muted: #a8b2a9;
-    --hm-border: rgba(255,255,255,.10);
-    min-height: 75vh;
-    padding: 42px 0 76px;
-    background: var(--hm-bg);
-    color: var(--hm-cream);
-  }
+.md-cart {
+  --cart-primary: #635bff;
+  --cart-bg: #f6f7fb;
+  --cart-surface: #ffffff;
+  --cart-text: #172033;
+  --cart-muted: #778397;
+  --cart-border: #e7eaf0;
+  min-height: 80vh;
+  padding: 38px 18px 75px;
+  background: var(--cart-bg);
+  color: var(--cart-text);
+}
 
-  .hm-cart-page *,
-  .hm-cart-page *::before,
-  .hm-cart-page *::after {
-    box-sizing: border-box;
-  }
+.md-cart * { box-sizing: border-box; }
 
-  .hm-cart-page a {
-    text-decoration: none;
-  }
+.md-cart button,
+.md-cart input { font: inherit; }
 
-  .hm-cart-container {
-    width: min(1160px, calc(100% - 40px));
-    margin: 0 auto;
-  }
+.md-cart-inner {
+  width: min(1160px, 100%);
+  margin: auto;
+}
 
-  .hm-cart-eyebrow {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    color: var(--hm-gold);
-    font-size: .75rem;
-    font-weight: 800;
-    letter-spacing: 2.5px;
-    text-transform: uppercase;
-  }
+.md-cart-header { margin-bottom: 32px; }
 
-  .hm-cart-eyebrow::before {
-    content: "";
-    width: 28px;
-    height: 1px;
-    background: var(--hm-gold);
-  }
+.md-cart-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--cart-primary);
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
 
-  .hm-cart-heading {
-    margin: 14px 0 10px;
-    color: var(--hm-cream);
-    font-family: Georgia, "Times New Roman", serif;
-    font-size: clamp(2.4rem, 5vw, 3.6rem);
-    font-weight: 600;
-    line-height: 1.1;
-  }
+.md-cart-title {
+  margin: 12px 0 8px;
+  font-size: clamp(30px, 5vw, 42px);
+  font-weight: 850;
+  letter-spacing: -1.5px;
+  line-height: 1.15;
+}
 
-  .hm-cart-subheading {
-    margin: 0;
-    color: var(--hm-muted);
-    font-size: .98rem;
-    line-height: 1.7;
-  }
+.md-cart-subtitle {
+  margin: 0;
+  color: var(--cart-muted);
+  font-size: 14px;
+  line-height: 1.7;
+}
 
-  .hm-cart-header {
-    margin-bottom: 36px;
-  }
+.md-cart-store {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 15px;
+  padding: 8px 12px;
+  border: 1px solid var(--cart-border);
+  border-radius: 8px;
+  background: white;
+  color: #526071;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+}
 
-  .hm-cart-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1.7fr) minmax(290px, .8fr);
-    gap: 28px;
-    align-items: start;
-  }
+.md-cart-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(290px, .8fr);
+  align-items: start;
+  gap: 24px;
+}
 
-  .hm-cart-items-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+.md-cart-items-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.md-cart-items-header h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.md-cart-count {
+  padding: 6px 11px;
+  border-radius: 30px;
+  background: #eeedff;
+  color: var(--cart-primary);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.md-cart-item {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 18px;
+  margin-bottom: 13px;
+  padding: 17px;
+  border: 1px solid var(--cart-border);
+  border-radius: 15px;
+  background: var(--cart-surface);
+}
+
+.md-cart-image {
+  display: grid;
+  width: 112px;
+  height: 125px;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 10px;
+  background: #f1f3f8;
+}
+
+.md-cart-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.md-cart-image i {
+  color: #aab3c1;
+  font-size: 35px;
+}
+
+.md-cart-item-content { min-width: 0; }
+
+.md-cart-item-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.md-cart-category {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--cart-primary);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+}
+
+.md-cart-name {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.md-cart-meta {
+  margin-top: 6px;
+  color: var(--cart-muted);
+  font-size: 12px;
+}
+
+.md-cart-variant {
+  display: inline-flex;
+  margin-top: 9px;
+  padding: 5px 9px;
+  border-radius: 6px;
+  background: #f0efff;
+  color: var(--cart-primary);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.md-cart-remove {
+  flex-shrink: 0;
+  padding: 7px 9px;
+  border: 1px solid #f3d7dc;
+  border-radius: 7px;
+  background: #fff8f9;
+  color: #d04455;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.md-cart-remove:hover { background: #fff0f2; }
+
+.md-cart-item-bottom {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 15px;
+  margin-top: 22px;
+}
+
+.md-cart-quantity-label {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--cart-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.md-cart-quantity {
+  display: flex;
+  align-items: center;
+  width: 125px;
+  height: 38px;
+  overflow: hidden;
+  border: 1px solid var(--cart-border);
+  border-radius: 8px;
+  background: white;
+}
+
+.md-cart-quantity button {
+  width: 36px;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--cart-text);
+  cursor: pointer;
+  font-size: 17px;
+}
+
+.md-cart-quantity button:hover:not(:disabled) {
+  background: #f0efff;
+  color: var(--cart-primary);
+}
+
+.md-cart-quantity button:disabled {
+  color: #c5cbd5;
+  cursor: not-allowed;
+}
+
+.md-cart-quantity span {
+  flex: 1;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.md-cart-price-label {
+  margin-bottom: 5px;
+  color: var(--cart-muted);
+  font-size: 11px;
+  text-align: right;
+}
+
+.md-cart-line-total {
+  color: var(--cart-text);
+  font-size: 17px;
+  font-weight: 850;
+  text-align: right;
+}
+
+.md-cart-summary {
+  position: sticky;
+  top: 22px;
+  overflow: hidden;
+  border: 1px solid var(--cart-border);
+  border-radius: 15px;
+  background: white;
+}
+
+.md-cart-summary-header {
+  padding: 21px;
+  border-bottom: 1px solid var(--cart-border);
+}
+
+.md-cart-summary-header h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 850;
+}
+
+.md-cart-summary-body { padding: 21px; }
+
+.md-cart-summary-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 17px;
+  color: var(--cart-muted);
+  font-size: 13px;
+}
+
+.md-cart-summary-row strong {
+  color: var(--cart-text);
+  font-weight: 800;
+}
+
+.md-cart-divider {
+  height: 1px;
+  margin: 21px 0;
+  border: 0;
+  background: var(--cart-border);
+}
+
+.md-cart-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
+.md-cart-total span:first-child {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.md-cart-total strong {
+  color: var(--cart-primary);
+  font-size: 22px;
+  font-weight: 900;
+  text-align: right;
+}
+
+.md-cart-checkout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 51px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--cart-primary);
+  color: white;
+  font-size: 13px;
+  font-weight: 850;
+  text-decoration: none;
+  transition: filter .2s, transform .2s;
+}
+
+.md-cart-checkout:hover {
+  color: white;
+  filter: brightness(.94);
+  transform: translateY(-1px);
+}
+
+.md-cart-continue {
+  display: block;
+  margin-top: 17px;
+  color: var(--cart-primary);
+  font-size: 12px;
+  font-weight: 750;
+  text-align: center;
+  text-decoration: none;
+}
+
+.md-cart-note {
+  margin-top: 19px;
+  padding: 12px;
+  border-radius: 9px;
+  background: #f7f8fc;
+  color: var(--cart-muted);
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.md-cart-empty {
+  max-width: 650px;
+  margin: 35px auto;
+  padding: 55px 25px;
+  border: 1px solid var(--cart-border);
+  border-radius: 17px;
+  background: white;
+  text-align: center;
+}
+
+.md-cart-empty-icon {
+  display: grid;
+  width: 76px;
+  height: 76px;
+  margin: 0 auto 20px;
+  place-items: center;
+  border-radius: 20px;
+  background: #f0efff;
+  color: var(--cart-primary);
+  font-size: 32px;
+}
+
+.md-cart-empty h2 {
+  margin: 0 0 9px;
+  font-size: 23px;
+  font-weight: 850;
+}
+
+.md-cart-empty p {
+  max-width: 400px;
+  margin: 0 auto 23px;
+  color: var(--cart-muted);
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.md-cart-browse {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 12px 19px;
+  border-radius: 9px;
+  background: var(--cart-primary);
+  color: white;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.md-cart-browse:hover { color: white; filter: brightness(.95); }
+
+@media (max-width: 850px) {
+  .md-cart-layout { grid-template-columns: 1fr; }
+  .md-cart-summary { position: static; }
+}
+
+@media (max-width: 540px) {
+  .md-cart { padding: 25px 13px 48px; }
+  .md-cart-item {
+    grid-template-columns: 78px minmax(0, 1fr);
     gap: 12px;
-    margin-bottom: 17px;
+    padding: 12px;
   }
-
-  .hm-cart-items-title {
-    margin: 0;
-    color: var(--hm-cream);
-    font-size: 1.15rem;
-    font-weight: 750;
-  }
-
-  .hm-cart-item-count {
-    padding: 6px 11px;
-    border: 1px solid rgba(251, 191, 36,.25);
-    border-radius: 999px;
-    background: rgba(251, 191, 36,.07);
-    color: var(--hm-gold);
-    font-size: .78rem;
-    font-weight: 750;
-    white-space: nowrap;
-  }
-
-  .hm-cart-item {
-    display: grid;
-    grid-template-columns: 116px minmax(0, 1fr);
-    gap: 20px;
-    margin-bottom: 15px;
-    padding: 20px;
-    border: 1px solid var(--hm-border);
-    border-radius: 16px;
-    background: var(--hm-panel);
-    transition: border-color .2s ease, transform .2s ease;
-  }
-
-  .hm-cart-item:hover {
-    border-color: rgba(251, 191, 36,.32);
-  }
-
-  .hm-cart-image-wrap {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 116px;
-    height: 132px;
-    overflow: hidden;
-    border: 1px solid rgba(255,255,255,.06);
-    border-radius: 11px;
-    background:
-      radial-gradient(ellipse at center, rgba(251, 191, 36,.09), transparent 70%),
-      #1a211c;
-  }
-
-  .hm-cart-image {
-    display: block;
-    width: 100%;
-    height: 100%;
-    padding: 9px;
-    object-fit: contain;
-  }
-
-  .hm-cart-image-placeholder {
-    display: grid;
-    width: 100%;
-    height: 100%;
-    place-items: center;
-    color: var(--hm-gold);
-    font-size: 2rem;
-  }
-
-  .hm-cart-item-main {
-    min-width: 0;
-  }
-
-  .hm-cart-item-top {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
-  }
-
-  .hm-cart-category {
-    display: inline-block;
-    margin-bottom: 7px;
-    color: var(--hm-gold);
-    font-size: .73rem;
-    font-weight: 750;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-  }
-
-  .hm-cart-product-name {
-    margin: 0;
-    color: var(--hm-cream);
-    font-family: Georgia, "Times New Roman", serif;
-    font-size: 1.35rem;
-    font-weight: 600;
-    line-height: 1.35;
-    overflow-wrap: anywhere;
-  }
-
-  .hm-cart-unit {
-    margin-top: 6px;
-    color: var(--hm-muted);
-    font-size: .84rem;
-  }
-
-  .hm-cart-remove {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    flex-shrink: 0;
-    padding: 7px 9px;
-    border: 1px solid rgba(255,125,125,.22);
-    border-radius: 8px;
-    background: rgba(255,100,100,.05);
-    color: #ffaaaa;
-    cursor: pointer;
-    font-size: .8rem;
-    transition: background .2s ease, border-color .2s ease;
-  }
-
-  .hm-cart-remove:hover {
-    border-color: rgba(255,125,125,.5);
-    background: rgba(255,100,100,.13);
-  }
-
-  .hm-cart-item-bottom {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 18px;
-    margin-top: 22px;
-  }
-
-  .hm-cart-quantity-label {
-    display: block;
-    margin-bottom: 8px;
-    color: var(--hm-muted);
-    font-size: .78rem;
-    font-weight: 650;
-  }
-
-  .hm-cart-quantity-control {
-    display: flex;
-    width: 130px;
-    height: 39px;
-    overflow: hidden;
-    border: 1px solid rgba(255,255,255,.15);
-    border-radius: 8px;
-    background: #1a211c;
-  }
-
-  .hm-cart-quantity-control button {
-    display: grid;
-    width: 36px;
-    flex: 0 0 36px;
-    place-items: center;
-    border: 0;
-    background: transparent;
-    color: var(--hm-cream);
-    cursor: pointer;
-    font-size: 1.1rem;
-    transition: background .2s ease;
-  }
-
-  .hm-cart-quantity-control button:hover:not(:disabled) {
-    background: var(--hm-green);
-  }
-
-  .hm-cart-quantity-control button:disabled {
-    color: #687169;
-    cursor: not-allowed;
-  }
-
-  .hm-cart-quantity-value {
-    display: grid;
-    min-width: 0;
-    flex: 1;
-    place-items: center;
-    border-right: 1px solid var(--hm-border);
-    border-left: 1px solid var(--hm-border);
-    color: var(--hm-cream);
-    font-size: .9rem;
-    font-weight: 750;
-  }
-
-  .hm-cart-price-label {
-    margin-bottom: 5px;
-    color: var(--hm-muted);
-    font-size: .76rem;
-    text-align: right;
-  }
-
-  .hm-cart-line-total {
-    color: var(--hm-gold);
-    font-size: 1.22rem;
-    font-weight: 800;
-    text-align: right;
-    white-space: nowrap;
-  }
-
-  .hm-cart-unit-price {
-    margin-top: 4px;
-    color: var(--hm-muted);
-    font-size: .77rem;
-    text-align: right;
-  }
-
-  .hm-cart-summary {
-    position: sticky;
-    top: 24px;
-    overflow: hidden;
-    border: 1px solid rgba(251, 191, 36,.24);
-    border-radius: 16px;
-    background: var(--hm-panel);
-  }
-
-  .hm-cart-summary-header {
-    padding: 23px 24px 19px;
-    border-bottom: 1px solid var(--hm-border);
-    background: linear-gradient(135deg, rgba(251, 191, 36,.07), transparent);
-  }
-
-  .hm-cart-summary-title {
-    margin: 0;
-    color: var(--hm-cream);
-    font-family: Georgia, "Times New Roman", serif;
-    font-size: 1.55rem;
-    font-weight: 600;
-  }
-
-  .hm-cart-summary-body {
-    padding: 24px;
-  }
-
-  .hm-cart-summary-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 15px;
-    margin-bottom: 19px;
-    color: var(--hm-muted);
-    font-size: .9rem;
-  }
-
-  .hm-cart-summary-row strong {
-    color: var(--hm-cream);
-    font-weight: 700;
-    text-align: right;
-  }
-
-  .hm-cart-summary-delivery {
-    max-width: 145px;
-    color: var(--hm-muted);
-    font-size: .78rem;
-    line-height: 1.6;
-    text-align: right;
-  }
-
-  .hm-cart-summary-divider {
-    height: 1px;
-    margin: 22px 0;
-    border: 0;
-    background: var(--hm-border);
-  }
-
-  .hm-cart-total-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 12px;
-    margin-bottom: 23px;
-  }
-
-  .hm-cart-total-label {
-    color: var(--hm-cream);
-    font-size: 1rem;
-    font-weight: 750;
-  }
-
-  .hm-cart-total-amount {
-    color: var(--hm-gold);
-    font-size: 1.65rem;
-    font-weight: 850;
-    text-align: right;
-    overflow-wrap: anywhere;
-  }
-
-  .hm-cart-checkout-button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 11px;
-    width: 100%;
-    min-height: 53px;
-    padding: 14px 17px;
-    border: 1px solid var(--hm-gold);
-    border-radius: 9px;
-    background: var(--hm-gold);
-    color: #1b241e !important;
-    font-size: .92rem;
-    font-weight: 850;
-    transition: transform .2s ease, background .2s ease;
-  }
-
-  .hm-cart-checkout-button:hover {
-    transform: translateY(-2px);
-    background: #ecd39a;
-  }
-
-  .hm-cart-continue {
-    display: block;
-    margin-top: 18px;
-    color: var(--hm-muted);
-    font-size: .86rem;
-    font-weight: 650;
-    text-align: center;
-    transition: color .2s ease;
-  }
-
-  .hm-cart-continue:hover {
-    color: var(--hm-gold);
-  }
-
-  .hm-cart-note {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    margin-top: 21px;
-    padding: 14px;
-    border: 1px solid var(--hm-border);
-    border-radius: 10px;
-    background: rgba(255,255,255,.02);
-    color: var(--hm-muted);
-    font-size: .77rem;
-    line-height: 1.65;
-  }
-
-  .hm-cart-note-icon {
-    color: var(--hm-gold);
-    font-size: 1.05rem;
-  }
-
-  .hm-cart-empty {
-    max-width: 650px;
-    margin: 0 auto;
-    padding: 45px 25px;
-    border: 1px solid var(--hm-border);
-    border-radius: 20px;
-    background:
-      radial-gradient(ellipse at top, rgba(251, 191, 36,.07), transparent 65%),
-      var(--hm-panel);
-    text-align: center;
-  }
-
-  .hm-cart-empty-icon {
-    display: grid;
-    width: 90px;
-    height: 90px;
-    margin: 0 auto 25px;
-    place-items: center;
-    border: 1px solid rgba(251, 191, 36,.25);
-    border-radius: 50%;
-    background: rgba(251, 191, 36,.07);
-    color: var(--hm-gold);
-    font-size: 2.5rem;
-  }
-
-  .hm-cart-empty h2 {
-    margin: 0 0 12px;
-    color: var(--hm-cream);
-    font-family: Georgia, "Times New Roman", serif;
-    font-size: 2.2rem;
-    font-weight: 600;
-  }
-
-  .hm-cart-empty p {
-    margin: 0 auto 26px;
-    color: var(--hm-muted);
-    line-height: 1.8;
-  }
-
-  .hm-cart-browse-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    min-height: 49px;
-    padding: 13px 22px;
-    border: 1px solid var(--hm-gold);
-    border-radius: 9px;
-    background: var(--hm-gold);
-    color: #1b241e !important;
-    font-size: .9rem;
-    font-weight: 800;
-    transition: background .2s ease, transform .2s ease;
-  }
-
-  .hm-cart-browse-button:hover {
-    transform: translateY(-2px);
-    background: #ecd39a;
-  }
-
-  .hm-cart-alert {
-    margin-bottom: 18px;
-    padding: 13px 15px;
-    border: 1px solid rgba(255,125,125,.25);
-    border-radius: 10px;
-    background: rgba(255,100,100,.07);
-    color: #ffb6b6;
-    font-size: .87rem;
-    line-height: 1.6;
-  }
-
-  @media (max-width: 900px) {
-    .hm-cart-layout {
-      grid-template-columns: minmax(0, 1fr);
-    }
-
-    .hm-cart-summary {
-      position: static;
-    }
-
-    .hm-cart-summary-body {
-      padding: 22px;
-    }
-  }
-
-  @media (max-width: 560px) {
-    .hm-cart-page {
-      padding: 28px 0 48px;
-    }
-
-    .hm-cart-container {
-      width: calc(100% - 28px);
-    }
-
-    .hm-cart-header {
-      margin-bottom: 27px;
-    }
-
-    .hm-cart-heading {
-      font-size: 2.65rem;
-    }
-
-    .hm-cart-subheading {
-      font-size: .9rem;
-    }
-
-    .hm-cart-item {
-      grid-template-columns: 82px minmax(0, 1fr);
-      gap: 13px;
-      padding: 13px;
-      border-radius: 12px;
-    }
-
-    .hm-cart-image-wrap {
-      width: 82px;
-      height: 105px;
-    }
-
-    .hm-cart-image {
-      padding: 5px;
-    }
-
-    .hm-cart-item-top {
-      flex-direction: column;
-      gap: 9px;
-    }
-
-    .hm-cart-product-name {
-      font-size: 1.1rem;
-    }
-
-    .hm-cart-category {
-      margin-bottom: 5px;
-      font-size: .66rem;
-    }
-
-    .hm-cart-unit {
-      font-size: .78rem;
-    }
-
-    .hm-cart-remove {
-      padding: 6px 8px;
-      font-size: .74rem;
-    }
-
-    .hm-cart-item-bottom {
-      grid-column: 1 / -1;
-      align-items: flex-end;
-      gap: 10px;
-      margin-top: 17px;
-    }
-
-    .hm-cart-quantity-control {
-      width: 116px;
-    }
-
-    .hm-cart-line-total {
-      font-size: 1.05rem;
-    }
-
-    .hm-cart-summary-header {
-      padding: 20px;
-    }
-
-    .hm-cart-summary-body {
-      padding: 20px;
-    }
-
-    .hm-cart-total-amount {
-      font-size: 1.4rem;
-    }
-
-    .hm-cart-empty {
-      padding: 36px 18px;
-    }
-
-    .hm-cart-empty h2 {
-      font-size: 1.8rem;
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .hm-cart-page *,
-    .hm-cart-page *::before,
-    .hm-cart-page *::after {
-      animation-duration: .01ms !important;
-      animation-iteration-count: 1 !important;
-      scroll-behavior: auto !important;
-      transition-duration: .01ms !important;
-    }
-  }
+  .md-cart-image { width: 78px; height: 95px; }
+  .md-cart-item-top { flex-direction: column; }
+  .md-cart-remove { align-self: flex-start; }
+  .md-cart-name { font-size: 14px; }
+  .md-cart-item-bottom { gap: 8px; margin-top: 15px; }
+  .md-cart-quantity { width: 108px; }
+  .md-cart-line-total { font-size: 14px; }
+  .md-cart-summary-body,
+  .md-cart-summary-header { padding: 17px; }
+}
 `;
 
-function Cart() {
+export default function Cart() {
   const {
     cartItems,
     cartTotal,
     updateQuantity,
     removeFromCart,
+    activeStoreSlug,
   } = useCart();
 
   const [failedImages, setFailedImages] = useState({});
-  const [cartError, setCartError] = useState("");
 
-  const formatPrice = (amount) =>
-    `KSh ${Number(amount || 0).toLocaleString("en-KE", {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    })}`;
+  const storePath = activeStoreSlug
+    ? `/store/${encodeURIComponent(activeStoreSlug)}`
+    : "/";
 
-  const getImageUrl = (image) => {
-    if (!image || typeof image !== "string" || !image.trim()) {
-      return "";
-    }
-
-    const imagePath = image.trim();
-
-    if (/^https?:\/\//i.test(imagePath)) {
-      return imagePath;
-    }
-
-    const baseURL = (api.defaults.baseURL || "").replace(/\/+$/, "");
-    const backendBaseURL = baseURL.replace(/\/api\/?$/, "");
-
-    if (imagePath.startsWith("/api/")) {
-      return `${backendBaseURL}${imagePath}`;
-    }
-
-    if (imagePath.startsWith("/product-images/")) {
-      return `${backendBaseURL}/api${imagePath}`;
-    }
-
-    const filename = imagePath.replace(/\\/g, "/").split("/").pop();
-
-    if (!filename) {
-      return "";
-    }
-
-    return `${backendBaseURL}/api/product-images/${encodeURIComponent(filename)}`;
-  };
-
-  const handleQuantityChange = (item, value) => {
-    const requestedQuantity = Number(value);
-    const stock = Number(item.stock);
-
-    if (
-      value === "" ||
-      !Number.isFinite(requestedQuantity) ||
-      !Number.isInteger(requestedQuantity) ||
-      requestedQuantity < 1
-    ) {
-      return;
-    }
-
-    if (Number.isFinite(stock) && stock >= 0 && requestedQuantity > stock) {
-      setCartError(
-        `Only ${stock} unit${stock === 1 ? "" : "s"} of ${item.name} currently available.`
-      );
-      updateQuantity(item.id, String(Math.max(1, stock)));
-      return;
-    }
-
-    setCartError("");
-    updateQuantity(item.id, String(requestedQuantity));
-  };
-
-  const changeQuantity = (item, amount) => {
-    const currentQuantity = Number(item.quantity) || 1;
-    const stock = Number(item.stock);
-    const nextQuantity = currentQuantity + amount;
-
-    if (nextQuantity < 1) {
-      return;
-    }
-
-    if (Number.isFinite(stock) && stock >= 0 && nextQuantity > stock) {
-      setCartError(
-        `Only ${stock} unit${stock === 1 ? "" : "s"} of ${item.name} currently available.`
-      );
-      return;
-    }
-
-    setCartError("");
-    updateQuantity(item.id, String(nextQuantity));
-  };
-
-  const handleRemove = (item) => {
-    removeFromCart(item.id);
-    setCartError("");
-  };
+  const storeName = readableSlug(activeStoreSlug) || "Online Store";
 
   const itemCount = cartItems.reduce(
-    (total, item) => total + (Number(item.quantity) || 0),
+    (total, item) => total + Number(item.quantity || 0),
     0
   );
 
-  if (cartItems.length === 0) {
-    return (
-      <div className="hm-cart-page">
-        <style>{styles}</style>
+  const currency = cartItems.find((item) => item.currency)?.currency || "KES";
 
-        <div className="hm-cart-container">
-          <div className="hm-cart-header">
-            <div className="hm-cart-eyebrow">Your selection</div>
-            <h1 className="hm-cart-heading">Shopping cart</h1>
-            <p className="hm-cart-subheading">
-              Your next favourite is waiting to be discovered.
-            </p>
+  const changeQuantity = (item, amount) => {
+    const nextQuantity = Number(item.quantity || 1) + amount;
+
+    if (nextQuantity < 1) return;
+
+    const stockValue = item.available_quantity ?? item.stock;
+
+    if (stockValue !== undefined && stockValue !== null && stockValue !== "") {
+      const stock = Number(stockValue);
+
+      if (Number.isFinite(stock) && nextQuantity > stock) return;
+    }
+
+    updateQuantity(item.id, nextQuantity);
+  };
+
+  const getPurchaseLabel = (item) => {
+    if (item.purchase_type === "portion") {
+      return "Portion";
+    }
+
+    return item.cart_label || "Whole unit";
+  };
+
+  return (
+    <main className="md-cart">
+      <style>{styles}</style>
+
+      <div className="md-cart-inner">
+        <header className="md-cart-header">
+          <div className="md-cart-eyebrow">
+            <i className="bi bi-bag-check" />
+            Your shopping bag
           </div>
 
-          <section className="hm-cart-empty">
-            <div className="hm-cart-empty-icon" aria-hidden="true">
-              ♧
+          <h1 className="md-cart-title">Shopping cart</h1>
+
+          <p className="md-cart-subtitle">
+            Review your items and quantities before proceeding to checkout.
+          </p>
+
+          {activeStoreSlug && (
+            <Link to={storePath} className="md-cart-store">
+              <i className="bi bi-shop" />
+              Shopping from {storeName}
+            </Link>
+          )}
+        </header>
+
+        {cartItems.length === 0 ? (
+          <section className="md-cart-empty">
+            <div className="md-cart-empty-icon">
+              <i className="bi bi-bag" />
             </div>
 
             <h2>Your cart is empty</h2>
 
             <p>
-              You haven't added anything just yet. Explore our collection
-              and find something worth sharing.
+              You haven't added anything yet. Browse this store and find
+              something you'd like to order.
             </p>
 
-            <Link to="/products" className="hm-cart-browse-button">
-              Browse the collection
-              <span aria-hidden="true">→</span>
+            <Link to={storePath} className="md-cart-browse">
+              <i className="bi bi-shop" />
+              Continue shopping
             </Link>
           </section>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="hm-cart-page">
-      <style>{styles}</style>
-
-      <div className="hm-cart-container">
-        <header className="hm-cart-header">
-          <div className="hm-cart-eyebrow">Your selection</div>
-
-          <h1 className="hm-cart-heading">Shopping cart</h1>
-
-          <p className="hm-cart-subheading">
-            Review your selection before moving to checkout.
-          </p>
-        </header>
-
-        <div className="hm-cart-layout">
-          <section aria-label="Items in your cart">
-            <div className="hm-cart-items-header">
-              <h2 className="hm-cart-items-title">Your items</h2>
-
-              <span className="hm-cart-item-count">
-                {itemCount} item{itemCount === 1 ? "" : "s"}
-              </span>
-            </div>
-
-            {cartError && (
-              <div className="hm-cart-alert" role="alert">
-                {cartError}
+        ) : (
+          <div className="md-cart-layout">
+            <section aria-label="Shopping cart items">
+              <div className="md-cart-items-header">
+                <h2>Your items</h2>
+                <span className="md-cart-count">
+                  {itemCount} item{itemCount === 1 ? "" : "s"}
+                </span>
               </div>
-            )}
 
-            {cartItems.map((item) => {
-              const imageUrl = getImageUrl(item.image);
-              const imageFailed = failedImages[item.id] || !imageUrl;
-              const quantity = Number(item.quantity) || 1;
-              const price = Number(item.price) || 0;
-              const stock = Number(item.stock);
-              const hasStockLimit = Number.isFinite(stock) && stock >= 0;
+              {cartItems.map((item) => {
+                const quantity = Number(item.quantity || 1);
+                const price = Number(item.price || 0);
+                const image = typeof item.image === "string" ? item.image : "";
+                const imageFailed = failedImages[item.id] || !image;
 
-              return (
-                <article className="hm-cart-item" key={item.id}>
-                  <div className="hm-cart-image-wrap">
-                    {imageFailed ? (
-                      <div
-                        className="hm-cart-image-placeholder"
-                        aria-label="Product image unavailable"
-                        role="img"
-                      >
-                        ◈
-                      </div>
-                    ) : (
-                      <img
-                        src={imageUrl}
-                        alt={item.name || "Product"}
-                        className="hm-cart-image"
-                        onError={() =>
-                          setFailedImages((previous) => ({
-                            ...previous,
-                            [item.id]: true,
-                          }))
-                        }
-                      />
-                    )}
-                  </div>
+                const stockValue = item.available_quantity ?? item.stock;
+                const hasStockLimit =
+                  stockValue !== undefined &&
+                  stockValue !== null &&
+                  stockValue !== "" &&
+                  Number.isFinite(Number(stockValue));
 
-                  <div className="hm-cart-item-main">
-                    <div className="hm-cart-item-top">
-                      <div>
-                        {item.category && (
-                          <div className="hm-cart-category">
-                            {item.category}
-                          </div>
-                        )}
-
-                        <h3 className="hm-cart-product-name">
-                          {item.name}
-                        </h3>
-
-                        {item.unit && (
-                          <div className="hm-cart-unit">
-                            {item.unit}
-                          </div>
-                        )}
-                      </div>
-
-                      <button
-                        type="button"
-                        className="hm-cart-remove"
-                        onClick={() => handleRemove(item)}
-                        aria-label={`Remove ${item.name} from cart`}
-                      >
-                        <span aria-hidden="true">×</span>
-                        Remove
-                      </button>
+                return (
+                  <article className="md-cart-item" key={item.id}>
+                    <div className="md-cart-image">
+                      {imageFailed ? (
+                        <i className="bi bi-image" aria-hidden="true" />
+                      ) : (
+                        <img
+                          src={image}
+                          alt={item.name || "Product"}
+                          onError={() =>
+                            setFailedImages((previous) => ({
+                              ...previous,
+                              [item.id]: true,
+                            }))
+                          }
+                        />
+                      )}
                     </div>
 
-                    <div className="hm-cart-item-bottom">
-                      <div>
-                        <label
-                          className="hm-cart-quantity-label"
-                          htmlFor={`cart-quantity-${item.id}`}
-                        >
-                          Quantity
-                        </label>
-
-                        <div className="hm-cart-quantity-control">
-                          <button
-                            type="button"
-                            aria-label={`Decrease quantity of ${item.name}`}
-                            disabled={quantity <= 1}
-                            onClick={() => changeQuantity(item, -1)}
-                          >
-                            −
-                          </button>
-
-                          <span
-                            className="hm-cart-quantity-value"
-                            id={`cart-quantity-${item.id}`}
-                            aria-live="polite"
-                          >
-                            {quantity}
+                    <div className="md-cart-item-content">
+                      <div className="md-cart-item-top">
+                        <div>
+                          <span className="md-cart-category">
+                            {item.category || "Product"}
                           </span>
 
-                          <button
-                            type="button"
-                            aria-label={`Increase quantity of ${item.name}`}
-                            disabled={hasStockLimit && quantity >= stock}
-                            onClick={() => changeQuantity(item, 1)}
-                          >
-                            +
-                          </button>
+                          <h3 className="md-cart-name">
+                            {item.name || "Unnamed product"}
+                          </h3>
+
+                          {item.unit && (
+                            <div className="md-cart-meta">
+                              Sold by {item.unit}
+                            </div>
+                          )}
+
+                          <span className="md-cart-variant">
+                            {getPurchaseLabel(item)}
+                          </span>
                         </div>
+
+                        <button
+                          type="button"
+                          className="md-cart-remove"
+                          onClick={() => removeFromCart(item.id)}
+                          aria-label={`Remove ${item.name} from cart`}
+                        >
+                          <i className="bi bi-trash3" /> Remove
+                        </button>
                       </div>
 
-                      <div>
-                        <div className="hm-cart-price-label">
-                          {formatPrice(price)} each
+                      <div className="md-cart-item-bottom">
+                        <div>
+                          <span className="md-cart-quantity-label">
+                            Quantity
+                          </span>
+
+                          <div className="md-cart-quantity">
+                            <button
+                              type="button"
+                              onClick={() => changeQuantity(item, -1)}
+                              disabled={quantity <= 1}
+                              aria-label="Decrease quantity"
+                            >
+                              −
+                            </button>
+
+                            <span>{quantity}</span>
+
+                            <button
+                              type="button"
+                              onClick={() => changeQuantity(item, 1)}
+                              disabled={
+                                hasStockLimit &&
+                                quantity >= Number(stockValue)
+                              }
+                              aria-label="Increase quantity"
+                            >
+                              +
+                            </button>
+                          </div>
                         </div>
 
-                        <div className="hm-cart-line-total">
-                          {formatPrice(price * quantity)}
-                        </div>
+                        <div>
+                          <div className="md-cart-price-label">
+                            {formatPrice(price, currency)} each
+                          </div>
 
-                        <div className="hm-cart-unit-price">
-                          Item subtotal
+                          <div className="md-cart-line-total">
+                            {formatPrice(price * quantity, currency)}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </article>
-              );
-            })}
+                  </article>
+                );
+              })}
 
-            <Link to="/products" className="hm-cart-continue">
-              <span aria-hidden="true">←</span> Continue shopping
-            </Link>
-          </section>
-
-          <aside
-            className="hm-cart-summary"
-            aria-label="Order summary"
-          >
-            <div className="hm-cart-summary-header">
-              <h2 className="hm-cart-summary-title">Order summary</h2>
-            </div>
-
-            <div className="hm-cart-summary-body">
-              <div className="hm-cart-summary-row">
-                <span>Items ({itemCount})</span>
-                <strong>{formatPrice(cartTotal)}</strong>
-              </div>
-
-              <div className="hm-cart-summary-row">
-                <span>Delivery</span>
-                <span className="hm-cart-summary-delivery">
-                  Calculated at checkout
-                </span>
-              </div>
-
-              <hr className="hm-cart-summary-divider" />
-
-              <div className="hm-cart-total-row">
-                <span className="hm-cart-total-label">Subtotal</span>
-                <span className="hm-cart-total-amount">
-                  {formatPrice(cartTotal)}
-                </span>
-              </div>
-
-              <Link
-                to="/checkout"
-                className="hm-cart-checkout-button"
-              >
-                Proceed to checkout
-                <span aria-hidden="true">→</span>
+              <Link to={storePath} className="md-cart-continue">
+                <i className="bi bi-arrow-left" /> Continue shopping
               </Link>
+            </section>
 
-              <div className="hm-cart-note">
-                <span className="hm-cart-note-icon" aria-hidden="true">
-                  ◈
-                </span>
-
-                <span>
-                  Your final delivery charges and order details will be
-                  confirmed during checkout.
-                </span>
+            <aside className="md-cart-summary">
+              <div className="md-cart-summary-header">
+                <h2>Order summary</h2>
               </div>
-            </div>
-          </aside>
-        </div>
+
+              <div className="md-cart-summary-body">
+                <div className="md-cart-summary-row">
+                  <span>Items ({itemCount})</span>
+                  <strong>{formatPrice(cartTotal, currency)}</strong>
+                </div>
+
+                <div className="md-cart-summary-row">
+                  <span>Delivery</span>
+                  <span>Calculated at checkout</span>
+                </div>
+
+                <hr className="md-cart-divider" />
+
+                <div className="md-cart-total">
+                  <span>Subtotal</span>
+                  <strong>{formatPrice(cartTotal, currency)}</strong>
+                </div>
+
+                <Link to="/checkout" className="md-cart-checkout">
+                  Proceed to checkout
+                  <i className="bi bi-arrow-right" />
+                </Link>
+
+                <div className="md-cart-note">
+                  Delivery charges and final order details will be confirmed
+                  during checkout.
+                </div>
+              </div>
+            </aside>
+          </div>
+        )}
       </div>
-    </div>
+    </main>
   );
 }
-
-export default Cart;
-
