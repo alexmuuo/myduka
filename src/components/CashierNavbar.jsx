@@ -52,14 +52,11 @@ function CashierNavbar() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // =========================================================
-  // CLOSE MOBILE NAVIGATION AFTER ROUTE CHANGE
-  // =========================================================
-
+  // Close the mobile navigation after changing routes.
   useEffect(() => {
     const navbar = document.getElementById("cashierNavbar");
 
-    if (!navbar?.classList.contains("show")) return;
+    if (!navbar || !navbar.classList.contains("show")) return;
 
     if (window.bootstrap?.Collapse) {
       window.bootstrap.Collapse
@@ -70,10 +67,7 @@ function CashierNavbar() {
     }
   }, [location.pathname]);
 
-  // =========================================================
-  // LOGOUT
-  // =========================================================
-
+  // Logout.
   const handleLogout = () => {
     const confirmed = window.confirm(
       "Are you sure you want to log out?"
@@ -87,17 +81,12 @@ function CashierNavbar() {
     navigate("/cashier-login", { replace: true });
   };
 
-  // =========================================================
-  // NAVBAR
-  // =========================================================
-
   return (
     <>
       <nav className="navbar navbar-expand-xl sticky-top md-cashier-navbar">
         <div className="container-fluid px-3 px-lg-4">
 
           {/* BRAND */}
-
           <Link
             className="navbar-brand md-cashier-brand"
             to="/cashier/pos"
@@ -119,7 +108,6 @@ function CashierNavbar() {
           </Link>
 
           {/* MOBILE TOGGLE */}
-
           <button
             className="navbar-toggler md-cashier-toggler"
             type="button"
@@ -133,13 +121,11 @@ function CashierNavbar() {
           </button>
 
           {/* NAVIGATION */}
-
           <div
             className="collapse navbar-collapse"
             id="cashierNavbar"
           >
             <ul className="navbar-nav mx-auto mb-2 mb-xl-0 md-cashier-nav">
-
               {links.map((link) => (
                 <li className="nav-item" key={link.path}>
                   <NavLink
@@ -148,7 +134,9 @@ function CashierNavbar() {
                     className={({ isActive }) =>
                       `md-cashier-nav-link ${
                         isActive ? "active" : ""
-                      } ${link.primary ? "md-cashier-pos-link" : ""}`
+                      } ${
+                        link.primary ? "md-cashier-pos-link" : ""
+                      }`
                     }
                   >
                     <i className={`bi ${link.icon}`} />
@@ -156,21 +144,17 @@ function CashierNavbar() {
                   </NavLink>
                 </li>
               ))}
-
             </ul>
 
             {/* RIGHT SIDE */}
-
             <div className="md-cashier-account-area">
 
               {/* THEME */}
-
               <div className="md-cashier-theme">
                 <ThemeSwitcher />
               </div>
 
               {/* CASHIER PROFILE */}
-
               <div className="md-cashier-profile">
                 <span className="md-cashier-avatar">
                   <i className="bi bi-person-fill" />
@@ -183,7 +167,6 @@ function CashierNavbar() {
               </div>
 
               {/* LOGOUT */}
-
               <button
                 type="button"
                 className="md-cashier-logout"
@@ -199,7 +182,6 @@ function CashierNavbar() {
       </nav>
 
       {/* STYLES */}
-
       <style>{`
         .md-cashier-navbar {
           min-height: 70px;
@@ -363,6 +345,7 @@ function CashierNavbar() {
           font-size: 12px;
           font-weight: 650;
           transition: all 0.2s ease;
+          cursor: pointer;
         }
 
         .md-cashier-logout:hover {
