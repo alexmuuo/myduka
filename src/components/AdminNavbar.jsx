@@ -10,6 +10,56 @@ function AdminNavbar() {
   const location = useLocation();
 
   const [unreadMessageCount, setUnreadMessageCount] = useState(0);
+  const [admin, setAdmin] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("admin") || "null");
+    } catch {
+      return null;
+    }
+  });
+
+  // =========================================================
+  // LOAD AUTHENTICATED ADMIN DETAILS
+  // =========================================================
+
+  useEffect(() => {
+    const loadAdmin = () => {
+      try {
+        setAdmin(JSON.parse(localStorage.getItem("admin") || "null"));
+      } catch {
+        setAdmin(null);
+      }
+    };
+
+    loadAdmin();
+
+    window.addEventListener("storage", loadAdmin);
+
+    return () => {
+      window.removeEventListener("storage", loadAdmin);
+    };
+  }, []);
+
+  const adminName =
+    admin?.full_name ||
+    admin?.name ||
+    admin?.username ||
+    admin?.first_name ||
+    "Administrator";
+
+  const businessName =
+    admin?.business?.name ||
+    admin?.business_name ||
+    admin?.store_name ||
+    STORE_NAME ||
+    "MyDuka";
+
+  const adminRole =
+    admin?.role === "owner" || admin?.role === "business_owner"
+      ? "Business Owner"
+      : admin?.role
+        ? admin.role.replace(/_/g, " ")
+        : "Business Owner";
 
   // =========================================================
   // LOAD UNREAD MESSAGE COUNT
@@ -83,6 +133,7 @@ function AdminNavbar() {
     localStorage.removeItem("adminToken");
     localStorage.removeItem("admin");
 
+    setAdmin(null);
     setUnreadMessageCount(0);
 
     navigate("/admin-login", { replace: true });
@@ -139,7 +190,7 @@ function AdminNavbar() {
 
             <span className="md-admin-brand-text">
               <span className="md-admin-brand-name">
-                {STORE_NAME}
+                {businessName}
               </span>
 
               <span className="md-admin-brand-label">
@@ -254,7 +305,9 @@ function AdminNavbar() {
                     </Link>
                   </li>
 
-                  <li><hr className="dropdown-divider" /></li>
+                  <li>
+                    <hr className="dropdown-divider" />
+                  </li>
 
                   <li>
                     <Link
@@ -317,13 +370,16 @@ function AdminNavbar() {
                     >
                       <i className="bi bi-cash-register" />
                       POS Sales
+
                       <span className="badge rounded-pill bg-success ms-auto">
                         POS
                       </span>
                     </Link>
                   </li>
 
-                  <li><hr className="dropdown-divider" /></li>
+                  <li>
+                    <hr className="dropdown-divider" />
+                  </li>
 
                   <li>
                     <Link
@@ -357,6 +413,7 @@ function AdminNavbar() {
                     "/admin/reports",
                     "/admin/messages",
                     "/admin/cashiers",
+                    "/admin/subscription",
                   ])}
                   type="button"
                   data-bs-toggle="dropdown"
@@ -398,8 +455,6 @@ function AdminNavbar() {
                     </Link>
                   </li>
 
-                  <li><hr className="dropdown-divider" /></li>
-
                   <li>
                     <Link
                       className={linkClass("/admin/messages")}
@@ -418,6 +473,20 @@ function AdminNavbar() {
                     </Link>
                   </li>
 
+                  <li>
+                    <hr className="dropdown-divider" />
+                  </li>
+
+                  <li>
+                    <Link
+                      className={linkClass("/admin/subscription")}
+                      to="/admin/subscription"
+                    >
+                      <i className="bi bi-credit-card-2-front" />
+                      Subscription & Billing
+                    </Link>
+                  </li>
+
                 </ul>
               </li>
 
@@ -431,21 +500,37 @@ function AdminNavbar() {
                 <ThemeSwitcher />
               </div>
 
-              <div className="md-admin-profile">
+              <Link
+                to="/admin/profile"
+                className={`md-admin-profile ${
+                  isActive("/admin/profile") ? "active" : ""
+                }`}
+              >
                 <div className="md-admin-avatar">
                   <i className="bi bi-person-fill" />
                 </div>
 
                 <div className="md-admin-profile-details">
                   <span className="md-admin-profile-name">
-                    Administrator
+                    {adminName}
                   </span>
 
                   <span className="md-admin-profile-role">
-                    Business Owner
+                    {adminRole}
                   </span>
                 </div>
-              </div>
+              </Link>
+
+              <Link
+                to="/admin/settings"
+                className={`md-admin-settings ${
+                  isActive("/admin/settings") ? "active" : ""
+                }`}
+                title="Settings"
+              >
+                <i className="bi bi-gear" />
+                <span>Settings</span>
+              </Link>
 
               <button
                 type="button"
@@ -603,7 +688,7 @@ function AdminNavbar() {
         .md-admin-account-area {
           display: flex;
           align-items: center;
-          gap: 17px;
+          gap: 13px;
           padding-left: 17px;
           border-left: 1px solid var(--border);
         }
@@ -617,6 +702,15 @@ function AdminNavbar() {
           align-items: center;
           gap: 9px;
           padding: 4px 8px;
+          border-radius: 9px;
+          color: inherit;
+          text-decoration: none;
+          transition: background 0.2s ease;
+        }
+
+        .md-admin-profile:hover,
+        .md-admin-profile.active {
+          background: var(--primary-light);
         }
 
         .md-admin-avatar {
@@ -629,6 +723,7 @@ function AdminNavbar() {
           background: var(--primary-light);
           color: var(--primary);
           font-size: 17px;
+          flex-shrink: 0;
         }
 
         .md-admin-profile-details {
@@ -647,6 +742,30 @@ function AdminNavbar() {
           margin-top: 3px;
           color: var(--text-muted);
           font-size: 10px;
+          text-transform: capitalize;
+        }
+
+        .md-admin-settings {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 7px;
+          min-height: 37px;
+          padding: 0 10px;
+          border: 1px solid var(--border);
+          border-radius: 9px;
+          color: var(--text-secondary, var(--text-muted));
+          text-decoration: none;
+          font-size: 12px;
+          font-weight: 650;
+          transition: all 0.2s ease;
+        }
+
+        .md-admin-settings:hover,
+        .md-admin-settings.active {
+          color: var(--primary);
+          background: var(--primary-light);
+          border-color: var(--primary);
         }
 
         .md-admin-logout {
@@ -704,6 +823,7 @@ function AdminNavbar() {
             padding-left: 0;
           }
 
+          .md-admin-settings,
           .md-admin-logout {
             width: 100%;
           }
