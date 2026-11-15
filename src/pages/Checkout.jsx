@@ -6,745 +6,617 @@ import api from "../api/api";
 const POLL_INTERVAL = 3000;
 const MAX_POLL_ATTEMPTS = 60;
 
+const formatPrice = (amount, currency = "KES") => {
+  try {
+    return new Intl.NumberFormat("en-KE", {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 2,
+    }).format(Number(amount || 0));
+  } catch {
+    return `${currency} ${Number(amount || 0).toLocaleString("en-KE")}`;
+  }
+};
+
+const readableSlug = (slug = "") =>
+  slug
+    .split("-")
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+
 const styles = `
-  .hm-checkout {
-    --hm-bg: #171d19;
-    --hm-panel: #202923;
-    --hm-panel-light: #28342b;
-    --hm-green: #326747;
-    --hm-gold: #d6b36a;
-    --hm-cream: #f7f5ef;
-    --hm-muted: #a8b2a9;
-    --hm-border: rgba(255,255,255,.10);
-    min-height: 75vh;
-    padding: 42px 0 76px;
-    background: var(--hm-bg);
-    color: var(--hm-cream);
-  }
-
-  .hm-checkout *,
-  .hm-checkout *::before,
-  .hm-checkout *::after {
-    box-sizing: border-box;
-  }
-
-  .hm-checkout button,
-  .hm-checkout input,
-  .hm-checkout textarea {
-    font: inherit;
-  }
-
-  .hm-checkout-container {
-    width: min(1160px, calc(100% - 40px));
-    margin: 0 auto;
-  }
-
-  .hm-checkout-header {
-    margin-bottom: 35px;
-  }
-
-  .hm-checkout-eyebrow {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    color: var(--hm-gold);
-    font-size: .75rem;
-    font-weight: 800;
-    letter-spacing: 2.5px;
-    text-transform: uppercase;
-  }
-
-  .hm-checkout-eyebrow::before {
-    content: "";
-    width: 28px;
-    height: 1px;
-    background: var(--hm-gold);
-  }
-
-  .hm-checkout-title {
-    margin: 14px 0 12px;
-    color: var(--hm-cream);
-    font-family: Georgia, "Times New Roman", serif;
-    font-size: clamp(2.4rem, 5vw, 3.5rem);
-    font-weight: 600;
-    line-height: 1.1;
-  }
-
-  .hm-checkout-subtitle {
-    max-width: 650px;
-    margin: 0;
-    color: var(--hm-muted);
-    font-size: .97rem;
-    line-height: 1.8;
-  }
-
-  .hm-checkout-steps {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-top: 25px;
-  }
-
-  .hm-checkout-step {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--hm-muted);
-    font-size: .8rem;
-    font-weight: 650;
-  }
-
-  .hm-checkout-step-number {
-    display: grid;
-    width: 29px;
-    height: 29px;
-    place-items: center;
-    border: 1px solid var(--hm-border);
-    border-radius: 50%;
-    background: var(--hm-panel);
-    color: var(--hm-muted);
-    font-size: .78rem;
-  }
-
-  .hm-checkout-step-active {
-    color: var(--hm-gold);
-  }
-
-  .hm-checkout-step-active .hm-checkout-step-number {
-    border-color: var(--hm-gold);
-    background: rgba(251, 191, 36,.10);
-    color: var(--hm-gold);
-  }
-
-  .hm-checkout-step-line {
-    width: 35px;
-    height: 1px;
-    background: var(--hm-border);
-  }
-
-  .hm-checkout-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1.35fr) minmax(320px, .85fr);
-    align-items: start;
-    gap: 28px;
-  }
-
-  .hm-checkout-section {
-    margin-bottom: 19px;
-    overflow: hidden;
-    border: 1px solid var(--hm-border);
-    border-radius: 15px;
-    background: var(--hm-panel);
-  }
-
-  .hm-checkout-section-header {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 21px 24px;
-    border-bottom: 1px solid var(--hm-border);
-    background: linear-gradient(120deg, rgba(251, 191, 36,.045), transparent);
-  }
-
-  .hm-checkout-section-icon {
-    display: grid;
-    width: 42px;
-    height: 42px;
-    flex: 0 0 42px;
-    place-items: center;
-    border: 1px solid rgba(251, 191, 36,.23);
-    border-radius: 11px;
-    background: rgba(251, 191, 36,.07);
-    color: var(--hm-gold);
-    font-size: 1.15rem;
-  }
-
-  .hm-checkout-section-title {
-    margin: 0;
-    color: var(--hm-cream);
-    font-size: 1.05rem;
-    font-weight: 800;
-  }
-
-  .hm-checkout-section-description {
-    margin: 5px 0 0;
-    color: var(--hm-muted);
-    font-size: .8rem;
-    line-height: 1.5;
-  }
-
-  .hm-checkout-section-body {
-    padding: 24px;
-  }
-
-  .hm-checkout-field {
-    margin-bottom: 21px;
-  }
-
-  .hm-checkout-field:last-child {
-    margin-bottom: 0;
-  }
-
-  .hm-checkout-label {
-    display: block;
-    margin-bottom: 9px;
-    color: var(--hm-cream);
-    font-size: .86rem;
-    font-weight: 750;
-  }
-
-  .hm-checkout-optional {
-    color: var(--hm-muted);
-    font-size: .78rem;
-    font-weight: 450;
-  }
-
-  .hm-checkout-input,
-  .hm-checkout-textarea {
-    display: block;
-    width: 100%;
-    min-height: 49px;
-    padding: 13px 14px;
-    border: 1px solid rgba(255,255,255,.13);
-    border-radius: 9px;
-    outline: none;
-    background: #1a211c;
-    color: var(--hm-cream);
-    font-size: .91rem;
-    transition: border-color .2s ease, box-shadow .2s ease;
-  }
-
-  .hm-checkout-input::placeholder,
-  .hm-checkout-textarea::placeholder {
-    color: #7f8b81;
-  }
-
-  .hm-checkout-input:focus,
-  .hm-checkout-textarea:focus {
-    border-color: var(--hm-gold);
-    box-shadow: 0 0 0 3px rgba(251, 191, 36,.09);
-  }
-
-  .hm-checkout-input:disabled,
-  .hm-checkout-textarea:disabled {
-    opacity: .6;
-    cursor: not-allowed;
-  }
-
-  .hm-checkout-textarea {
-    min-height: 112px;
-    resize: vertical;
-    line-height: 1.65;
-  }
-
-  .hm-checkout-help {
-    margin: 8px 0 0;
-    color: var(--hm-muted);
-    font-size: .77rem;
-    line-height: 1.6;
-  }
-
-  .hm-checkout-options {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 13px;
-  }
-
-  .hm-checkout-option {
-    position: relative;
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    min-width: 0;
-    padding: 17px 15px;
-    border: 1px solid rgba(255,255,255,.12);
-    border-radius: 11px;
-    background: #1b231d;
-    cursor: pointer;
-    transition: border-color .2s ease, background .2s ease;
-  }
-
-  .hm-checkout-option:hover {
-    border-color: rgba(251, 191, 36,.45);
-  }
-
-  .hm-checkout-option-selected {
-    border-color: var(--hm-gold);
-    background: rgba(251, 191, 36,.065);
-  }
-
-  .hm-checkout-option input {
-    width: 17px;
-    height: 17px;
-    flex: 0 0 17px;
-    margin: 2px 0 0;
-    accent-color: var(--hm-gold);
-    cursor: pointer;
-  }
-
-  .hm-checkout-option-content {
-    min-width: 0;
-  }
-
-  .hm-checkout-option-title {
-    display: block;
-    margin: 0 0 5px;
-    color: var(--hm-cream);
-    font-size: .88rem;
-    font-weight: 800;
-  }
-
-  .hm-checkout-option-description {
-    display: block;
-    color: var(--hm-muted);
-    font-size: .77rem;
-    line-height: 1.65;
-  }
-
-  .hm-checkout-option-icon {
-    display: grid;
-    width: 34px;
-    height: 34px;
-    flex: 0 0 34px;
-    place-items: center;
-    border: 1px solid rgba(251, 191, 36,.2);
-    border-radius: 9px;
-    background: rgba(251, 191, 36,.07);
-    color: var(--hm-gold);
-    font-size: 1rem;
-  }
-
-  .hm-checkout-alert {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    margin-bottom: 19px;
-    padding: 16px 18px;
-    border: 1px solid;
-    border-radius: 11px;
-    font-size: .88rem;
-    line-height: 1.7;
-    overflow-wrap: anywhere;
-  }
-
-  .hm-checkout-alert-error {
-    border-color: rgba(255,125,125,.3);
-    background: rgba(255,100,100,.075);
-    color: #ffb6b6;
-  }
-
-  .hm-checkout-alert-info {
-    border-color: rgba(110,175,232,.3);
-    background: rgba(65,125,190,.09);
-    color: #c0e1ff;
-  }
-
-  .hm-checkout-alert-warning {
-    border-color: rgba(251, 191, 36,.35);
-    background: rgba(251, 191, 36,.075);
-    color: var(--hm-cream);
-  }
-
-  .hm-checkout-alert-icon {
-    flex: 0 0 auto;
-    font-size: 1.15rem;
-  }
-
-  .hm-checkout-alert strong {
-    color: var(--hm-cream);
-  }
-
-  .hm-checkout-alert p {
-    margin: 7px 0 0;
-  }
-
-  .hm-checkout-alert p:last-child {
-    margin-bottom: 0;
-  }
-
-  .hm-checkout-summary {
-    position: sticky;
-    top: 24px;
-    overflow: hidden;
-    border: 1px solid rgba(251, 191, 36,.25);
-    border-radius: 15px;
-    background: var(--hm-panel);
-  }
-
-  .hm-checkout-summary-header {
-    padding: 24px;
-    border-bottom: 1px solid var(--hm-border);
-    background: linear-gradient(135deg, rgba(251, 191, 36,.09), transparent);
-  }
-
-  .hm-checkout-summary-title {
-    margin: 0;
-    color: var(--hm-cream);
-    font-family: Georgia, "Times New Roman", serif;
-    font-size: 1.6rem;
-    font-weight: 600;
-  }
-
-  .hm-checkout-summary-subtitle {
-    margin: 7px 0 0;
-    color: var(--hm-muted);
-    font-size: .82rem;
-    line-height: 1.6;
-  }
-
-  .hm-checkout-summary-body {
-    padding: 24px;
-  }
-
-  .hm-checkout-products {
-    display: grid;
-    gap: 17px;
-  }
-
-  .hm-checkout-product {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 14px;
-    align-items: start;
-  }
-
-  .hm-checkout-product-name {
-    margin: 0;
-    color: var(--hm-cream);
-    font-size: .88rem;
-    font-weight: 750;
-    line-height: 1.55;
-    overflow-wrap: anywhere;
-  }
-
-  .hm-checkout-product-meta {
-    margin-top: 4px;
-    color: var(--hm-muted);
-    font-size: .77rem;
-    line-height: 1.5;
-  }
-
-  .hm-checkout-product-price {
-    color: var(--hm-cream);
-    font-size: .87rem;
-    font-weight: 750;
-    text-align: right;
-    white-space: nowrap;
-  }
-
-  .hm-checkout-divider {
-    height: 1px;
-    margin: 22px 0;
-    border: 0;
-    background: var(--hm-border);
-  }
-
-  .hm-checkout-summary-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 14px;
-    margin-bottom: 17px;
-    color: var(--hm-muted);
-    font-size: .86rem;
-  }
-
-  .hm-checkout-summary-row strong {
-    color: var(--hm-cream);
-    font-weight: 750;
-    text-align: right;
-  }
-
-  .hm-checkout-total-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 14px;
-    margin-bottom: 24px;
-  }
-
-  .hm-checkout-total-label {
-    color: var(--hm-cream);
-    font-size: 1rem;
-    font-weight: 800;
-  }
-
-  .hm-checkout-total-value {
-    color: var(--hm-gold);
-    font-size: 1.65rem;
-    font-weight: 850;
-    text-align: right;
-    overflow-wrap: anywhere;
-  }
-
-  .hm-checkout-submit {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    width: 100%;
-    min-height: 54px;
-    padding: 14px 18px;
-    border: 1px solid var(--hm-gold);
-    border-radius: 9px;
-    background: var(--hm-gold);
-    color: #1b241e;
-    cursor: pointer;
-    font-size: .91rem;
-    font-weight: 850;
-    transition: transform .2s ease, background .2s ease;
-  }
-
-  .hm-checkout-submit:hover:not(:disabled) {
-    transform: translateY(-2px);
-    background: #ecd39a;
-  }
-
-  .hm-checkout-submit:disabled {
-    opacity: .65;
-    cursor: not-allowed;
-  }
-
-  .hm-checkout-secondary-button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 9px;
-    width: 100%;
-    min-height: 46px;
-    margin-top: 10px;
-    padding: 12px 15px;
-    border: 1px solid rgba(255,255,255,.16);
-    border-radius: 9px;
-    background: transparent;
-    color: var(--hm-cream);
-    cursor: pointer;
-    font-size: .85rem;
-    font-weight: 700;
-    text-decoration: none;
-    transition: border-color .2s ease, background .2s ease;
-  }
-
-  .hm-checkout-secondary-button:hover:not(:disabled) {
-    border-color: var(--hm-gold);
-    background: rgba(251, 191, 36,.05);
-    color: var(--hm-gold);
-  }
-
-  .hm-checkout-secondary-button:disabled {
-    opacity: .55;
-    cursor: not-allowed;
-  }
-
-  .hm-checkout-back-link {
-    display: block;
-    margin-top: 19px;
-    color: var(--hm-muted);
-    font-size: .84rem;
-    font-weight: 650;
-    text-align: center;
-    text-decoration: none;
-  }
-
-  .hm-checkout-back-link:hover {
-    color: var(--hm-gold);
-  }
-
-  .hm-checkout-secure-note {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    margin-top: 20px;
-    padding: 14px;
-    border: 1px solid var(--hm-border);
-    border-radius: 10px;
-    background: rgba(255,255,255,.02);
-    color: var(--hm-muted);
-    font-size: .76rem;
-    line-height: 1.7;
-  }
-
-  .hm-checkout-secure-icon {
-    color: var(--hm-gold);
-    font-size: 1rem;
-  }
-
-  .hm-checkout-spinner {
-    display: inline-block;
-    width: 17px;
-    height: 17px;
-    flex: 0 0 17px;
-    border: 2px solid rgba(255,255,255,.25);
-    border-top-color: currentColor;
-    border-radius: 50%;
-    animation: hm-checkout-spin .75s linear infinite;
-  }
-
-  @keyframes hm-checkout-spin {
-    to { transform: rotate(360deg); }
-  }
-
-  .hm-checkout-empty {
-    max-width: 650px;
-    margin: 0 auto;
-    padding: 45px 25px;
-    border: 1px solid var(--hm-border);
-    border-radius: 18px;
-    background: var(--hm-panel);
-    text-align: center;
-  }
-
-  .hm-checkout-empty-icon {
-    display: grid;
-    width: 85px;
-    height: 85px;
-    margin: 0 auto 23px;
-    place-items: center;
-    border: 1px solid rgba(251, 191, 36,.25);
-    border-radius: 50%;
-    background: rgba(251, 191, 36,.07);
-    color: var(--hm-gold);
-    font-size: 2.4rem;
-  }
-
-  .hm-checkout-empty h2 {
-    margin: 0 0 12px;
-    color: var(--hm-cream);
-    font-family: Georgia, "Times New Roman", serif;
-    font-size: 2rem;
-  }
-
-  .hm-checkout-empty p {
-    margin: 0 0 25px;
-    color: var(--hm-muted);
-    line-height: 1.8;
-  }
-
-  .hm-checkout-empty-link {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    min-height: 48px;
-    padding: 13px 22px;
-    border: 1px solid var(--hm-gold);
-    border-radius: 9px;
-    background: var(--hm-gold);
-    color: #1b241e;
-    font-size: .9rem;
-    font-weight: 800;
-    text-decoration: none;
-  }
-
-  @media (max-width: 900px) {
-    .hm-checkout-layout {
-      grid-template-columns: minmax(0, 1fr);
-    }
-
-    .hm-checkout-summary {
-      position: static;
-    }
-  }
-
-  @media (max-width: 560px) {
-    .hm-checkout {
-      padding: 28px 0 48px;
-    }
-
-    .hm-checkout-container {
-      width: calc(100% - 28px);
-    }
-
-    .hm-checkout-header {
-      margin-bottom: 27px;
-    }
-
-    .hm-checkout-title {
-      font-size: 2.55rem;
-    }
-
-    .hm-checkout-subtitle {
-      font-size: .9rem;
-    }
-
-    .hm-checkout-steps {
-      gap: 7px;
-    }
-
-    .hm-checkout-step {
-      gap: 6px;
-      font-size: .72rem;
-    }
-
-    .hm-checkout-step-number {
-      width: 26px;
-      height: 26px;
-    }
-
-    .hm-checkout-step-line {
-      width: 17px;
-    }
-
-    .hm-checkout-section-header {
-      padding: 17px;
-      gap: 11px;
-    }
-
-    .hm-checkout-section-icon {
-      width: 37px;
-      height: 37px;
-      flex-basis: 37px;
-    }
-
-    .hm-checkout-section-body {
-      padding: 18px;
-    }
-
-    .hm-checkout-options {
-      grid-template-columns: minmax(0, 1fr);
-    }
-
-    .hm-checkout-option {
-      padding: 14px;
-    }
-
-    .hm-checkout-summary-header,
-    .hm-checkout-summary-body {
-      padding: 20px;
-    }
-
-    .hm-checkout-total-value {
-      font-size: 1.4rem;
-    }
-
-    .hm-checkout-empty {
-      padding: 35px 18px;
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .hm-checkout *,
-    .hm-checkout *::before,
-    .hm-checkout *::after {
-      animation-duration: .01ms !important;
-      animation-iteration-count: 1 !important;
-      scroll-behavior: auto !important;
-      transition-duration: .01ms !important;
-    }
-  }
+.md-checkout {
+  --checkout-primary: #635bff;
+  --checkout-bg: #f6f7fb;
+  --checkout-surface: #ffffff;
+  --checkout-text: #172033;
+  --checkout-muted: #778397;
+  --checkout-border: #e7eaf0;
+  min-height: 80vh;
+  padding: 38px 18px 75px;
+  background: var(--checkout-bg);
+  color: var(--checkout-text);
+}
+
+.md-checkout * { box-sizing: border-box; }
+
+.md-checkout button,
+.md-checkout input,
+.md-checkout textarea {
+  font: inherit;
+}
+
+.md-checkout-inner {
+  width: min(1160px, 100%);
+  margin: auto;
+}
+
+.md-checkout-header { margin-bottom: 30px; }
+
+.md-checkout-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--checkout-primary);
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+}
+
+.md-checkout-title {
+  margin: 12px 0 9px;
+  font-size: clamp(30px, 5vw, 42px);
+  font-weight: 850;
+  letter-spacing: -1.5px;
+  line-height: 1.15;
+}
+
+.md-checkout-subtitle {
+  max-width: 650px;
+  margin: 0;
+  color: var(--checkout-muted);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.md-checkout-store {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 8px 12px;
+  border: 1px solid var(--checkout-border);
+  border-radius: 8px;
+  background: white;
+  color: #526071;
+  font-size: 12px;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.md-checkout-steps {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 25px;
+}
+
+.md-checkout-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--checkout-muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.md-checkout-step-number {
+  display: grid;
+  width: 29px;
+  height: 29px;
+  place-items: center;
+  border: 1px solid var(--checkout-border);
+  border-radius: 50%;
+  background: white;
+  font-size: 12px;
+}
+
+.md-checkout-step-active { color: var(--checkout-primary); }
+
+.md-checkout-step-active .md-checkout-step-number {
+  border-color: var(--checkout-primary);
+  background: #eeedff;
+  color: var(--checkout-primary);
+}
+
+.md-checkout-step-line {
+  width: 35px;
+  height: 1px;
+  background: var(--checkout-border);
+}
+
+.md-checkout-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, .8fr);
+  align-items: start;
+  gap: 24px;
+}
+
+.md-checkout-section {
+  margin-bottom: 16px;
+  overflow: hidden;
+  border: 1px solid var(--checkout-border);
+  border-radius: 14px;
+  background: white;
+}
+
+.md-checkout-section-header {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 19px 22px;
+  border-bottom: 1px solid var(--checkout-border);
+}
+
+.md-checkout-section-icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  place-items: center;
+  border-radius: 10px;
+  background: #f0efff;
+  color: var(--checkout-primary);
+  font-size: 17px;
+}
+
+.md-checkout-section-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 850;
+}
+
+.md-checkout-section-description {
+  margin: 4px 0 0;
+  color: var(--checkout-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.md-checkout-section-body { padding: 22px; }
+
+.md-checkout-field { margin-bottom: 19px; }
+.md-checkout-field:last-child { margin-bottom: 0; }
+
+.md-checkout-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.md-checkout-optional {
+  color: var(--checkout-muted);
+  font-weight: 450;
+}
+
+.md-checkout-input,
+.md-checkout-textarea {
+  display: block;
+  width: 100%;
+  min-height: 47px;
+  padding: 12px 13px;
+  border: 1px solid var(--checkout-border);
+  border-radius: 9px;
+  outline: none;
+  background: white;
+  color: var(--checkout-text);
+  font-size: 13px;
+  transition: border-color .2s, box-shadow .2s;
+}
+
+.md-checkout-input::placeholder,
+.md-checkout-textarea::placeholder {
+  color: #a2abba;
+}
+
+.md-checkout-input:focus,
+.md-checkout-textarea:focus {
+  border-color: var(--checkout-primary);
+  box-shadow: 0 0 0 3px rgba(99,91,255,.09);
+}
+
+.md-checkout-input:disabled,
+.md-checkout-textarea:disabled {
+  background: #f5f6f9;
+  cursor: not-allowed;
+}
+
+.md-checkout-textarea {
+  min-height: 100px;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.md-checkout-help {
+  margin: 7px 0 0;
+  color: var(--checkout-muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.md-checkout-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.md-checkout-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  min-width: 0;
+  padding: 15px;
+  border: 1px solid var(--checkout-border);
+  border-radius: 10px;
+  background: white;
+  cursor: pointer;
+  transition: border-color .2s, background .2s;
+}
+
+.md-checkout-option:hover {
+  border-color: #aaa5ff;
+}
+
+.md-checkout-option-selected {
+  border-color: var(--checkout-primary);
+  background: #f7f6ff;
+}
+
+.md-checkout-option input {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  margin: 2px 0 0;
+  accent-color: var(--checkout-primary);
+}
+
+.md-checkout-option-content { min-width: 0; }
+
+.md-checkout-option-title {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.md-checkout-option-description {
+  display: block;
+  color: var(--checkout-muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.md-checkout-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  margin-bottom: 17px;
+  padding: 14px 16px;
+  border: 1px solid;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.md-checkout-alert-error {
+  border-color: #f3c8cf;
+  background: #fff4f5;
+  color: #a52e42;
+}
+
+.md-checkout-alert-info {
+  border-color: #c9dcf5;
+  background: #f2f7ff;
+  color: #28588d;
+}
+
+.md-checkout-alert-warning {
+  border-color: #f1dfaa;
+  background: #fffbeb;
+  color: #805b12;
+}
+
+.md-checkout-alert strong { color: inherit; }
+.md-checkout-alert p { margin: 6px 0 0; }
+
+.md-checkout-summary {
+  position: sticky;
+  top: 24px;
+  overflow: hidden;
+  border: 1px solid var(--checkout-border);
+  border-radius: 14px;
+  background: white;
+}
+
+.md-checkout-summary-header {
+  padding: 20px;
+  border-bottom: 1px solid var(--checkout-border);
+}
+
+.md-checkout-summary-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 850;
+}
+
+.md-checkout-summary-subtitle {
+  margin: 6px 0 0;
+  color: var(--checkout-muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.md-checkout-summary-body { padding: 20px; }
+
+.md-checkout-products {
+  display: grid;
+  gap: 16px;
+}
+
+.md-checkout-product {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.md-checkout-product-name {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.md-checkout-product-meta {
+  margin-top: 4px;
+  color: var(--checkout-muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.md-checkout-product-price {
+  font-size: 12px;
+  font-weight: 800;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.md-checkout-divider {
+  height: 1px;
+  margin: 20px 0;
+  border: 0;
+  background: var(--checkout-border);
+}
+
+.md-checkout-summary-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 15px;
+  color: var(--checkout-muted);
+  font-size: 12px;
+}
+
+.md-checkout-summary-row strong {
+  color: var(--checkout-text);
+  font-weight: 800;
+  text-align: right;
+}
+
+.md-checkout-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 21px;
+}
+
+.md-checkout-total-label {
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.md-checkout-total-value {
+  color: var(--checkout-primary);
+  font-size: 21px;
+  font-weight: 900;
+  text-align: right;
+}
+
+.md-checkout-submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 51px;
+  padding: 13px 16px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--checkout-primary);
+  color: white;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 850;
+  transition: filter .2s, transform .2s;
+}
+
+.md-checkout-submit:hover:not(:disabled) {
+  filter: brightness(.94);
+  transform: translateY(-1px);
+}
+
+.md-checkout-submit:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+.md-checkout-secondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 10px;
+  padding: 11px;
+  border: 1px solid var(--checkout-border);
+  border-radius: 9px;
+  background: white;
+  color: var(--checkout-text);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.md-checkout-secondary:hover {
+  border-color: var(--checkout-primary);
+  color: var(--checkout-primary);
+}
+
+.md-checkout-secondary:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+.md-checkout-secure {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-top: 17px;
+  padding: 12px;
+  border-radius: 9px;
+  background: #f7f8fc;
+  color: var(--checkout-muted);
+  font-size: 10px;
+  line-height: 1.7;
+}
+
+.md-checkout-empty {
+  max-width: 600px;
+  margin: 30px auto;
+  padding: 45px 24px;
+  border: 1px solid var(--checkout-border);
+  border-radius: 15px;
+  background: white;
+  text-align: center;
+}
+
+.md-checkout-empty-icon {
+  display: grid;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 18px;
+  place-items: center;
+  border-radius: 19px;
+  background: #f0efff;
+  color: var(--checkout-primary);
+  font-size: 30px;
+}
+
+.md-checkout-empty h2 {
+  margin: 0 0 9px;
+  font-size: 22px;
+  font-weight: 850;
+}
+
+.md-checkout-empty p {
+  margin: 0 auto 22px;
+  color: var(--checkout-muted);
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.md-checkout-empty-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 17px;
+  border-radius: 9px;
+  background: var(--checkout-primary);
+  color: white;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.md-checkout-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,.35);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: md-checkout-spin .7s linear infinite;
+}
+
+@keyframes md-checkout-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 850px) {
+  .md-checkout-layout { grid-template-columns: 1fr; }
+  .md-checkout-summary { position: static; }
+}
+
+@media (max-width: 560px) {
+  .md-checkout { padding: 25px 13px 48px; }
+  .md-checkout-title { font-size: 31px; }
+  .md-checkout-steps { gap: 7px; }
+  .md-checkout-step { gap: 5px; font-size: 10px; }
+  .md-checkout-step-number { width: 25px; height: 25px; }
+  .md-checkout-step-line { width: 16px; }
+  .md-checkout-section-header,
+  .md-checkout-section-body,
+  .md-checkout-summary-header,
+  .md-checkout-summary-body { padding: 16px; }
+  .md-checkout-options { grid-template-columns: 1fr; }
+  .md-checkout-total-value { font-size: 18px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .md-checkout *,
+  .md-checkout *::before,
+  .md-checkout *::after {
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
+  }
+}
 `;
 
-function Checkout() {
-  const { cartItems, cartTotal, clearCart } = useCart();
-  const navigate = useNavigate();
+export default function Checkout() {
+  const {
+    cartItems,
+    cartTotal,
+    clearCart,
+    activeStoreSlug,
+  } = useCart();
 
-  const loggedInCustomer = (() => {
+  const navigate = useNavigate();
+  const pollingRef = useRef(false);
+
+  const [loggedInCustomer] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem("customer") || "null");
     } catch {
       return null;
     }
-  })();
+  });
 
   const [formData, setFormData] = useState({
     name: loggedInCustomer?.name || "",
@@ -761,16 +633,18 @@ function Checkout() {
   const [statusMessage, setStatusMessage] = useState("");
   const [pendingOrder, setPendingOrder] = useState(null);
 
-  const pollingRef = useRef(false);
+  const currency =
+    cartItems.find((item) => item.currency)?.currency || "KES";
+
+  const storePath = activeStoreSlug
+    ? `/store/${encodeURIComponent(activeStoreSlug)}`
+    : "/";
+
+  const storeName =
+    readableSlug(activeStoreSlug) || "Online Store";
 
   const sleep = (milliseconds) =>
     new Promise((resolve) => setTimeout(resolve, milliseconds));
-
-  const formatPrice = (amount) =>
-    `KSh ${Number(amount || 0).toLocaleString("en-KE", {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    })}`;
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -783,7 +657,6 @@ function Checkout() {
     setError("");
   };
 
-  // Verify payment status through the backend.
   const checkPaymentStatus = async (order) => {
     if (!order?.id) {
       throw new Error("The order ID is missing.");
@@ -793,11 +666,8 @@ function Checkout() {
     return response.data;
   };
 
-  // Poll until payment is confirmed, failed, or times out.
   const waitForPaymentConfirmation = async (order) => {
-    if (pollingRef.current) {
-      return;
-    }
+    if (pollingRef.current) return;
 
     pollingRef.current = true;
     setSubmitting(true);
@@ -810,9 +680,7 @@ function Checkout() {
 
     try {
       for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
-        if (attempt > 0) {
-          await sleep(POLL_INTERVAL);
-        }
+        if (attempt > 0) await sleep(POLL_INTERVAL);
 
         let payment;
 
@@ -820,20 +688,20 @@ function Checkout() {
           payment = await checkPaymentStatus(order);
           consecutiveErrors = 0;
         } catch (err) {
-          console.error("Could not check payment status:", err);
+          console.error("Payment status check failed:", err);
           consecutiveErrors++;
 
           if (consecutiveErrors < 5) {
             setStatusMessage(
-              "Reconnecting to the payment service. Your order is being retained."
+              "Reconnecting to the payment service. Your order is retained."
             );
             continue;
           }
 
-          setError(
-            "We couldn't verify your payment because the payment service is unavailable. Your cart has been retained. Please try checking again."
-          );
           setStatusMessage("");
+          setError(
+            "We couldn't verify your payment. Your order has been retained. Please check again."
+          );
           return;
         }
 
@@ -845,24 +713,20 @@ function Checkout() {
           payment.transaction_status || ""
         ).toLowerCase();
 
-        // Success requires the backend to report both statuses as paid.
         if (
           paymentStatus === "paid" &&
           transactionStatus === "paid"
         ) {
-          const confirmedOrder = {
-            ...order,
-            payment_status: "paid",
-          };
-
-          setStatusMessage("Payment confirmed successfully!");
           clearCart();
           setPendingOrder(null);
 
           navigate("/order-confirmation", {
             replace: true,
             state: {
-              order: confirmedOrder,
+              order: {
+                ...order,
+                payment_status: "paid",
+              },
               payment: {
                 method: "mpesa",
                 status: "paid",
@@ -884,14 +748,14 @@ function Checkout() {
           setStatusMessage("");
           setError(
             payment.message ||
-              "M-Pesa payment failed. Your cart has been retained. You can retry payment for the same order."
+              "M-Pesa payment failed. Your cart has been retained. You can retry payment."
           );
           return;
         }
 
         if (transactionStatus === "not_initiated") {
           setStatusMessage(
-            "No active payment request was found. You can retry payment for this order."
+            "No active payment request was found. You can retry payment."
           );
           return;
         }
@@ -903,7 +767,7 @@ function Checkout() {
 
       setStatusMessage("");
       setError(
-        "Payment confirmation is taking longer than expected. Do not place another order. Your cart has been retained; check your M-Pesa messages and try checking payment again."
+        "Payment confirmation is taking longer than expected. Do not place another order. Your cart has been retained."
       );
     } finally {
       pollingRef.current = false;
@@ -911,12 +775,9 @@ function Checkout() {
     }
   };
 
-  // Initiate M-Pesa for an existing order.
   const initiateMpesaPayment = async (order) => {
     if (!order?.id) {
-      setError(
-        "The order ID is missing. Please contact support before retrying."
-      );
+      setError("The order ID is missing. Please contact support.");
       return;
     }
 
@@ -925,19 +786,15 @@ function Checkout() {
       setError("");
       setStatusMessage("Connecting to M-Pesa...");
 
-      const response = await api.post("/payments/stk-push", {
+      await api.post("/payments/stk-push", {
         order_id: order.id,
         phone: formData.phone.trim(),
       });
-
-      console.log("M-Pesa STK Push initiated:", response.data);
 
       setStatusMessage(
         "Payment prompt requested. Check your phone and enter your M-Pesa PIN."
       );
     } catch (err) {
-      console.error("M-Pesa payment initiation response:", err);
-
       const status = err.response?.status;
       const data = err.response?.data || {};
 
@@ -946,12 +803,12 @@ function Checkout() {
         String(data.payment_status || "").toLowerCase() === "pending"
       ) {
         setStatusMessage(
-          "An M-Pesa payment request may already be active. Checking its status..."
+          "A payment request may already be active. Checking its status..."
         );
       } else {
         setStatusMessage("");
         setError(
-          `${data.error || data.message || "Could not initiate M-Pesa payment."} Your order has been retained. You can retry using the same order.`
+          `${data.error || data.message || "Could not initiate M-Pesa payment."} Your order has been retained.`
         );
         return;
       }
@@ -962,25 +819,14 @@ function Checkout() {
     await waitForPaymentConfirmation(order);
   };
 
-  const resumePaymentCheck = async () => {
-    if (!pendingOrder || submitting) {
-      return;
-    }
-
-    await waitForPaymentConfirmation(pendingOrder);
-  };
-
-  // Submit checkout.
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError("");
     setStatusMessage("");
 
-    if (submitting || pollingRef.current) {
-      return;
-    }
+    if (submitting || pollingRef.current) return;
 
-    if (cartItems.length === 0 && !pendingOrder) {
+    if (!pendingOrder && cartItems.length === 0) {
       setError("Your cart is empty.");
       return;
     }
@@ -999,7 +845,6 @@ function Checkout() {
       return;
     }
 
-    // Do not create another order while an order awaits payment.
     if (pendingOrder) {
       await initiateMpesaPayment(pendingOrder);
       return;
@@ -1009,6 +854,7 @@ function Checkout() {
       setSubmitting(true);
 
       const orderData = {
+        business_slug: activeStoreSlug || null,
         customer: {
           id: loggedInCustomer?.id || null,
           name: formData.name.trim(),
@@ -1024,13 +870,18 @@ function Checkout() {
         notes: formData.notes.trim() || null,
         items: cartItems.map((item) => ({
           product_id: item.product_id || item.id,
-          quantity: item.quantity,
-          purchase_type: item.purchase_type || "unit",
+          quantity: Number(item.quantity || 1),
+          purchase_type: item.purchase_type || "whole",
           unit_price: Number(item.price || 0),
+          product_name: item.name || "",
+          unit: item.unit || null,
+          portions_per_unit:
+            item.purchase_type === "portion"
+              ? Number(item.portions_per_unit || 1)
+              : null,
         })),
       };
 
-      // Step 1: create the order.
       const orderResponse = await api.post("/orders", orderData);
       const order = orderResponse.data?.order;
 
@@ -1040,9 +891,6 @@ function Checkout() {
         );
       }
 
-      console.log("Order created:", order);
-
-      // Step 2a: M-Pesa payment.
       if (formData.paymentMethod === "mpesa") {
         setPendingOrder(order);
         setSubmitting(false);
@@ -1050,7 +898,6 @@ function Checkout() {
         return;
       }
 
-      // Step 2b: cash on pickup/delivery.
       clearCart();
 
       navigate("/order-confirmation", {
@@ -1068,13 +915,12 @@ function Checkout() {
     } catch (err) {
       console.error("Order creation failed:", err);
 
-      const message =
+      setError(
         err.response?.data?.message ||
-        err.response?.data?.error ||
-        err.message ||
-        "Could not place your order. Please try again.";
-
-      setError(message);
+          err.response?.data?.error ||
+          err.message ||
+          "Could not place your order. Please try again."
+      );
     } finally {
       setSubmitting(false);
     }
@@ -1084,39 +930,28 @@ function Checkout() {
 
   if (isEmpty) {
     return (
-      <div className="hm-checkout">
+      <main className="md-checkout">
         <style>{styles}</style>
 
-        <div className="hm-checkout-container">
-          <div className="hm-checkout-header">
-            <div className="hm-checkout-eyebrow">Almost there</div>
-            <h1 className="hm-checkout-title">Checkout</h1>
-            <p className="hm-checkout-subtitle">
-              Your order starts with your selection.
-            </p>
-          </div>
-
-          <section className="hm-checkout-empty">
-            <div className="hm-checkout-empty-icon" aria-hidden="true">
-              ♧
+        <div className="md-checkout-inner">
+          <section className="md-checkout-empty">
+            <div className="md-checkout-empty-icon">
+              <i className="bi bi-bag" />
             </div>
 
             <h2>Your cart is empty</h2>
 
             <p>
-              Add a few products to your cart before proceeding to checkout.
-              Your next selection is just around the corner.
+              Add products from this store before proceeding to checkout.
             </p>
 
-            <Link
-              to="/products"
-              className="hm-checkout-empty-link"
-            >
-              Browse the collection <span aria-hidden="true">→</span>
+            <Link to={storePath} className="md-checkout-empty-link">
+              <i className="bi bi-shop" />
+              Browse this store
             </Link>
           </section>
         </div>
-      </div>
+      </main>
     );
   }
 
@@ -1125,139 +960,115 @@ function Checkout() {
   ) || 0;
 
   return (
-    <div className="hm-checkout">
+    <main className="md-checkout">
       <style>{styles}</style>
 
-      <div className="hm-checkout-container">
-        <header className="hm-checkout-header">
-          <div className="hm-checkout-eyebrow">
-            MyDuka
+      <div className="md-checkout-inner">
+        <header className="md-checkout-header">
+          <div className="md-checkout-eyebrow">
+            <i className="bi bi-shield-check" />
+            Secure checkout
           </div>
 
-          <h1 className="hm-checkout-title">
-            Complete your order
-          </h1>
+          <h1 className="md-checkout-title">Complete your order</h1>
 
-          <p className="hm-checkout-subtitle">
-            Just a few details and you're all set. Review your order,
-            choose how to receive it, and select your payment method.
+          <p className="md-checkout-subtitle">
+            Confirm your details, choose how to receive your order and select
+            your preferred payment method.
           </p>
 
-          <div className="hm-checkout-steps" aria-label="Checkout progress">
-            <div className="hm-checkout-step">
-              <span className="hm-checkout-step-number">1</span>
-              <span>Cart</span>
+          {activeStoreSlug && (
+            <Link to={storePath} className="md-checkout-store">
+              <i className="bi bi-shop" />
+              Ordering from {storeName}
+            </Link>
+          )}
+
+          <div className="md-checkout-steps">
+            <div className="md-checkout-step">
+              <span className="md-checkout-step-number">1</span>
+              Cart
             </div>
 
-            <span className="hm-checkout-step-line" aria-hidden="true" />
+            <span className="md-checkout-step-line" />
 
-            <div className="hm-checkout-step hm-checkout-step-active">
-              <span className="hm-checkout-step-number">2</span>
-              <span>Checkout</span>
+            <div className="md-checkout-step md-checkout-step-active">
+              <span className="md-checkout-step-number">2</span>
+              Checkout
             </div>
 
-            <span className="hm-checkout-step-line" aria-hidden="true" />
+            <span className="md-checkout-step-line" />
 
-            <div className="hm-checkout-step">
-              <span className="hm-checkout-step-number">3</span>
-              <span>Confirmation</span>
+            <div className="md-checkout-step">
+              <span className="md-checkout-step-number">3</span>
+              Confirmation
             </div>
           </div>
         </header>
 
         {error && (
-          <div
-            className="hm-checkout-alert hm-checkout-alert-error"
-            role="alert"
-          >
-            <span className="hm-checkout-alert-icon" aria-hidden="true">
-              !
-            </span>
+          <div className="md-checkout-alert md-checkout-alert-error" role="alert">
+            <i className="bi bi-exclamation-circle" />
             <div>{error}</div>
           </div>
         )}
 
         {statusMessage && (
           <div
-            className="hm-checkout-alert hm-checkout-alert-info"
+            className="md-checkout-alert md-checkout-alert-info"
             role="status"
             aria-live="polite"
           >
-            {submitting ? (
-              <span
-                className="hm-checkout-spinner"
-                aria-hidden="true"
-              />
-            ) : (
-              <span className="hm-checkout-alert-icon" aria-hidden="true">
-                ◈
-              </span>
-            )}
-
+            {submitting && <span className="md-checkout-spinner" />}
             <div>{statusMessage}</div>
           </div>
         )}
 
         {pendingOrder && (
-          <div className="hm-checkout-alert hm-checkout-alert-warning">
-            <span className="hm-checkout-alert-icon" aria-hidden="true">
-              !
-            </span>
-
+          <div className="md-checkout-alert md-checkout-alert-warning">
+            <i className="bi bi-clock-history" />
             <div>
-              <strong>Order created — payment not yet confirmed</strong>
-
+              <strong>Order created — payment not yet confirmed.</strong>
               <p>
-                Order number:{" "}
-                <strong>
-                  {pendingOrder.order_number || pendingOrder.id}
-                </strong>
+                Order number: {pendingOrder.order_number || pendingOrder.id}
               </p>
-
               <p>
-                We're retaining this order while we check payment. Please
-                don't create another order for the same purchase.
+                Your order is being retained. Please don't create another
+                order for the same purchase.
               </p>
             </div>
           </div>
         )}
 
         <form onSubmit={handleSubmit}>
-          <div className="hm-checkout-layout">
+          <div className="md-checkout-layout">
             <div>
-              {/* Customer details */}
-              <section className="hm-checkout-section">
-                <div className="hm-checkout-section-header">
-                  <div className="hm-checkout-section-icon" aria-hidden="true">
-                    ♙
+              <section className="md-checkout-section">
+                <div className="md-checkout-section-header">
+                  <div className="md-checkout-section-icon">
+                    <i className="bi bi-person" />
                   </div>
-
                   <div>
-                    <h2 className="hm-checkout-section-title">
+                    <h2 className="md-checkout-section-title">
                       Customer details
                     </h2>
-                    <p className="hm-checkout-section-description">
-                      Tell us who we're preparing this order for.
+                    <p className="md-checkout-section-description">
+                      Who should we prepare this order for?
                     </p>
                   </div>
                 </div>
 
-                <div className="hm-checkout-section-body">
-                  <div className="hm-checkout-field">
-                    <label
-                      className="hm-checkout-label"
-                      htmlFor="customer-name"
-                    >
+                <div className="md-checkout-section-body">
+                  <div className="md-checkout-field">
+                    <label className="md-checkout-label" htmlFor="checkout-name">
                       Full name
                     </label>
-
                     <input
-                      id="customer-name"
-                      type="text"
+                      id="checkout-name"
                       name="name"
-                      className="hm-checkout-input"
-                      placeholder="Enter your full name"
+                      className="md-checkout-input"
                       autoComplete="name"
+                      placeholder="Enter your full name"
                       value={formData.name}
                       onChange={handleChange}
                       required
@@ -1265,51 +1076,39 @@ function Checkout() {
                     />
                   </div>
 
-                  <div className="hm-checkout-field">
-                    <label
-                      className="hm-checkout-label"
-                      htmlFor="customer-phone"
-                    >
-                      M-Pesa / contact phone number
+                  <div className="md-checkout-field">
+                    <label className="md-checkout-label" htmlFor="checkout-phone">
+                      Contact / M-Pesa phone number
                     </label>
-
                     <input
-                      id="customer-phone"
-                      type="tel"
+                      id="checkout-phone"
                       name="phone"
-                      className="hm-checkout-input"
-                      placeholder="07XXXXXXXX"
+                      type="tel"
+                      className="md-checkout-input"
                       autoComplete="tel"
+                      placeholder="07XXXXXXXX"
                       value={formData.phone}
                       onChange={handleChange}
                       required
                       disabled={submitting}
                     />
-
-                    <p className="hm-checkout-help">
-                      For M-Pesa, use the number that should receive the
-                      payment prompt.
+                    <p className="md-checkout-help">
+                      Use the number that should receive the M-Pesa payment
+                      prompt.
                     </p>
                   </div>
 
-                  <div className="hm-checkout-field">
-                    <label
-                      className="hm-checkout-label"
-                      htmlFor="customer-email"
-                    >
-                      Email address{" "}
-                      <span className="hm-checkout-optional">
-                        (optional)
-                      </span>
+                  <div className="md-checkout-field">
+                    <label className="md-checkout-label" htmlFor="checkout-email">
+                      Email address <span className="md-checkout-optional">(optional)</span>
                     </label>
-
                     <input
-                      id="customer-email"
-                      type="email"
+                      id="checkout-email"
                       name="email"
-                      className="hm-checkout-input"
-                      placeholder="you@example.com"
+                      type="email"
+                      className="md-checkout-input"
                       autoComplete="email"
+                      placeholder="you@example.com"
                       value={formData.email}
                       onChange={handleChange}
                       disabled={!!pendingOrder || submitting}
@@ -1318,29 +1117,27 @@ function Checkout() {
                 </div>
               </section>
 
-              {/* Fulfilment */}
-              <section className="hm-checkout-section">
-                <div className="hm-checkout-section-header">
-                  <div className="hm-checkout-section-icon" aria-hidden="true">
-                    ⇄
+              <section className="md-checkout-section">
+                <div className="md-checkout-section-header">
+                  <div className="md-checkout-section-icon">
+                    <i className="bi bi-truck" />
                   </div>
-
                   <div>
-                    <h2 className="hm-checkout-section-title">
-                      How would you like to receive your order?
+                    <h2 className="md-checkout-section-title">
+                      Order fulfilment
                     </h2>
-                    <p className="hm-checkout-section-description">
+                    <p className="md-checkout-section-description">
                       Choose pickup or delivery.
                     </p>
                   </div>
                 </div>
 
-                <div className="hm-checkout-section-body">
-                  <div className="hm-checkout-options">
+                <div className="md-checkout-section-body">
+                  <div className="md-checkout-options">
                     <label
-                      className={`hm-checkout-option ${
+                      className={`md-checkout-option ${
                         formData.orderType === "pickup"
-                          ? "hm-checkout-option-selected"
+                          ? "md-checkout-option-selected"
                           : ""
                       }`}
                     >
@@ -1352,21 +1149,18 @@ function Checkout() {
                         onChange={handleChange}
                         disabled={!!pendingOrder || submitting}
                       />
-
-                      <span className="hm-checkout-option-content">
-                        <span className="hm-checkout-option-title">
-                          Pickup
-                        </span>
-                        <span className="hm-checkout-option-description">
-                          Collect your order in person.
+                      <span className="md-checkout-option-content">
+                        <span className="md-checkout-option-title">Pickup</span>
+                        <span className="md-checkout-option-description">
+                          Collect your order from the business.
                         </span>
                       </span>
                     </label>
 
                     <label
-                      className={`hm-checkout-option ${
+                      className={`md-checkout-option ${
                         formData.orderType === "delivery"
-                          ? "hm-checkout-option-selected"
+                          ? "md-checkout-option-selected"
                           : ""
                       }`}
                     >
@@ -1378,32 +1172,28 @@ function Checkout() {
                         onChange={handleChange}
                         disabled={!!pendingOrder || submitting}
                       />
-
-                      <span className="hm-checkout-option-content">
-                        <span className="hm-checkout-option-title">
-                          Delivery
-                        </span>
-                        <span className="hm-checkout-option-description">
-                          Have your order delivered to you.
+                      <span className="md-checkout-option-content">
+                        <span className="md-checkout-option-title">Delivery</span>
+                        <span className="md-checkout-option-description">
+                          Have your order delivered to your location.
                         </span>
                       </span>
                     </label>
                   </div>
 
                   {formData.orderType === "delivery" && (
-                    <div className="hm-checkout-field" style={{ marginTop: 22 }}>
+                    <div className="md-checkout-field" style={{ marginTop: 20 }}>
                       <label
-                        className="hm-checkout-label"
-                        htmlFor="delivery-location"
+                        className="md-checkout-label"
+                        htmlFor="checkout-location"
                       >
                         Delivery location
                       </label>
-
                       <textarea
-                        id="delivery-location"
+                        id="checkout-location"
                         name="location"
-                        className="hm-checkout-textarea"
-                        placeholder="Enter your area, estate, building, or other delivery directions..."
+                        className="md-checkout-textarea"
+                        placeholder="Enter your area, estate, building and delivery directions..."
                         value={formData.location}
                         onChange={handleChange}
                         required
@@ -1414,45 +1204,30 @@ function Checkout() {
                 </div>
               </section>
 
-              {/* Payment method */}
-              <section className="hm-checkout-section">
-                <div className="hm-checkout-section-header">
-                  <div className="hm-checkout-section-icon" aria-hidden="true">
-                    ◈
+              <section className="md-checkout-section">
+                <div className="md-checkout-section-header">
+                  <div className="md-checkout-section-icon">
+                    <i className="bi bi-wallet2" />
                   </div>
-
                   <div>
-                    <h2 className="hm-checkout-section-title">
+                    <h2 className="md-checkout-section-title">
                       Payment method
                     </h2>
-                    <p className="hm-checkout-section-description">
-                      Choose how you want to pay for your order.
+                    <p className="md-checkout-section-description">
+                      Choose how you want to pay.
                     </p>
                   </div>
                 </div>
 
-                <div className="hm-checkout-section-body">
-                  <div className="hm-checkout-options">
+                <div className="md-checkout-section-body">
+                  <div className="md-checkout-options">
                     <label
-                      className={`hm-checkout-option ${
+                      className={`md-checkout-option ${
                         formData.paymentMethod === "mpesa"
-                          ? "hm-checkout-option-selected"
+                          ? "md-checkout-option-selected"
                           : ""
                       }`}
                     >
-                      <span className="hm-checkout-option-icon" aria-hidden="true">
-                        M
-                      </span>
-
-                      <span className="hm-checkout-option-content">
-                        <span className="hm-checkout-option-title">
-                          M-Pesa
-                        </span>
-                        <span className="hm-checkout-option-description">
-                          Receive a payment prompt on your phone.
-                        </span>
-                      </span>
-
                       <input
                         type="radio"
                         name="paymentMethod"
@@ -1461,28 +1236,21 @@ function Checkout() {
                         onChange={handleChange}
                         disabled={!!pendingOrder || submitting}
                       />
+                      <span className="md-checkout-option-content">
+                        <span className="md-checkout-option-title">M-Pesa</span>
+                        <span className="md-checkout-option-description">
+                          Receive a payment prompt on your phone.
+                        </span>
+                      </span>
                     </label>
 
                     <label
-                      className={`hm-checkout-option ${
+                      className={`md-checkout-option ${
                         formData.paymentMethod === "cash"
-                          ? "hm-checkout-option-selected"
+                          ? "md-checkout-option-selected"
                           : ""
                       }`}
                     >
-                      <span className="hm-checkout-option-icon" aria-hidden="true">
-                        KSh
-                      </span>
-
-                      <span className="hm-checkout-option-content">
-                        <span className="hm-checkout-option-title">
-                          Pay on receipt
-                        </span>
-                        <span className="hm-checkout-option-description">
-                          Pay when collecting or receiving your order.
-                        </span>
-                      </span>
-
                       <input
                         type="radio"
                         name="paymentMethod"
@@ -1491,33 +1259,38 @@ function Checkout() {
                         onChange={handleChange}
                         disabled={!!pendingOrder || submitting}
                       />
+                      <span className="md-checkout-option-content">
+                        <span className="md-checkout-option-title">
+                          Pay on receipt
+                        </span>
+                        <span className="md-checkout-option-description">
+                          Pay when collecting or receiving your order.
+                        </span>
+                      </span>
                     </label>
                   </div>
                 </div>
               </section>
 
-              {/* Order notes */}
-              <section className="hm-checkout-section">
-                <div className="hm-checkout-section-header">
-                  <div className="hm-checkout-section-icon" aria-hidden="true">
-                    ✎
+              <section className="md-checkout-section">
+                <div className="md-checkout-section-header">
+                  <div className="md-checkout-section-icon">
+                    <i className="bi bi-chat-left-text" />
                   </div>
-
                   <div>
-                    <h2 className="hm-checkout-section-title">
+                    <h2 className="md-checkout-section-title">
                       Order notes
                     </h2>
-                    <p className="hm-checkout-section-description">
-                      Add any extra information about your order.
+                    <p className="md-checkout-section-description">
+                      Add any additional instructions.
                     </p>
                   </div>
                 </div>
 
-                <div className="hm-checkout-section-body">
+                <div className="md-checkout-section-body">
                   <textarea
                     name="notes"
-                    className="hm-checkout-textarea"
-                    rows="3"
+                    className="md-checkout-textarea"
                     placeholder="Additional instructions (optional)"
                     value={formData.notes}
                     onChange={handleChange}
@@ -1527,57 +1300,56 @@ function Checkout() {
               </section>
             </div>
 
-            {/* Order summary */}
-            <aside
-              className="hm-checkout-summary"
-              aria-label="Order summary"
-            >
-              <div className="hm-checkout-summary-header">
-                <h2 className="hm-checkout-summary-title">
+            <aside className="md-checkout-summary">
+              <div className="md-checkout-summary-header">
+                <h2 className="md-checkout-summary-title">
                   Order summary
                 </h2>
-
-                <p className="hm-checkout-summary-subtitle">
+                <p className="md-checkout-summary-subtitle">
                   {pendingOrder
                     ? "Payment details for your existing order."
-                    : "A final look at what's in your selection."}
+                    : `Your order from ${storeName}.`}
                 </p>
               </div>
 
-              <div className="hm-checkout-summary-body">
+              <div className="md-checkout-summary-body">
                 {pendingOrder ? (
                   <>
-                    <div className="hm-checkout-summary-row">
+                    <div className="md-checkout-summary-row">
                       <span>Order number</span>
                       <strong>
                         {pendingOrder.order_number || pendingOrder.id}
                       </strong>
                     </div>
-
-                    <div className="hm-checkout-summary-row">
+                    <div className="md-checkout-summary-row">
                       <span>Payment status</span>
-                      <strong style={{ color: "#e8c77f" }}>
-                        Not confirmed
-                      </strong>
+                      <strong>Not confirmed</strong>
                     </div>
                   </>
                 ) : (
-                  <div className="hm-checkout-products">
-                    {cartItems.map((item) => (
-                      <div className="hm-checkout-product" key={item.id}>
+                  <div className="md-checkout-products">
+                    {cartItems.map((item, index) => (
+                      <div
+                        className="md-checkout-product"
+                        key={`${item.id}-${item.purchase_type || "whole"}-${index}`}
+                      >
                         <div>
-                          <h3 className="hm-checkout-product-name">
+                          <h3 className="md-checkout-product-name">
                             {item.name}
                           </h3>
-
-                          <div className="hm-checkout-product-meta">
-                            {item.quantity} × {formatPrice(item.price)}
+                          <div className="md-checkout-product-meta">
+                            {item.purchase_type === "portion"
+                              ? "Portion"
+                              : "Whole unit"}
+                            {" · "}
+                            {item.quantity} × {formatPrice(item.price, currency)}
                           </div>
                         </div>
-
-                        <div className="hm-checkout-product-price">
+                        <div className="md-checkout-product-price">
                           {formatPrice(
-                            Number(item.price) * Number(item.quantity)
+                            Number(item.price || 0) *
+                              Number(item.quantity || 0),
+                            currency
                           )}
                         </div>
                       </div>
@@ -1585,92 +1357,72 @@ function Checkout() {
                   </div>
                 )}
 
-                <hr className="hm-checkout-divider" />
+                <hr className="md-checkout-divider" />
 
-                <div className="hm-checkout-summary-row">
+                <div className="md-checkout-summary-row">
                   <span>Subtotal</span>
-                  <strong>{formatPrice(displayedTotal)}</strong>
+                  <strong>{formatPrice(displayedTotal, currency)}</strong>
                 </div>
 
-                <div className="hm-checkout-summary-row">
+                <div className="md-checkout-summary-row">
                   <span>Delivery</span>
-                  <span style={{ textAlign: "right" }}>
-                    To be confirmed
-                  </span>
+                  <span>To be confirmed</span>
                 </div>
 
-                <hr className="hm-checkout-divider" />
+                <hr className="md-checkout-divider" />
 
-                <div className="hm-checkout-total-row">
-                  <span className="hm-checkout-total-label">Total</span>
-                  <span className="hm-checkout-total-value">
-                    {formatPrice(displayedTotal)}
+                <div className="md-checkout-total">
+                  <span className="md-checkout-total-label">Total</span>
+                  <span className="md-checkout-total-value">
+                    {formatPrice(displayedTotal, currency)}
                   </span>
                 </div>
 
                 <button
                   type="submit"
-                  className="hm-checkout-submit"
+                  className="md-checkout-submit"
                   disabled={submitting}
                 >
                   {submitting ? (
                     <>
-                      <span
-                        className="hm-checkout-spinner"
-                        aria-hidden="true"
-                      />
-                      {pendingOrder
-                        ? "Checking payment..."
-                        : "Processing order..."}
+                      <span className="md-checkout-spinner" />
+                      Processing...
                     </>
                   ) : pendingOrder ? (
-                    <>
-                      Retry M-Pesa payment
-                      <span aria-hidden="true">→</span>
-                    </>
+                    "Retry M-Pesa payment"
                   ) : formData.paymentMethod === "mpesa" ? (
-                    <>
-                      Place order & pay
-                      <span aria-hidden="true">→</span>
-                    </>
+                    "Place order & pay"
                   ) : (
-                    <>
-                      Place order
-                      <span aria-hidden="true">→</span>
-                    </>
+                    "Place order"
                   )}
+                  {!submitting && <i className="bi bi-arrow-right" />}
                 </button>
 
                 {pendingOrder && (
                   <button
                     type="button"
-                    className="hm-checkout-secondary-button"
-                    onClick={resumePaymentCheck}
+                    className="md-checkout-secondary"
+                    onClick={() => waitForPaymentConfirmation(pendingOrder)}
                     disabled={submitting}
                   >
-                    ↻ Check payment status
+                    <i className="bi bi-arrow-clockwise" />
+                    Check payment status
                   </button>
                 )}
 
                 {!pendingOrder && (
-                  <Link
-                    to="/cart"
-                    className="hm-checkout-secondary-button"
-                  >
-                    <span aria-hidden="true">←</span>
+                  <Link to="/cart" className="md-checkout-secondary">
+                    <i className="bi bi-arrow-left" />
                     Back to cart
                   </Link>
                 )}
 
-                <div className="hm-checkout-secure-note">
-                  <span className="hm-checkout-secure-icon" aria-hidden="true">
-                    ◈
-                  </span>
-
+                <div className="md-checkout-secure">
+                  <i className="bi bi-shield-lock" />
                   <span>
-                    Your M-Pesa order is not marked as paid until the backend
-                    confirms the payment. If confirmation takes time, keep
-                    your order number and check the payment status again.
+                    M-Pesa orders are only marked as paid after payment
+                    confirmation. Keep your order number if confirmation
+                    takes longer than expected.
                   </span>
                 </div>
               </div>
@@ -1678,9 +1430,6 @@ function Checkout() {
           </div>
         </form>
       </div>
-    </div>
+    </main>
   );
 }
-
-export default Checkout;
-
