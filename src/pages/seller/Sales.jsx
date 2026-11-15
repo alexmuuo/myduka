@@ -1,30 +1,20 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import React, { useMemo, useState } from "react";
 
-import api from "../../api/api";
+const INITIAL_SALES = [];
 
-const PAGE_SIZE = 10;
-
-const formatCurrency = (value) =>
-  Number(value || 0).toLocaleString("en-KE", {
+const money = (value) =>
+  new Intl.NumberFormat("en-KE", {
     style: "currency",
     currency: "KES",
-    minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  });
+  }).format(Number(value || 0));
 
-const formatDate = (value) => {
+const dateTime = (value) => {
   if (!value) return "—";
 
   const date = new Date(value);
 
-  if (Number.isNaN(date.getTime())) {
-    return "—";
-  }
+  if (Number.isNaN(date.getTime())) return value;
 
   return date.toLocaleString("en-KE", {
     dateStyle: "medium",
@@ -32,1307 +22,1368 @@ const formatDate = (value) => {
   });
 };
 
-const normalizeStatus = (value) =>
-  String(value || "unknown")
-    .trim()
-    .toLowerCase()
-    .replace(/-/g, "_")
-    .replace(/\s+/g, "_");
+const dateOnly = (value) => {
+  if (!value) return "";
 
-const titleCase = (value) =>
-  String(value || "Unknown")
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+  const date = new Date(value);
 
-const getStatusClass = (status) => {
-  const value = normalizeStatus(status);
+  if (Number.isNaN(date.getTime())) return "";
 
-  if (
-    [
-      "paid",
-      "completed",
-      "confirmed",
-      "successful",
-      "success",
-    ].includes(value)
-  ) {
-    return "bg-success-subtle text-success";
-  }
-
-  if (
-    [
-      "pending",
-      "unpaid",
-      "processing",
-      "awaiting_payment",
-    ].includes(value)
-  ) {
-    return "bg-warning-subtle text-warning-emphasis";
-  }
-
-  if (
-    [
-      "failed",
-      "cancelled",
-      "canceled",
-      "rejected",
-    ].includes(value)
-  ) {
-    return "bg-danger-subtle text-danger";
-  }
-
-  return "bg-secondary-subtle text-secondary";
+  return date.toISOString().slice(0, 10);
 };
 
-const getPaymentLabel = (method) => {
-  const value = String(method || "unknown")
-    .trim()
-    .toLowerCase();
+const escapeCSV = (value) =>
+  `"${String(value ?? "").replace(/"/g, '""')}"`;
 
-  if (["mpesa", "m-pesa", "m_pesa"].includes(value)) {
-    return "M-Pesa";
-  }
+function Icon({ name, size = 18 }) {
+  const common = {
+    width: size,
+    height: size,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.8,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    "aria-hidden": true,
+  };
 
-  if (value === "cash") {
-    return "Cash";
-  }
+  const paths = {
+    search: (
+      <>
+        <circle cx="11" cy="11" r="7" />
+        <path d="m20 20-4-4" />
+      </>
+    ),
+    download: (
+      <>
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+        <path d="m7 10 5 5 5-5" />
+        <path d="M12 15V3" />
+      </>
+    ),
+    calendar: (
+      <>
+        <rect x="3" y="5" width="18" height="16" rx="2" />
+        <path d="M16 3v4M8 3v4M3 10h18" />
+      </>
+    ),
+    receipt: (
+      <>
+        <path d="M4 3h16v18l-3-2-3 2-2-2-3 2-2-2-3 2z" />
+        <path d="M8 8h8M8 12h8M8 16h4" />
+      </>
+    ),
+    wallet: (
+      <>
+        <rect x="3" y="5" width="18" height="15" rx="2" />
+        <path d="M3 9h18" />
+        <path d="M16 14h2" />
+      </>
+    ),
+    chart: (
+      <>
+        <path d="M3 3v18h18" />
+        <path d="m7 14 4-4 4 3 6-7" />
+      </>
+    ),
+    eye: (
+      <>
+        <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
+        <circle cx="12" cy="12" r="3" />
+      </>
+    ),
+    close: (
+      <>
+        <path d="m18 6-12 12M6 6l12 12" />
+      </>
+    ),
+    filter: (
+      <>
+        <path d="M4 6h16M7 12h10M10 18h4" />
+      </>
+    ),
+    refresh: (
+      <>
+        <path d="M20 7v5h-5" />
+        <path d="M4 17v-5h5" />
+        <path d="M5.5 9A7 7 0 0 1 18 6l2 6" />
+        <path d="M18.5 15A7 7 0 0 1 6 18l-2-6" />
+      </>
+    ),
+  };
 
-  if (value === "card") {
-    return "Card";
-  }
-
-  return titleCase(value);
-};
-
-const getOrderCustomerName = (order) => {
-  const customer = order?.customer;
-
-  if (!customer) {
-    return "Website customer";
-  }
-
-  return (
-    customer.full_name ||
-    customer.name ||
-    customer.username ||
-    customer.email ||
-    "Website customer"
-  );
-};
-
-const getPosCashierName = (sale) =>
-  sale?.cashier_name ||
-  sale?.cashier?.username ||
-  sale?.cashier?.name ||
-  (sale?.cashier_id
-    ? `Cashier #${sale.cashier_id}`
-    : "Unknown cashier");
-
-const getPosBranchName = (sale) =>
-  sale?.branch_name ||
-  sale?.branch?.name ||
-  (sale?.branch_id
-    ? `Branch #${sale.branch_id}`
-    : "Unknown branch");
-
-const getOrderNumber = (order) =>
-  order?.order_number || `ORDER-${order?.id ?? "UNKNOWN"}`;
-
-const getSaleNumber = (sale) =>
-  sale?.sale_number || `POS-${sale?.id ?? "UNKNOWN"}`;
+  return <svg {...common}>{paths[name] || null}</svg>;
+}
 
 function StatusBadge({ status }) {
+  const normalized = String(status || "unknown").toLowerCase();
+
+  const labels = {
+    paid: "Paid",
+    pending: "Pending",
+    partially_paid: "Partially paid",
+    refunded: "Refunded",
+    completed: "Completed",
+    processing: "Processing",
+    cancelled: "Cancelled",
+  };
+
   return (
-    <span
-      className={`badge rounded-pill px-3 py-2 ${getStatusClass(
-        status
-      )}`}
-    >
-      {titleCase(status)}
+    <span className={`md-sales-status md-sales-status-${normalized}`}>
+      <span className="md-sales-status-dot" />
+      {labels[normalized] || normalized.replaceAll("_", " ")}
     </span>
   );
 }
 
-function SummaryCard({
-  title,
-  value,
-  description,
-  color = "dark",
-}) {
+function ChannelBadge({ channel }) {
+  const normalized = String(channel || "").toLowerCase();
+
   return (
-    <div className="col-12 col-sm-6 col-xl-3">
-      <div className="card border-0 shadow-sm h-100">
-        <div className="card-body">
-          <p className="text-secondary small mb-2">
-            {title}
-          </p>
-
-          <h3 className={`fw-bold text-${color} mb-1`}>
-            {value}
-          </h3>
-
-          <small className="text-secondary">
-            {description}
-          </small>
-        </div>
-      </div>
-    </div>
+    <span className={`md-sales-channel md-sales-channel-${normalized}`}>
+      {normalized === "pos" ? "POS" : normalized === "online" ? "Online" : channel || "—"}
+    </span>
   );
 }
 
-function Sales() {
-  // ==========================================================
-  // VIEW STATE
-  // ==========================================================
-
-  const [activeView, setActiveView] = useState("orders");
-
-  // ==========================================================
-  // SEPARATE DATA SOURCES
-  // ==========================================================
-
-  const [orders, setOrders] = useState([]);
-  const [posSales, setPosSales] = useState([]);
-
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState("");
-
-  // ==========================================================
-  // FILTERS
-  // ==========================================================
+export default function Sales() {
+  const [sales] = useState(INITIAL_SALES);
 
   const [search, setSearch] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [channelFilter, setChannelFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [branchFilter, setBranchFilter] = useState("all");
+  const [selectedSale, setSelectedSale] = useState(null);
+  const [showFilters, setShowFilters] = useState(false);
 
-  const [currentPage, setCurrentPage] = useState(1);
-
-  // ==========================================================
-  // DETAILS MODAL
-  // ==========================================================
-
-  const [selectedTransaction, setSelectedTransaction] =
-    useState(null);
-
-  // ==========================================================
-  // FETCH WEBSITE ORDERS ONLY
-  // ==========================================================
-
-  const fetchOrders = useCallback(async () => {
-    const response = await api.get("/admin/orders");
-
-    const data = response.data;
-
-    const orderList = Array.isArray(data)
-      ? data
-      : Array.isArray(data?.orders)
-      ? data.orders
-      : Array.isArray(data?.items)
-      ? data.items
-      : null;
-
-    if (!orderList) {
-      throw new Error(
-        "The orders API returned an unexpected response."
-      );
-    }
-
-    setOrders(orderList);
-  }, []);
-
-  // ==========================================================
-  // FETCH POS SALES ONLY
-  // ==========================================================
-
-  const fetchPosSales = useCallback(async () => {
-    const response = await api.get("/admin/pos-sales");
-
-    const data = response.data;
-
-    const salesList = Array.isArray(data)
-      ? data
-      : Array.isArray(data?.sales)
-      ? data.sales
-      : Array.isArray(data?.items)
-      ? data.items
-      : null;
-
-    if (!salesList) {
-      throw new Error(
-        "The POS sales API returned an unexpected response."
-      );
-    }
-
-    setPosSales(salesList);
-  }, []);
-
-  // ==========================================================
-  // FETCH THE ACTIVE VIEW
-  // ==========================================================
-
-  const fetchTransactions = useCallback(
-    async (showRefresh = false, view = activeView) => {
-      try {
-        if (showRefresh) {
-          setRefreshing(true);
-        } else {
-          setLoading(true);
-        }
-
-        setError("");
-
-        if (view === "orders") {
-          await fetchOrders();
-        } else {
-          await fetchPosSales();
-        }
-      } catch (err) {
-        setError(
-          err.response?.data?.message ||
-            err.response?.data?.error ||
-            err.message ||
-            "Unable to load transactions."
-        );
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
-      }
-    },
-    [activeView, fetchOrders, fetchPosSales]
-  );
-
-  useEffect(() => {
-    fetchTransactions(false, activeView);
-  }, [activeView, fetchTransactions]);
-
-  // ==========================================================
-  // RESET FILTERS WHEN CHANGING VIEWS
-  // ==========================================================
-
-  const changeView = (view) => {
-    if (view === activeView) {
-      return;
-    }
-
-    setActiveView(view);
-
-    setSearch("");
-    setPaymentFilter("all");
-    setStatusFilter("all");
-    setDateFrom("");
-    setDateTo("");
-    setBranchFilter("all");
-    setCurrentPage(1);
-    setSelectedTransaction(null);
-  };
-
-  // ==========================================================
-  // CURRENT DATASET
-  // ==========================================================
-
-  const transactions =
-    activeView === "orders" ? orders : posSales;
-
-  // ==========================================================
-  // BRANCH OPTIONS — POS SALES ONLY
-  // ==========================================================
-
-  const branches = useMemo(() => {
-    const branchMap = new Map();
-
-    posSales.forEach((sale) => {
-      if (sale.branch_id == null) {
-        return;
-      }
-
-      branchMap.set(
-        String(sale.branch_id),
-        getPosBranchName(sale)
-      );
-    });
-
-    return Array.from(branchMap.entries())
-      .map(([id, name]) => ({
-        id,
-        name,
-      }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [posSales]);
-
-  // ==========================================================
-  // FILTER TRANSACTIONS
-  // ==========================================================
-
-  const filteredTransactions = useMemo(() => {
-    const term = search.trim().toLowerCase();
-
-    return transactions.filter((transaction) => {
-      const isPosSale = activeView === "pos";
-
-      const reference = isPosSale
-        ? getSaleNumber(transaction)
-        : getOrderNumber(transaction);
-
-      const customerName = isPosSale
-        ? "walk-in customer"
-        : getOrderCustomerName(transaction).toLowerCase();
-
-      const cashierName = isPosSale
-        ? getPosCashierName(transaction).toLowerCase()
-        : "";
-
-      const branchName = isPosSale
-        ? getPosBranchName(transaction).toLowerCase()
-        : "";
-
-      const paymentMethod = String(
-        transaction.payment_method || ""
-      ).toLowerCase();
-
-      const paymentStatus = normalizeStatus(
-        transaction.payment_status
-      );
-
-      const transactionStatus = normalizeStatus(
-        transaction.status
-      );
+  const filteredSales = useMemo(() => {
+    return sales.filter((sale) => {
+      const searchValue = search.trim().toLowerCase();
 
       const matchesSearch =
-        !term ||
-        reference.toLowerCase().includes(term) ||
-        customerName.includes(term) ||
-        cashierName.includes(term) ||
-        branchName.includes(term) ||
-        paymentMethod.includes(term);
+        !searchValue ||
+        [
+          sale.sale_number,
+          sale.customer_name,
+          sale.customer_phone,
+          sale.branch_name,
+          sale.channel,
+          sale.payment_method,
+        ]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(searchValue));
 
       const matchesPayment =
         paymentFilter === "all" ||
-        paymentStatus === paymentFilter;
+        String(sale.payment_status || "").toLowerCase() === paymentFilter;
 
-      const matchesStatus =
-        statusFilter === "all" ||
-        transactionStatus === statusFilter;
+      const matchesChannel =
+        channelFilter === "all" ||
+        String(sale.channel || "").toLowerCase() === channelFilter;
 
-      const transactionDate = transaction.created_at
-        ? new Date(transaction.created_at)
-        : null;
+      const saleDate = dateOnly(sale.created_at);
 
-      let matchesFromDate = true;
-      let matchesToDate = true;
-
-      if (dateFrom) {
-        matchesFromDate =
-          transactionDate &&
-          !Number.isNaN(transactionDate.getTime()) &&
-          transactionDate >= new Date(`${dateFrom}T00:00:00`);
-      }
-
-      if (dateTo) {
-        matchesToDate =
-          transactionDate &&
-          !Number.isNaN(transactionDate.getTime()) &&
-          transactionDate <=
-            new Date(`${dateTo}T23:59:59.999`);
-      }
-
-      const matchesBranch =
-        !isPosSale ||
-        branchFilter === "all" ||
-        String(transaction.branch_id) === branchFilter;
+      const matchesFrom = !dateFrom || saleDate >= dateFrom;
+      const matchesTo = !dateTo || saleDate <= dateTo;
 
       return (
         matchesSearch &&
         matchesPayment &&
-        matchesStatus &&
-        matchesFromDate &&
-        matchesToDate &&
-        matchesBranch
+        matchesChannel &&
+        matchesFrom &&
+        matchesTo
       );
     });
-  }, [
-    transactions,
-    activeView,
-    search,
-    paymentFilter,
-    statusFilter,
-    dateFrom,
-    dateTo,
-    branchFilter,
-  ]);
+  }, [sales, search, paymentFilter, channelFilter, dateFrom, dateTo]);
 
-  // ==========================================================
-  // SUMMARY VALUES — ACTIVE VIEW ONLY
-  // ==========================================================
+  const summary = useMemo(() => {
+    const totalSales = filteredSales.length;
 
-  const paidTransactions = transactions.filter(
-    (transaction) =>
-      normalizeStatus(transaction.payment_status) === "paid" &&
-      !["cancelled", "canceled"].includes(
-        normalizeStatus(transaction.status)
-      )
-  );
+    const revenue = filteredSales.reduce(
+      (total, sale) => total + Number(sale.total_amount || 0),
+      0
+    );
 
-  const confirmedRevenue = paidTransactions.reduce(
-    (sum, transaction) =>
-      sum + Number(transaction.total || 0),
-    0
-  );
+    const paid = filteredSales.reduce(
+      (total, sale) =>
+        total +
+        (String(sale.payment_status).toLowerCase() === "paid"
+          ? Number(sale.total_amount || 0)
+          : Number(sale.amount_paid || 0)),
+      0
+    );
 
-  const pendingTransactions = transactions.filter(
-    (transaction) =>
-      ["pending", "unpaid"].includes(
-        normalizeStatus(transaction.payment_status)
-      ) &&
-      !["cancelled", "canceled"].includes(
-        normalizeStatus(transaction.status)
-      )
-  ).length;
+    const outstanding = filteredSales.reduce(
+      (total, sale) =>
+        total +
+        Math.max(
+          0,
+          Number(sale.total_amount || 0) - Number(sale.amount_paid || 0)
+        ),
+      0
+    );
 
-  const cancelledTransactions = transactions.filter(
-    (transaction) =>
-      ["cancelled", "canceled"].includes(
-        normalizeStatus(transaction.status)
-      )
-  ).length;
+    return {
+      totalSales,
+      revenue,
+      paid,
+      outstanding,
+    };
+  }, [filteredSales]);
 
-  const filteredValue = filteredTransactions.reduce(
-    (sum, transaction) =>
-      sum + Number(transaction.total || 0),
-    0
-  );
+  const activeFilters =
+    paymentFilter !== "all" ||
+    channelFilter !== "all" ||
+    Boolean(dateFrom) ||
+    Boolean(dateTo);
 
-  // ==========================================================
-  // PAGINATION
-  // ==========================================================
-
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredTransactions.length / PAGE_SIZE)
-  );
-
-  const safePage = Math.min(currentPage, totalPages);
-
-  const paginatedTransactions = filteredTransactions.slice(
-    (safePage - 1) * PAGE_SIZE,
-    safePage * PAGE_SIZE
-  );
-
-  // ==========================================================
-  // FILTER HANDLERS
-  // ==========================================================
-
-  const resetFilters = () => {
-    setSearch("");
+  const clearFilters = () => {
     setPaymentFilter("all");
-    setStatusFilter("all");
+    setChannelFilter("all");
     setDateFrom("");
     setDateTo("");
-    setBranchFilter("all");
-    setCurrentPage(1);
+    setSearch("");
   };
 
-  const handleFilterChange = (setter, value) => {
-    setter(value);
-    setCurrentPage(1);
+  const exportCSV = () => {
+    if (!filteredSales.length) return;
+
+    const headers = [
+      "Sale Number",
+      "Date",
+      "Channel",
+      "Customer",
+      "Phone",
+      "Branch",
+      "Subtotal",
+      "Discount",
+      "Tax",
+      "Total",
+      "Amount Paid",
+      "Payment Status",
+      "Payment Method",
+    ];
+
+    const rows = filteredSales.map((sale) => [
+      sale.sale_number,
+      dateTime(sale.created_at),
+      sale.channel,
+      sale.customer_name,
+      sale.customer_phone,
+      sale.branch_name,
+      sale.subtotal,
+      sale.discount,
+      sale.tax,
+      sale.total_amount,
+      sale.amount_paid,
+      sale.payment_status,
+      sale.payment_method,
+    ]);
+
+    const csv = [
+      headers.map(escapeCSV).join(","),
+      ...rows.map((row) => row.map(escapeCSV).join(",")),
+    ].join("\n");
+
+    const blob = new Blob(["\uFEFF" + csv], {
+      type: "text/csv;charset=utf-8;",
+    });
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = `MyDuka_Sales_${new Date()
+      .toISOString()
+      .slice(0, 10)}.csv`;
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    URL.revokeObjectURL(url);
   };
-
-  // ==========================================================
-  // TRANSACTION DETAILS
-  // ==========================================================
-
-  const getTransactionReference = (transaction) =>
-    activeView === "pos"
-      ? getSaleNumber(transaction)
-      : getOrderNumber(transaction);
-
-  const getTransactionCustomer = (transaction) =>
-    activeView === "pos"
-      ? "Walk-in Customer"
-      : getOrderCustomerName(transaction);
-
-  const getTransactionSource = (transaction) =>
-    activeView === "pos"
-      ? `${getPosCashierName(transaction)} · ${getPosBranchName(
-          transaction
-        )}`
-      : "Website Order";
-
-  // ==========================================================
-  // RENDER
-  // ==========================================================
 
   return (
-    <div className="container-fluid px-3 px-md-4 py-4">
-      {/* PAGE HEADER */}
+    <div className="md-sales-page">
+      <style>{`
+        .md-sales-page {
+          color: var(--text-primary, #172033);
+          width: 100%;
+          min-width: 0;
+          padding: 4px 0 30px;
+        }
 
-      <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        .md-sales-page * {
+          box-sizing: border-box;
+        }
+
+        .md-sales-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 18px;
+          margin-bottom: 24px;
+        }
+
+        .md-sales-title {
+          font-size: 25px;
+          font-weight: 750;
+          letter-spacing: -0.7px;
+          margin: 0;
+        }
+
+        .md-sales-subtitle {
+          color: var(--text-secondary, #64748b);
+          font-size: 13px;
+          margin: 7px 0 0;
+          line-height: 1.6;
+        }
+
+        .md-sales-actions {
+          display: flex;
+          align-items: center;
+          gap: 9px;
+          flex-wrap: wrap;
+        }
+
+        .md-sales-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          border: 1px solid var(--border-color, #e2e8f0);
+          border-radius: 9px;
+          padding: 10px 14px;
+          min-height: 40px;
+          background: var(--card-bg, #fff);
+          color: var(--text-primary, #172033);
+          font-size: 12px;
+          font-weight: 650;
+          cursor: pointer;
+          transition: 0.2s ease;
+        }
+
+        .md-sales-btn:hover:not(:disabled) {
+          border-color: var(--primary-color, #4f46e5);
+          color: var(--primary-color, #4f46e5);
+        }
+
+        .md-sales-btn:disabled {
+          opacity: 0.45;
+          cursor: not-allowed;
+        }
+
+        .md-sales-btn-primary {
+          background: var(--primary-color, #4f46e5);
+          color: #fff;
+          border-color: var(--primary-color, #4f46e5);
+        }
+
+        .md-sales-btn-primary:hover:not(:disabled) {
+          background: var(--primary-hover, #4338ca);
+          color: #fff;
+        }
+
+        .md-sales-preview {
+          display: flex;
+          align-items: flex-start;
+          gap: 11px;
+          padding: 13px 15px;
+          border: 1px solid #bfdbfe;
+          border-radius: 11px;
+          background: #eff6ff;
+          color: #1e40af;
+          margin-bottom: 21px;
+          font-size: 12px;
+          line-height: 1.6;
+        }
+
+        .md-sales-preview strong {
+          display: block;
+          margin-bottom: 2px;
+          font-size: 12px;
+        }
+
+        .md-sales-preview p {
+          margin: 0;
+          color: #1d4ed8;
+        }
+
+        .md-sales-stats {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 14px;
+          margin-bottom: 22px;
+        }
+
+        .md-sales-stat {
+          padding: 17px;
+          background: var(--card-bg, #fff);
+          border: 1px solid var(--border-color, #e2e8f0);
+          border-radius: 13px;
+          min-width: 0;
+        }
+
+        .md-sales-stat-top {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 17px;
+        }
+
+        .md-sales-stat-label {
+          font-size: 12px;
+          color: var(--text-secondary, #64748b);
+          font-weight: 550;
+        }
+
+        .md-sales-stat-icon {
+          width: 34px;
+          height: 34px;
+          display: grid;
+          place-items: center;
+          border-radius: 9px;
+          background: var(--hover-bg, #f1f5f9);
+          color: var(--primary-color, #4f46e5);
+        }
+
+        .md-sales-stat-value {
+          font-size: 22px;
+          font-weight: 750;
+          letter-spacing: -0.5px;
+          overflow-wrap: anywhere;
+        }
+
+        .md-sales-stat-note {
+          color: var(--text-secondary, #94a3b8);
+          font-size: 11px;
+          margin-top: 5px;
+        }
+
+        .md-sales-toolbar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          margin-bottom: 13px;
+          flex-wrap: wrap;
+        }
+
+        .md-sales-search {
+          position: relative;
+          flex: 1;
+          min-width: 220px;
+          max-width: 430px;
+        }
+
+        .md-sales-search svg {
+          position: absolute;
+          top: 50%;
+          left: 12px;
+          transform: translateY(-50%);
+          color: var(--text-secondary, #94a3b8);
+        }
+
+        .md-sales-input,
+        .md-sales-select {
+          width: 100%;
+          min-height: 41px;
+          border: 1px solid var(--border-color, #e2e8f0);
+          border-radius: 9px;
+          padding: 9px 11px;
+          background: var(--input-bg, var(--card-bg, #fff));
+          color: var(--text-primary, #172033);
+          font-size: 12px;
+          outline: none;
+        }
+
+        .md-sales-search .md-sales-input {
+          padding-left: 39px;
+        }
+
+        .md-sales-input:focus,
+        .md-sales-select:focus {
+          border-color: var(--primary-color, #4f46e5);
+          box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.09);
+        }
+
+        .md-sales-filter-row {
+          display: flex;
+          align-items: center;
+          gap: 9px;
+          flex-wrap: wrap;
+        }
+
+        .md-sales-filter-row .md-sales-select {
+          width: auto;
+          min-width: 135px;
+        }
+
+        .md-sales-filter-panel {
+          display: flex;
+          align-items: flex-end;
+          gap: 12px;
+          flex-wrap: wrap;
+          padding: 15px;
+          margin-bottom: 14px;
+          border: 1px solid var(--border-color, #e2e8f0);
+          background: var(--card-bg, #fff);
+          border-radius: 11px;
+        }
+
+        .md-sales-filter-field {
+          flex: 1;
+          min-width: 160px;
+        }
+
+        .md-sales-filter-field label {
+          display: block;
+          font-size: 11px;
+          font-weight: 650;
+          color: var(--text-secondary, #64748b);
+          margin-bottom: 6px;
+        }
+
+        .md-sales-table-card {
+          border: 1px solid var(--border-color, #e2e8f0);
+          border-radius: 13px;
+          overflow: hidden;
+          background: var(--card-bg, #fff);
+        }
+
+        .md-sales-table-heading {
+          padding: 17px 18px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 12px;
+          border-bottom: 1px solid var(--border-color, #e2e8f0);
+        }
+
+        .md-sales-table-heading h3 {
+          font-size: 14px;
+          margin: 0;
+          font-weight: 700;
+        }
+
+        .md-sales-table-heading span {
+          font-size: 11px;
+          color: var(--text-secondary, #64748b);
+        }
+
+        .md-sales-table-wrap {
+          width: 100%;
+          overflow-x: auto;
+        }
+
+        .md-sales-table {
+          width: 100%;
+          min-width: 850px;
+          border-collapse: collapse;
+          text-align: left;
+        }
+
+        .md-sales-table th {
+          background: var(--table-header-bg, var(--hover-bg, #f8fafc));
+          color: var(--text-secondary, #64748b);
+          padding: 12px 15px;
+          font-size: 10px;
+          text-transform: uppercase;
+          letter-spacing: 0.55px;
+          font-weight: 700;
+          white-space: nowrap;
+        }
+
+        .md-sales-table td {
+          padding: 14px 15px;
+          border-top: 1px solid var(--border-color, #e2e8f0);
+          font-size: 12px;
+          white-space: nowrap;
+        }
+
+        .md-sales-table tbody tr:hover {
+          background: var(--hover-bg, #f8fafc);
+        }
+
+        .md-sales-sale-number {
+          font-weight: 700;
+          color: var(--primary-color, #4f46e5);
+        }
+
+        .md-sales-customer {
+          font-weight: 650;
+        }
+
+        .md-sales-muted {
+          color: var(--text-secondary, #64748b);
+          font-size: 11px;
+          margin-top: 4px;
+        }
+
+        .md-sales-amount {
+          font-weight: 700;
+        }
+
+        .md-sales-status,
+        .md-sales-channel {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 5px 9px;
+          border-radius: 20px;
+          font-size: 10px;
+          font-weight: 700;
+          text-transform: capitalize;
+          white-space: nowrap;
+        }
+
+        .md-sales-status-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: currentColor;
+        }
+
+        .md-sales-status-paid,
+        .md-sales-status-completed {
+          color: #15803d;
+          background: #dcfce7;
+        }
+
+        .md-sales-status-pending,
+        .md-sales-status-processing {
+          color: #a16207;
+          background: #fef3c7;
+        }
+
+        .md-sales-status-partially_paid {
+          color: #1d4ed8;
+          background: #dbeafe;
+        }
+
+        .md-sales-status-refunded {
+          color: #7e22ce;
+          background: #f3e8ff;
+        }
+
+        .md-sales-status-cancelled {
+          color: #b91c1c;
+          background: #fee2e2;
+        }
+
+        .md-sales-channel-online {
+          background: #e0e7ff;
+          color: #4338ca;
+        }
+
+        .md-sales-channel-pos {
+          background: #ccfbf1;
+          color: #0f766e;
+        }
+
+        .md-sales-icon-btn {
+          border: 1px solid var(--border-color, #e2e8f0);
+          background: transparent;
+          color: var(--text-secondary, #64748b);
+          width: 32px;
+          height: 32px;
+          border-radius: 8px;
+          display: grid;
+          place-items: center;
+          cursor: pointer;
+        }
+
+        .md-sales-icon-btn:hover {
+          color: var(--primary-color, #4f46e5);
+          border-color: var(--primary-color, #4f46e5);
+        }
+
+        .md-sales-empty {
+          text-align: center;
+          padding: 55px 20px;
+        }
+
+        .md-sales-empty-icon {
+          width: 54px;
+          height: 54px;
+          display: grid;
+          place-items: center;
+          margin: 0 auto 14px;
+          border-radius: 15px;
+          color: var(--text-secondary, #64748b);
+          background: var(--hover-bg, #f1f5f9);
+        }
+
+        .md-sales-empty h3 {
+          margin: 0 0 7px;
+          font-size: 14px;
+        }
+
+        .md-sales-empty p {
+          margin: 0 auto;
+          max-width: 360px;
+          font-size: 12px;
+          line-height: 1.6;
+          color: var(--text-secondary, #64748b);
+        }
+
+        .md-sales-pagination {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 13px 17px;
+          border-top: 1px solid var(--border-color, #e2e8f0);
+          color: var(--text-secondary, #64748b);
+          font-size: 11px;
+        }
+
+        .md-sales-modal-backdrop {
+          position: fixed;
+          inset: 0;
+          z-index: 1000;
+          background: rgba(15, 23, 42, 0.55);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 16px;
+        }
+
+        .md-sales-modal {
+          width: 100%;
+          max-width: 610px;
+          max-height: 90vh;
+          overflow-y: auto;
+          border-radius: 15px;
+          background: var(--card-bg, #fff);
+          color: var(--text-primary, #172033);
+          box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+
+        .md-sales-modal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          padding: 19px 21px;
+          border-bottom: 1px solid var(--border-color, #e2e8f0);
+        }
+
+        .md-sales-modal-header h3 {
+          margin: 0;
+          font-size: 16px;
+        }
+
+        .md-sales-modal-header p {
+          margin: 5px 0 0;
+          color: var(--text-secondary, #64748b);
+          font-size: 11px;
+        }
+
+        .md-sales-modal-body {
+          padding: 20px;
+        }
+
+        .md-sales-detail-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 17px;
+          margin-bottom: 22px;
+        }
+
+        .md-sales-detail-label {
+          color: var(--text-secondary, #64748b);
+          font-size: 10px;
+          margin-bottom: 5px;
+        }
+
+        .md-sales-detail-value {
+          font-size: 12px;
+          font-weight: 650;
+          overflow-wrap: anywhere;
+        }
+
+        .md-sales-modal-section {
+          border-top: 1px solid var(--border-color, #e2e8f0);
+          padding-top: 17px;
+          margin-top: 17px;
+        }
+
+        .md-sales-modal-section h4 {
+          font-size: 12px;
+          margin: 0 0 13px;
+        }
+
+        .md-sales-line {
+          display: flex;
+          justify-content: space-between;
+          gap: 15px;
+          padding: 8px 0;
+          font-size: 12px;
+        }
+
+        .md-sales-line-total {
+          border-top: 1px solid var(--border-color, #e2e8f0);
+          padding-top: 13px;
+          margin-top: 7px;
+          font-weight: 750;
+          font-size: 14px;
+        }
+
+        @media (max-width: 1000px) {
+          .md-sales-stats {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+        }
+
+        @media (max-width: 650px) {
+          .md-sales-header {
+            flex-direction: column;
+          }
+
+          .md-sales-actions {
+            width: 100%;
+          }
+
+          .md-sales-actions .md-sales-btn {
+            flex: 1;
+          }
+
+          .md-sales-stats {
+            gap: 9px;
+          }
+
+          .md-sales-stat {
+            padding: 13px;
+          }
+
+          .md-sales-stat-value {
+            font-size: 18px;
+          }
+
+          .md-sales-stat-top {
+            margin-bottom: 12px;
+          }
+
+          .md-sales-toolbar {
+            align-items: stretch;
+          }
+
+          .md-sales-search {
+            max-width: none;
+            min-width: 100%;
+          }
+
+          .md-sales-filter-row {
+            width: 100%;
+          }
+
+          .md-sales-filter-row .md-sales-select {
+            flex: 1;
+            min-width: 0;
+          }
+
+          .md-sales-filter-panel {
+            align-items: stretch;
+          }
+
+          .md-sales-filter-field {
+            min-width: 100%;
+          }
+
+          .md-sales-detail-grid {
+            grid-template-columns: 1fr 1fr;
+          }
+        }
+
+        @media (max-width: 380px) {
+          .md-sales-stats {
+            grid-template-columns: 1fr;
+          }
+
+          .md-sales-detail-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
+
+      <div className="md-sales-header">
         <div>
-          <h1 className="fw-bold mb-1">
-            Sales Management
-          </h1>
-
-          <p className="text-secondary mb-0">
-            Manage website orders and cashier POS sales separately.
+          <h1 className="md-sales-title">Sales</h1>
+          <p className="md-sales-subtitle">
+            Monitor your business sales, revenue and payment records.
           </p>
         </div>
 
-        <button
-          type="button"
-          className="btn btn-success"
-          onClick={() => fetchTransactions(true)}
-          disabled={loading || refreshing}
-        >
-          {refreshing ? "Refreshing..." : "↻ Refresh"}
-        </button>
+        <div className="md-sales-actions">
+          <button
+            className="md-sales-btn"
+            onClick={clearFilters}
+            type="button"
+          >
+            <Icon name="refresh" size={15} />
+            Reset
+          </button>
+
+          <button
+            className="md-sales-btn md-sales-btn-primary"
+            onClick={exportCSV}
+            disabled={!filteredSales.length}
+            type="button"
+          >
+            <Icon name="download" size={15} />
+            Export CSV
+          </button>
+        </div>
       </div>
 
-      {/* SEPARATE ORDERS AND POS SALES TABS */}
+      <div className="md-sales-preview">
+        <Icon name="receipt" size={19} />
+        <div>
+          <strong>Frontend preview mode</strong>
+          <p>
+            Sales records will appear here once the backend is connected.
+            This page currently uses no sample or fabricated transactions.
+            Filters and exports will work with real records after integration.
+          </p>
+        </div>
+      </div>
 
-      <div className="card border-0 shadow-sm mb-4">
-        <div className="card-body">
-          <div
-            className="btn-group flex-wrap"
-            role="group"
-            aria-label="Transaction type"
-          >
-            <button
-              type="button"
-              className={`btn ${
-                activeView === "orders"
-                  ? "btn-success"
-                  : "btn-outline-success"
-              }`}
-              onClick={() => changeView("orders")}
-              aria-pressed={activeView === "orders"}
-            >
-              Website Orders
-              <span className="badge bg-white text-dark ms-2">
-                {orders.length}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              className={`btn ${
-                activeView === "pos"
-                  ? "btn-success"
-                  : "btn-outline-success"
-              }`}
-              onClick={() => changeView("pos")}
-              aria-pressed={activeView === "pos"}
-            >
-              POS Sales
-              <span className="badge bg-white text-dark ms-2">
-                {posSales.length}
-              </span>
-            </button>
+      <div className="md-sales-stats">
+        <div className="md-sales-stat">
+          <div className="md-sales-stat-top">
+            <span className="md-sales-stat-label">Total sales</span>
+            <span className="md-sales-stat-icon">
+              <Icon name="receipt" />
+            </span>
           </div>
+          <div className="md-sales-stat-value">
+            {summary.totalSales.toLocaleString("en-KE")}
+          </div>
+          <div className="md-sales-stat-note">
+            Transactions in selected period
+          </div>
+        </div>
 
-          <div className="mt-3 small text-secondary">
-            {activeView === "orders"
-              ? "Showing website orders only. POS transactions are excluded."
-              : "Showing cashier POS transactions only. Website orders are excluded."}
+        <div className="md-sales-stat">
+          <div className="md-sales-stat-top">
+            <span className="md-sales-stat-label">Total revenue</span>
+            <span className="md-sales-stat-icon">
+              <Icon name="chart" />
+            </span>
+          </div>
+          <div className="md-sales-stat-value">
+            {money(summary.revenue)}
+          </div>
+          <div className="md-sales-stat-note">
+            Total value of recorded sales
+          </div>
+        </div>
+
+        <div className="md-sales-stat">
+          <div className="md-sales-stat-top">
+            <span className="md-sales-stat-label">Amount paid</span>
+            <span className="md-sales-stat-icon">
+              <Icon name="wallet" />
+            </span>
+          </div>
+          <div className="md-sales-stat-value">
+            {money(summary.paid)}
+          </div>
+          <div className="md-sales-stat-note">
+            Payments received
+          </div>
+        </div>
+
+        <div className="md-sales-stat">
+          <div className="md-sales-stat-top">
+            <span className="md-sales-stat-label">Outstanding</span>
+            <span className="md-sales-stat-icon">
+              <Icon name="calendar" />
+            </span>
+          </div>
+          <div className="md-sales-stat-value">
+            {money(summary.outstanding)}
+          </div>
+          <div className="md-sales-stat-note">
+            Remaining customer balances
           </div>
         </div>
       </div>
 
-      {/* ERROR MESSAGE */}
+      <div className="md-sales-toolbar">
+        <div className="md-sales-search">
+          <Icon name="search" size={17} />
+          <input
+            className="md-sales-input"
+            type="text"
+            placeholder="Search sale number, customer, phone or branch..."
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+        </div>
 
-      {error && (
-        <div
-          className="alert alert-danger d-flex flex-wrap justify-content-between align-items-center gap-2"
-          role="alert"
-        >
-          <span>{error}</span>
+        <div className="md-sales-filter-row">
+          <select
+            className="md-sales-select"
+            value={channelFilter}
+            onChange={(event) => setChannelFilter(event.target.value)}
+            aria-label="Filter by sales channel"
+          >
+            <option value="all">All channels</option>
+            <option value="online">Online</option>
+            <option value="pos">POS</option>
+          </select>
+
+          <select
+            className="md-sales-select"
+            value={paymentFilter}
+            onChange={(event) => setPaymentFilter(event.target.value)}
+            aria-label="Filter by payment status"
+          >
+            <option value="all">All payments</option>
+            <option value="paid">Paid</option>
+            <option value="pending">Pending</option>
+            <option value="partially_paid">Partially paid</option>
+            <option value="refunded">Refunded</option>
+          </select>
 
           <button
+            className="md-sales-btn"
             type="button"
-            className="btn btn-outline-danger btn-sm"
-            onClick={() => fetchTransactions()}
+            onClick={() => setShowFilters(!showFilters)}
           >
-            Try Again
+            <Icon name="filter" size={15} />
+            Dates
+            {activeFilters && (
+              <span style={{ color: "var(--primary-color, #4f46e5)" }}>
+                •
+              </span>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {showFilters && (
+        <div className="md-sales-filter-panel">
+          <div className="md-sales-filter-field">
+            <label htmlFor="sales-date-from">From date</label>
+            <input
+              id="sales-date-from"
+              className="md-sales-input"
+              type="date"
+              value={dateFrom}
+              onChange={(event) => setDateFrom(event.target.value)}
+            />
+          </div>
+
+          <div className="md-sales-filter-field">
+            <label htmlFor="sales-date-to">To date</label>
+            <input
+              id="sales-date-to"
+              className="md-sales-input"
+              type="date"
+              value={dateTo}
+              min={dateFrom || undefined}
+              onChange={(event) => setDateTo(event.target.value)}
+            />
+          </div>
+
+          <button
+            className="md-sales-btn"
+            type="button"
+            onClick={() => {
+              setDateFrom("");
+              setDateTo("");
+            }}
+          >
+            Clear dates
           </button>
         </div>
       )}
 
-      {/* SUMMARY CARDS */}
-
-      <div className="row g-3 mb-4">
-        <SummaryCard
-          title="Confirmed Revenue"
-          value={formatCurrency(confirmedRevenue)}
-          description="Paid, non-cancelled transactions"
-          color="success"
-        />
-
-        <SummaryCard
-          title={
-            activeView === "pos"
-              ? "Total POS Sales"
-              : "Total Website Orders"
-          }
-          value={transactions.length}
-          description="Transactions in this category"
-        />
-
-        <SummaryCard
-          title="Awaiting Payment"
-          value={pendingTransactions}
-          description="Pending or unpaid transactions"
-          color="warning"
-        />
-
-        <SummaryCard
-          title="Cancelled Transactions"
-          value={cancelledTransactions}
-          description="Retained in transaction history"
-          color="danger"
-        />
-      </div>
-
-      {/* TRANSACTION TABLE */}
-
-      <div className="card border-0 shadow-sm">
-        <div className="card-header bg-white border-0 pt-4 px-3 px-md-4">
-          <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-            <div>
-              <h5 className="fw-bold mb-1">
-                {activeView === "pos"
-                  ? "POS Sales History"
-                  : "Website Order History"}
-              </h5>
-
-              <p className="small text-secondary mb-0">
-                {filteredTransactions.length} matching transactions
-              </p>
-            </div>
-
-            <div className="text-md-end">
-              <small className="text-secondary d-block">
-                Value of filtered transactions
-              </small>
-
-              <strong>{formatCurrency(filteredValue)}</strong>
-            </div>
-          </div>
-
-          {/* FILTERS */}
-
-          <div className="row g-3 pb-3">
-            <div className="col-12 col-lg-4">
-              <label className="form-label small fw-semibold">
-                Search transactions
-              </label>
-
-              <input
-                type="search"
-                className="form-control"
-                placeholder={
-                  activeView === "pos"
-                    ? "Sale number, cashier, branch..."
-                    : "Order number, customer..."
-                }
-                value={search}
-                onChange={(event) =>
-                  handleFilterChange(
-                    setSearch,
-                    event.target.value
-                  )
-                }
-              />
-            </div>
-
-            {activeView === "pos" && (
-              <div className="col-12 col-md-4 col-lg-2">
-                <label className="form-label small fw-semibold">
-                  Branch
-                </label>
-
-                <select
-                  className="form-select"
-                  value={branchFilter}
-                  onChange={(event) =>
-                    handleFilterChange(
-                      setBranchFilter,
-                      event.target.value
-                    )
-                  }
-                >
-                  <option value="all">All branches</option>
-
-                  {branches.map((branch) => (
-                    <option key={branch.id} value={branch.id}>
-                      {branch.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            <div className="col-6 col-lg-2">
-              <label className="form-label small fw-semibold">
-                Payment status
-              </label>
-
-              <select
-                className="form-select"
-                value={paymentFilter}
-                onChange={(event) =>
-                  handleFilterChange(
-                    setPaymentFilter,
-                    event.target.value
-                  )
-                }
-              >
-                <option value="all">All payments</option>
-                <option value="paid">Paid</option>
-                <option value="unpaid">Unpaid</option>
-                <option value="pending">Pending</option>
-                <option value="failed">Failed</option>
-              </select>
-            </div>
-
-            <div className="col-6 col-lg-2">
-              <label className="form-label small fw-semibold">
-                Transaction status
-              </label>
-
-              <select
-                className="form-select"
-                value={statusFilter}
-                onChange={(event) =>
-                  handleFilterChange(
-                    setStatusFilter,
-                    event.target.value
-                  )
-                }
-              >
-                <option value="all">All statuses</option>
-                <option value="pending">Pending</option>
-                <option value="confirmed">Confirmed</option>
-                <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
-                <option value="failed">Failed</option>
-              </select>
-            </div>
-
-            <div className="col-6 col-lg-2">
-              <label className="form-label small fw-semibold">
-                From date
-              </label>
-
-              <input
-                type="date"
-                className="form-control"
-                value={dateFrom}
-                onChange={(event) =>
-                  handleFilterChange(
-                    setDateFrom,
-                    event.target.value
-                  )
-                }
-              />
-            </div>
-
-            <div className="col-6 col-lg-2">
-              <label className="form-label small fw-semibold">
-                To date
-              </label>
-
-              <input
-                type="date"
-                className="form-control"
-                value={dateTo}
-                min={dateFrom || undefined}
-                onChange={(event) =>
-                  handleFilterChange(
-                    setDateTo,
-                    event.target.value
-                  )
-                }
-              />
-            </div>
-
-            <div className="col-12 d-flex justify-content-end">
-              <button
-                type="button"
-                className="btn btn-outline-secondary btn-sm"
-                onClick={resetFilters}
-              >
-                Clear Filters
-              </button>
-            </div>
-          </div>
+      <div className="md-sales-table-card">
+        <div className="md-sales-table-heading">
+          <h3>Sales records</h3>
+          <span>
+            {filteredSales.length}{" "}
+            {filteredSales.length === 1 ? "record" : "records"}
+          </span>
         </div>
 
-        {/* TABLE BODY */}
-
-        <div className="card-body p-0">
-          {loading ? (
-            <div className="text-center py-5">
-              <div
-                className="spinner-border text-success"
-                role="status"
-                aria-label="Loading transactions"
-              />
-
-              <p className="text-secondary mt-3 mb-0">
-                Loading{" "}
-                {activeView === "pos"
-                  ? "POS sales"
-                  : "website orders"}
-                ...
-              </p>
+        {filteredSales.length === 0 ? (
+          <div className="md-sales-empty">
+            <div className="md-sales-empty-icon">
+              <Icon name="receipt" size={25} />
             </div>
-          ) : paginatedTransactions.length === 0 ? (
-            <div className="text-center py-5 px-3">
-              <div className="display-6 mb-2">🧾</div>
 
-              <h5>No transactions found</h5>
+            <h3>
+              {sales.length === 0
+                ? "No sales recorded yet"
+                : "No matching sales"}
+            </h3>
 
-              <p className="text-secondary mb-3">
-                Try changing your search or filters.
-              </p>
+            <p>
+              {sales.length === 0
+                ? "Your business sales will appear here when transactions are connected to MyDuka. Online and POS sales will be available in this register."
+                : "Try changing your search or filters to find the sales records you are looking for."}
+            </p>
+          </div>
+        ) : (
+          <div className="md-sales-table-wrap">
+            <table className="md-sales-table">
+              <thead>
+                <tr>
+                  <th>Sale number</th>
+                  <th>Date</th>
+                  <th>Customer</th>
+                  <th>Channel</th>
+                  <th>Branch</th>
+                  <th>Total</th>
+                  <th>Payment</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
 
-              <button
-                type="button"
-                className="btn btn-outline-success"
-                onClick={resetFilters}
-              >
-                Clear Filters
-              </button>
-            </div>
-          ) : (
-            <div className="table-responsive">
-              <table className="table table-hover align-middle mb-0">
-                <thead className="table-light">
-                  <tr>
-                    <th className="px-3 px-md-4 py-3">
-                      {activeView === "pos"
-                        ? "Sale Number"
-                        : "Order Number"}
-                    </th>
+              <tbody>
+                {filteredSales.map((sale) => (
+                  <tr key={sale.id}>
+                    <td>
+                      <span className="md-sales-sale-number">
+                        {sale.sale_number || `SALE-${sale.id}`}
+                      </span>
+                    </td>
 
-                    <th className="py-3">Date</th>
+                    <td>{dateTime(sale.created_at)}</td>
 
-                    {activeView === "pos" ? (
-                      <>
-                        <th className="py-3">Cashier</th>
-                        <th className="py-3">Branch</th>
-                      </>
-                    ) : (
-                      <th className="py-3">Customer</th>
-                    )}
-
-                    <th className="py-3">Payment</th>
-                    <th className="py-3">Status</th>
-
-                    <th className="py-3 text-end">Total</th>
-
-                    <th className="px-3 px-md-4 py-3 text-end">
-                      Details
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {paginatedTransactions.map((transaction) => (
-                    <tr
-                      key={`${activeView}-${transaction.id}`}
-                    >
-                      <td className="px-3 px-md-4">
-                        <strong>
-                          {activeView === "pos"
-                            ? getSaleNumber(transaction)
-                            : getOrderNumber(transaction)}
-                        </strong>
-                      </td>
-
-                      <td className="text-nowrap small">
-                        {formatDate(transaction.created_at)}
-                      </td>
-
-                      {activeView === "pos" ? (
-                        <>
-                          <td>
-                            {getPosCashierName(transaction)}
-                          </td>
-
-                          <td>
-                            {getPosBranchName(transaction)}
-                          </td>
-                        </>
-                      ) : (
-                        <td>
-                          <span className="d-block">
-                            {getOrderCustomerName(transaction)}
-                          </span>
-
-                          {transaction.customer?.phone && (
-                            <small className="text-secondary">
-                              {transaction.customer.phone}
-                            </small>
-                          )}
-                        </td>
-                      )}
-
-                      <td>
-                        <div className="mb-1">
-                          {getPaymentLabel(
-                            transaction.payment_method
-                          )}
+                    <td>
+                      <div className="md-sales-customer">
+                        {sale.customer_name || "Walk-in customer"}
+                      </div>
+                      {sale.customer_phone && (
+                        <div className="md-sales-muted">
+                          {sale.customer_phone}
                         </div>
+                      )}
+                    </td>
 
-                        <StatusBadge
-                          status={transaction.payment_status}
-                        />
-                      </td>
+                    <td>
+                      <ChannelBadge channel={sale.channel} />
+                    </td>
 
-                      <td>
-                        <StatusBadge
-                          status={transaction.status}
-                        />
-                      </td>
+                    <td>{sale.branch_name || "—"}</td>
 
-                      <td className="text-end text-nowrap fw-semibold">
-                        {formatCurrency(transaction.total)}
-                      </td>
+                    <td className="md-sales-amount">
+                      {money(sale.total_amount)}
+                    </td>
 
-                      <td className="px-3 px-md-4 text-end">
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-outline-success"
-                          onClick={() =>
-                            setSelectedTransaction({
-                              type: activeView,
-                              transaction,
-                            })
-                          }
-                        >
-                          View
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+                    <td>
+                      <StatusBadge status={sale.payment_status} />
+                    </td>
 
-        {/* PAGINATION */}
-
-        {!loading && filteredTransactions.length > 0 && (
-          <div className="card-footer bg-white d-flex flex-wrap justify-content-between align-items-center gap-3 px-3 px-md-4 py-3">
-            <small className="text-secondary">
-              Showing {(safePage - 1) * PAGE_SIZE + 1}–
-              {Math.min(
-                safePage * PAGE_SIZE,
-                filteredTransactions.length
-              )}{" "}
-              of {filteredTransactions.length}
-            </small>
-
-            <div className="d-flex align-items-center gap-2">
-              <button
-                type="button"
-                className="btn btn-outline-secondary btn-sm"
-                disabled={safePage <= 1}
-                onClick={() =>
-                  setCurrentPage((page) =>
-                    Math.max(1, page - 1)
-                  )
-                }
-              >
-                Previous
-              </button>
-
-              <span className="small">
-                Page {safePage} of {totalPages}
-              </span>
-
-              <button
-                type="button"
-                className="btn btn-outline-secondary btn-sm"
-                disabled={safePage >= totalPages}
-                onClick={() =>
-                  setCurrentPage((page) =>
-                    Math.min(totalPages, page + 1)
-                  )
-                }
-              >
-                Next
-              </button>
-            </div>
+                    <td>
+                      <button
+                        className="md-sales-icon-btn"
+                        type="button"
+                        title="View sale"
+                        onClick={() => setSelectedSale(sale)}
+                      >
+                        <Icon name="eye" size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
+
+        <div className="md-sales-pagination">
+          <span>
+            Showing {filteredSales.length} of {sales.length} records
+          </span>
+          <span>All records</span>
+        </div>
       </div>
 
-      {/* TRANSACTION DETAILS MODAL */}
+      {selectedSale && (
+        <div
+          className="md-sales-modal-backdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setSelectedSale(null);
+            }
+          }}
+        >
+          <div
+            className="md-sales-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="sales-detail-title"
+          >
+            <div className="md-sales-modal-header">
+              <div>
+                <h3 id="sales-detail-title">Sale details</h3>
+                <p>
+                  {selectedSale.sale_number || `SALE-${selectedSale.id}`}
+                </p>
+              </div>
 
-      {selectedTransaction && (
-        <TransactionDetailsModal
-          type={selectedTransaction.type}
-          transaction={selectedTransaction.transaction}
-          onClose={() => setSelectedTransaction(null)}
-        />
+              <button
+                className="md-sales-icon-btn"
+                type="button"
+                onClick={() => setSelectedSale(null)}
+                aria-label="Close sale details"
+              >
+                <Icon name="close" size={17} />
+              </button>
+            </div>
+
+            <div className="md-sales-modal-body">
+              <div className="md-sales-detail-grid">
+                <div>
+                  <div className="md-sales-detail-label">Sale date</div>
+                  <div className="md-sales-detail-value">
+                    {dateTime(selectedSale.created_at)}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="md-sales-detail-label">Sales channel</div>
+                  <div className="md-sales-detail-value">
+                    <ChannelBadge channel={selectedSale.channel} />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="md-sales-detail-label">Customer</div>
+                  <div className="md-sales-detail-value">
+                    {selectedSale.customer_name || "Walk-in customer"}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="md-sales-detail-label">Phone</div>
+                  <div className="md-sales-detail-value">
+                    {selectedSale.customer_phone || "—"}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="md-sales-detail-label">Branch</div>
+                  <div className="md-sales-detail-value">
+                    {selectedSale.branch_name || "—"}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="md-sales-detail-label">Payment status</div>
+                  <div className="md-sales-detail-value">
+                    <StatusBadge status={selectedSale.payment_status} />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="md-sales-detail-label">Payment method</div>
+                  <div className="md-sales-detail-value">
+                    {selectedSale.payment_method || "—"}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="md-sales-detail-label">Fulfilment status</div>
+                  <div className="md-sales-detail-value">
+                    {selectedSale.fulfillment_status || "—"}
+                  </div>
+                </div>
+              </div>
+
+              <div className="md-sales-modal-section">
+                <h4>Sale summary</h4>
+
+                <div className="md-sales-line">
+                  <span>Subtotal</span>
+                  <span>{money(selectedSale.subtotal)}</span>
+                </div>
+
+                <div className="md-sales-line">
+                  <span>Discount</span>
+                  <span>{money(selectedSale.discount)}</span>
+                </div>
+
+                <div className="md-sales-line">
+                  <span>Tax</span>
+                  <span>{money(selectedSale.tax)}</span>
+                </div>
+
+                <div className="md-sales-line md-sales-line-total">
+                  <span>Total amount</span>
+                  <span>{money(selectedSale.total_amount)}</span>
+                </div>
+
+                <div className="md-sales-line">
+                  <span>Amount paid</span>
+                  <span>{money(selectedSale.amount_paid)}</span>
+                </div>
+
+                <div className="md-sales-line">
+                  <span>Balance</span>
+                  <span>
+                    {money(
+                      Math.max(
+                        0,
+                        Number(selectedSale.total_amount || 0) -
+                          Number(selectedSale.amount_paid || 0)
+                      )
+                    )}
+                  </span>
+                </div>
+              </div>
+
+              {Array.isArray(selectedSale.items) &&
+                selectedSale.items.length > 0 && (
+                  <div className="md-sales-modal-section">
+                    <h4>Items sold</h4>
+
+                    {selectedSale.items.map((item, index) => (
+                      <div className="md-sales-line" key={item.id || index}>
+                        <span>
+                          {item.product_name || item.name || "Product"} ×{" "}
+                          {item.quantity}
+                        </span>
+                        <strong>
+                          {money(
+                            item.total_price ??
+                              Number(item.quantity || 0) *
+                                Number(item.unit_price || 0)
+                          )}
+                        </strong>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+              {selectedSale.notes && (
+                <div className="md-sales-modal-section">
+                  <h4>Notes</h4>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 12,
+                      lineHeight: 1.6,
+                      color: "var(--text-secondary, #64748b)",
+                    }}
+                  >
+                    {selectedSale.notes}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
 }
-
-// ============================================================
-// TRANSACTION DETAILS MODAL
-// ============================================================
-
-function TransactionDetailsModal({
-  type,
-  transaction,
-  onClose,
-}) {
-  const isPosSale = type === "pos";
-
-  const reference = isPosSale
-    ? getSaleNumber(transaction)
-    : getOrderNumber(transaction);
-
-  const customerName = isPosSale
-    ? "Walk-in Customer"
-    : getOrderCustomerName(transaction);
-
-  const source = isPosSale
-    ? `${getPosCashierName(transaction)} · ${getPosBranchName(
-        transaction
-      )}`
-    : "Website Order";
-
-  const items = Array.isArray(transaction.items)
-    ? transaction.items
-    : [];
-
-  return (
-    <div
-      className="modal d-block"
-      tabIndex="-1"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="transactionDetailsTitle"
-      style={{
-        background: "rgba(0, 0, 0, 0.5)",
-        zIndex: 1055,
-      }}
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) {
-          onClose();
-        }
-      }}
-      onKeyDown={(event) => {
-        if (event.key === "Escape") {
-          onClose();
-        }
-      }}
-    >
-      <div className="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
-        <div className="modal-content border-0 shadow">
-          <div className="modal-header">
-            <div>
-              <h5
-                className="modal-title fw-bold"
-                id="transactionDetailsTitle"
-              >
-                {isPosSale
-                  ? "POS Sale Details"
-                  : "Website Order Details"}
-              </h5>
-
-              <small className="text-secondary">
-                {reference}
-              </small>
-            </div>
-
-            <button
-              type="button"
-              className="btn-close"
-              aria-label="Close"
-              onClick={onClose}
-            />
-          </div>
-
-          <div className="modal-body">
-            <div className="row g-3 mb-4">
-              <div className="col-12 col-md-6">
-                <div className="border rounded p-3 h-100">
-                  <small className="text-secondary d-block mb-1">
-                    {isPosSale ? "Customer Type" : "Customer"}
-                  </small>
-
-                  <strong>{customerName}</strong>
-
-                  {!isPosSale &&
-                    transaction.customer?.phone && (
-                      <div className="small text-secondary mt-1">
-                        {transaction.customer.phone}
-                      </div>
-                    )}
-                </div>
-              </div>
-
-              <div className="col-12 col-md-6">
-                <div className="border rounded p-3 h-100">
-                  <small className="text-secondary d-block mb-1">
-                    {isPosSale ? "Cashier / Branch" : "Source"}
-                  </small>
-
-                  <strong>{source}</strong>
-                </div>
-              </div>
-
-              <div className="col-12 col-md-6">
-                <div className="border rounded p-3 h-100">
-                  <small className="text-secondary d-block mb-1">
-                    Transaction Date
-                  </small>
-
-                  <strong>
-                    {formatDate(transaction.created_at)}
-                  </strong>
-                </div>
-              </div>
-
-              <div className="col-12 col-md-6">
-                <div className="border rounded p-3 h-100">
-                  <small className="text-secondary d-block mb-1">
-                    Payment Method
-                  </small>
-
-                  <strong>
-                    {getPaymentLabel(
-                      transaction.payment_method
-                    )}
-                  </strong>
-
-                  <div className="mt-2">
-                    <StatusBadge
-                      status={transaction.payment_status}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <h6 className="fw-bold mb-3">Items Sold</h6>
-
-            {items.length > 0 ? (
-              <div className="table-responsive">
-                <table className="table table-sm align-middle">
-                  <thead className="table-light">
-                    <tr>
-                      <th>Product</th>
-                      <th className="text-center">Qty</th>
-                      <th className="text-end">Unit Price</th>
-                      <th className="text-end">Subtotal</th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {items.map((item, index) => {
-                      const quantity = Number(
-                        item.quantity || 0
-                      );
-
-                      const price = Number(item.price || 0);
-
-                      const subtotal =
-                        item.subtotal != null
-                          ? Number(item.subtotal)
-                          : price * quantity;
-
-                      return (
-                        <tr
-                          key={
-                            item.id ||
-                            `${item.product_id}-${index}`
-                          }
-                        >
-                          <td>
-                            {item.product_name ||
-                              item.product?.name ||
-                              "Product"}
-                          </td>
-
-                          <td className="text-center">
-                            {quantity}
-                          </td>
-
-                          <td className="text-end text-nowrap">
-                            {formatCurrency(price)}
-                          </td>
-
-                          <td className="text-end text-nowrap">
-                            {formatCurrency(subtotal)}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="text-secondary">
-                No item details are available for this transaction.
-              </p>
-            )}
-
-            {transaction.notes && (
-              <div className="mt-3">
-                <small className="text-secondary d-block mb-1">
-                  Notes
-                </small>
-
-                <p className="mb-0 text-break">
-                  {transaction.notes}
-                </p>
-              </div>
-            )}
-
-            <div className="border-top pt-3 mt-3">
-              <div className="d-flex justify-content-between align-items-center gap-3">
-                <span className="fw-semibold">
-                  {isPosSale ? "Sale Total" : "Order Total"}
-                </span>
-
-                <h5 className="fw-bold text-success mb-0">
-                  {formatCurrency(transaction.total)}
-                </h5>
-              </div>
-            </div>
-
-            <div className="mt-3">
-              <small className="text-secondary d-block mb-1">
-                Transaction Status
-              </small>
-
-              <StatusBadge status={transaction.status} />
-            </div>
-          </div>
-
-          <div className="modal-footer">
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={onClose}
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default Sales;
