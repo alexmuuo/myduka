@@ -1,4 +1,7 @@
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
+
+from sqlalchemy.dialects.postgresql import UUID
 
 from extensions import db
 
@@ -14,55 +17,31 @@ class StockMovement(db.Model):
     __tablename__ = "stock_movements"
 
     id = db.Column(
-        db.Integer,
+        UUID(as_uuid=True),
         primary_key=True,
-        autoincrement=True
+        server_default=db.text("gen_random_uuid()")
     )
 
     business_id = db.Column(
-        db.Integer,
-        db.ForeignKey("businesses.id", ondelete="RESTRICT"),
+        UUID(as_uuid=True),
         nullable=False,
         index=True
     )
 
-    # Cashier movements retain their cashier ID.
-    # Administrator movements do not need a fake cashier.
-    cashier_id = db.Column(
-        db.Integer,
-        db.ForeignKey("cashiers.id"),
-        nullable=True,
-        index=True
-    )
-
-    admin_username = db.Column(
-        db.String(100),
-        nullable=True
-    )
-
-    movement_type = db.Column(
-        db.String(20),
+    branch_id = db.Column(
+        UUID(as_uuid=True),
         nullable=False,
-        default="STOCK_IN",
-        server_default="STOCK_IN",
         index=True
     )
 
     product_id = db.Column(
-        db.Integer,
-        db.ForeignKey("products.id"),
+        UUID(as_uuid=True),
         nullable=False,
         index=True
     )
 
-    product_name = db.Column(
-        db.String(255),
-        nullable=False
-    )
-
-    branch_id = db.Column(
-        db.Integer,
-        db.ForeignKey("branches.id"),
+    movement_type = db.Column(
+        db.Text,
         nullable=False,
         index=True
     )
@@ -72,7 +51,7 @@ class StockMovement(db.Model):
         nullable=False
     )
 
-    quantity_added = db.Column(
+    quantity_changed = db.Column(
         db.Numeric(12, 3),
         nullable=False
     )
@@ -83,9 +62,8 @@ class StockMovement(db.Model):
     )
 
     reference = db.Column(
-        db.String(100),
-        nullable=True,
-        index=True
+        db.Text,
+        nullable=True
     )
 
     notes = db.Column(
@@ -93,68 +71,52 @@ class StockMovement(db.Model):
         nullable=True
     )
 
+    performed_by = db.Column(
+        UUID(as_uuid=True),
+        nullable=True
+    )
+
     created_at = db.Column(
         db.DateTime(timezone=True),
-        nullable=False,
+        nullable=True,
         default=_utcnow,
+        server_default=db.func.now(),
         index=True
     )
 
-    cashier = db.relationship(
-        "Cashier",
-        backref=db.backref("stock_movements", lazy=True)
-    )
-
-    product = db.relationship(
-        "Product",
-        backref=db.backref("stock_movements", lazy=True)
-    )
-
-    branch = db.relationship(
-        "Branch",
-        backref=db.backref("stock_movements", lazy=True)
-    )
+    branch = db.relationship("Branch")
+    product = db.relationship("Product")
 
     __table_args__ = (
-        db.CheckConstraint(
-            "quantity_added > 0",
-            name="ck_stock_movement_quantity_added_positive"
+        db.ForeignKeyConstraint(
+            ["branch_id", "business_id"],
+            ["branches.id", "branches.business_id"],
+            name="stock_movements_branch_business_fk"
         ),
-
+        db.ForeignKeyConstraint(
+            ["product_id", "business_id"],
+            ["products.id", "products.business_id"],
+            name="stock_movements_product_business_fk"
+        ),
+        db.ForeignKeyConstraint(
+            ["branch_id", "product_id"],
+            [
+                "branch_product_stock.branch_id",
+                "branch_product_stock.product_id"
+            ],
+            name="stock_movements_branch_product_fk"
+        ),
         db.CheckConstraint(
             "previous_stock >= 0",
             name="ck_stock_movement_previous_stock_nonnegative"
         ),
-
+        db.CheckConstraint(
+            "quantity_changed > 0",
+            name="ck_stock_movement_quantity_positive"
+        ),
         db.CheckConstraint(
             "new_stock >= 0",
             name="ck_stock_movement_new_stock_nonnegative"
-        ),
-
-        db.CheckConstraint(
-            """
-            (
-                movement_type = 'TRANSFER_OUT'
-                AND new_stock = previous_stock - quantity_added
-            )
-            OR
-            (
-                movement_type IN ('STOCK_IN', 'TRANSFER_IN')
-                AND new_stock = previous_stock + quantity_added
-            )
-            """,
-            name="ck_stock_movement_stock_arithmetic"
-        ),
-
-        db.CheckConstraint(
-            """
-            movement_type IN (
-                'STOCK_IN',
-                'TRANSFER_IN',
-                'TRANSFER_OUT'
-            )
-            """,
-            name="ck_stock_movement_valid_type"
         ),
     )
 
@@ -175,21 +137,27 @@ class StockMovement(db.Model):
         created_at_eat = self._created_at_eat()
 
         return {
-            "id": self.id,
-            "cashier_id": self.cashier_id,
-            "admin_username": self.admin_username,
+            "id": str(self.id),
+            "business_id": str(self.business_id),
+            "branch_id": str(self.branch_id),
+            "product_id": str(self.product_id),
+            "product_name": (
+                self.product.name if self.product else None
+            ),
             "movement_type": self.movement_type,
-            "product_id": self.product_id,
-            "product_name": self.product_name,
-            "branch_id": self.branch_id,
             "previous_stock": float(self.previous_stock),
-            "quantity_added": float(self.quantity_added),
+            "quantity_changed": float(self.quantity_changed),
             "new_stock": float(self.new_stock),
             "reference": self.reference,
             "notes": self.notes,
+            "performed_by": (
+                str(self.performed_by)
+                if self.performed_by
+                else None
+            ),
             "created_at": (
                 created_at_eat.isoformat()
                 if created_at_eat
                 else None
-            ),
+            )
         }
