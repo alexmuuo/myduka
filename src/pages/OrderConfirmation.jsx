@@ -2,408 +2,394 @@ import { Link, useLocation } from "react-router-dom";
 
 function OrderConfirmation() {
   const location = useLocation();
-  const order = location.state?.order;
+  const order = location.state?.order || null;
+  const storeSlug =
+    location.state?.storeSlug ||
+    order?.business_slug ||
+    order?.store_slug ||
+    "";
+
+  const storePath = storeSlug ? `/store/${storeSlug}` : "/";
 
   const styles = `
-    .hm-confirmation {
+    .md-confirmation {
       min-height: 100vh;
-      padding: 56px 20px 80px;
-      color: #f1f5f9;
-      background:
-        radial-gradient(ellipse at top, rgba(29, 82, 56, 0.25), transparent 55%),
-        #101310;
+      padding: 48px 18px 70px;
+      background: #f6f7fb;
+      color: #172033;
+      font-family: inherit;
     }
 
-    .hm-confirmation * {
+    .md-confirmation *,
+    .md-confirmation *::before,
+    .md-confirmation *::after {
       box-sizing: border-box;
     }
 
-    .hm-confirmation .hm-container {
+    .md-confirmation .md-container {
       width: 100%;
-      max-width: 850px;
+      max-width: 820px;
       margin: 0 auto;
     }
 
-    .hm-confirmation .hm-muted {
-      color: #aaaFA8;
+    .md-confirmation .md-header {
+      text-align: center;
+      margin-bottom: 34px;
     }
 
-    .hm-confirmation .hm-gold {
-      color: #fbbf24;
-    }
-
-    .hm-confirmation .hm-success-icon {
+    .md-confirmation .md-success-icon {
+      width: 76px;
+      height: 76px;
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 84px;
-      height: 84px;
-      margin: 0 auto;
-      border: 1px solid rgba(251, 191, 36, 0.55);
+      margin: 0 auto 20px;
       border-radius: 50%;
-      background: rgba(27, 75, 49, 0.45);
-      color: #fbbf24;
-      font-size: 2.6rem;
-      box-shadow: 0 0 35px rgba(251, 191, 36, 0.08);
+      background: #e7f8ef;
+      color: #159957;
+      font-size: 2.3rem;
     }
 
-    .hm-confirmation .hm-eyebrow {
-      color: #fbbf24;
-      font-size: 0.76rem;
+    .md-confirmation .md-eyebrow {
+      margin: 0 0 9px;
+      color: #635bff;
+      font-size: 0.75rem;
       font-weight: 800;
-      letter-spacing: 0.2em;
+      letter-spacing: 0.14em;
       text-transform: uppercase;
     }
 
-    .hm-confirmation .hm-heading {
-      margin: 20px 0 12px;
-      color: #f8f5eb;
-      font-size: clamp(2rem, 5vw, 3.1rem);
-      font-weight: 800;
+    .md-confirmation .md-heading {
+      margin: 0 0 12px;
+      color: #172033;
+      font-size: clamp(2rem, 5vw, 2.8rem);
+      font-weight: 850;
       letter-spacing: -0.045em;
       line-height: 1.12;
     }
 
-    .hm-confirmation .hm-subheading {
+    .md-confirmation .md-subheading {
       max-width: 540px;
       margin: 0 auto;
-      color: #b7bcb4;
-      font-size: 1rem;
-      line-height: 1.8;
+      color: #697386;
+      font-size: 0.98rem;
+      line-height: 1.75;
     }
 
-    .hm-confirmation .hm-panel {
+    .md-confirmation .md-panel {
       overflow: hidden;
-      margin-bottom: 22px;
-      border: 1px solid #30372f;
-      border-radius: 18px;
-      background: #191e19;
-      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+      margin-bottom: 18px;
+      border: 1px solid #e7eaf0;
+      border-radius: 17px;
+      background: #fff;
+      box-shadow: 0 8px 28px rgba(23, 32, 51, 0.045);
     }
 
-    .hm-confirmation .hm-panel-header {
-      padding: 22px 26px;
-      border-bottom: 1px solid #30372f;
-      background: rgba(255, 255, 255, 0.015);
+    .md-confirmation .md-panel-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid #edf0f5;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 14px;
     }
 
-    .hm-confirmation .hm-panel-body {
-      padding: 26px;
+    .md-confirmation .md-panel-body {
+      padding: 24px;
     }
 
-    .hm-confirmation .hm-section-title {
+    .md-confirmation .md-section-title {
       margin: 0;
-      color: #f1f5f9;
-      font-size: 1.05rem;
-      font-weight: 750;
+      color: #172033;
+      font-size: 1rem;
+      font-weight: 800;
     }
 
-    .hm-confirmation .hm-label {
+    .md-confirmation .md-label {
       display: block;
       margin-bottom: 7px;
-      color: #9fa69c;
-      font-size: 0.76rem;
-      font-weight: 700;
+      color: #8992a3;
+      font-size: 0.7rem;
+      font-weight: 800;
       letter-spacing: 0.07em;
       text-transform: uppercase;
     }
 
-    .hm-confirmation .hm-value {
-      color: #f1f0e9;
-      font-size: 0.96rem;
-      font-weight: 600;
-      overflow-wrap: anywhere;
-    }
-
-    .hm-confirmation .hm-order-number {
-      margin-top: 5px;
-      color: #fbbf24;
-      font-size: 1.25rem;
-      font-weight: 800;
-      overflow-wrap: anywhere;
-    }
-
-    .hm-confirmation .hm-divider {
-      height: 1px;
-      margin: 22px 0;
-      border: 0;
-      background: #343b33;
-      opacity: 1;
-    }
-
-    .hm-confirmation .hm-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      padding: 8px 12px;
-      border: 1px solid transparent;
-      border-radius: 999px;
-      font-size: 0.76rem;
-      font-weight: 750;
-      text-transform: capitalize;
-    }
-
-    .hm-confirmation .hm-badge-success {
-      border-color: rgba(99, 190, 127, 0.3);
-      background: rgba(40, 120, 67, 0.2);
-      color: #8ee0a5;
-    }
-
-    .hm-confirmation .hm-badge-warning {
-      border-color: rgba(251, 191, 36, 0.3);
-      background: rgba(251, 191, 36, 0.1);
-      color: #e5c879;
-    }
-
-    .hm-confirmation .hm-badge-danger {
-      border-color: rgba(235, 100, 100, 0.3);
-      background: rgba(150, 45, 45, 0.18);
-      color: #ff9c9c;
-    }
-
-    .hm-confirmation .hm-item {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 20px;
-      padding: 15px 0;
-      border-bottom: 1px solid #2d342c;
-    }
-
-    .hm-confirmation .hm-item:last-child {
-      border-bottom: 0;
-    }
-
-    .hm-confirmation .hm-item-name {
-      color: #f1f0e9;
+    .md-confirmation .md-value {
+      color: #172033;
+      font-size: 0.94rem;
       font-weight: 650;
       overflow-wrap: anywhere;
     }
 
-    .hm-confirmation .hm-item-detail {
-      margin-top: 6px;
-      color: #a7ada4;
-      font-size: 0.86rem;
+    .md-confirmation .md-order-number {
+      margin-top: 4px;
+      color: #635bff;
+      font-size: 1.2rem;
+      font-weight: 850;
+      overflow-wrap: anywhere;
     }
 
-    .hm-confirmation .hm-item-total {
-      color: #f0eee5;
+    .md-confirmation .md-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 800;
+      text-transform: capitalize;
+    }
+
+    .md-confirmation .md-success {
+      background: #e7f8ef;
+      color: #13834c;
+    }
+
+    .md-confirmation .md-warning {
+      background: #fff5dc;
+      color: #9b6b00;
+    }
+
+    .md-confirmation .md-danger {
+      background: #fff0f0;
+      color: #c43e3e;
+    }
+
+    .md-confirmation .md-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 15px 0;
+      border-bottom: 1px solid #edf0f5;
+    }
+
+    .md-confirmation .md-item:last-child {
+      border-bottom: 0;
+    }
+
+    .md-confirmation .md-item-name {
+      color: #172033;
+      font-size: 0.93rem;
       font-weight: 750;
+      overflow-wrap: anywhere;
+    }
+
+    .md-confirmation .md-item-detail {
+      margin-top: 5px;
+      color: #8790a0;
+      font-size: 0.83rem;
+    }
+
+    .md-confirmation .md-item-total {
+      color: #172033;
+      font-size: 0.9rem;
+      font-weight: 800;
       white-space: nowrap;
     }
 
-    .hm-confirmation .hm-total-row {
+    .md-confirmation .md-divider {
+      height: 1px;
+      margin: 20px 0;
+      border: 0;
+      background: #e9edf3;
+    }
+
+    .md-confirmation .md-total-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 15px;
+      gap: 14px;
     }
 
-    .hm-confirmation .hm-grand-total {
-      color: #fbbf24;
-      font-size: clamp(1.35rem, 4vw, 1.8rem);
-      font-weight: 850;
+    .md-confirmation .md-grand-total {
+      color: #635bff;
+      font-size: 1.55rem;
+      font-weight: 900;
       text-align: right;
     }
 
-    .hm-confirmation .hm-info {
+    .md-confirmation .md-info {
       display: flex;
       align-items: flex-start;
-      gap: 14px;
-      padding: 22px;
-      border: 1px solid #344c39;
+      gap: 13px;
+      padding: 20px;
+      margin-bottom: 22px;
+      border: 1px solid #e2e6ff;
       border-radius: 15px;
-      background: rgba(28, 74, 47, 0.2);
+      background: #f0f1ff;
     }
 
-    .hm-confirmation .hm-info-icon {
+    .md-confirmation .md-info-icon {
       flex-shrink: 0;
-      color: #fbbf24;
-      font-size: 1.35rem;
+      color: #635bff;
+      font-size: 1.3rem;
     }
 
-    .hm-confirmation .hm-info-title {
-      margin: 0 0 8px;
-      color: #f1e8cc;
-      font-size: 1rem;
-      font-weight: 750;
+    .md-confirmation .md-info-title {
+      margin: 0 0 7px;
+      color: #27245c;
+      font-size: 0.95rem;
+      font-weight: 800;
     }
 
-    .hm-confirmation .hm-info-text {
+    .md-confirmation .md-info-text {
       margin: 0;
-      color: #c0c6bb;
-      font-size: 0.92rem;
-      line-height: 1.75;
+      color: #555b7b;
+      font-size: 0.88rem;
+      line-height: 1.7;
     }
 
-    .hm-confirmation .hm-actions {
+    .md-confirmation .md-actions {
       display: flex;
       justify-content: center;
       flex-wrap: wrap;
-      gap: 12px;
-      margin-top: 28px;
+      gap: 11px;
+      margin-top: 25px;
     }
 
-    .hm-confirmation .hm-btn {
+    .md-confirmation .md-btn {
+      min-height: 47px;
       display: inline-flex;
-      min-height: 48px;
       align-items: center;
       justify-content: center;
       gap: 9px;
-      padding: 12px 22px;
+      padding: 12px 21px;
       border: 1px solid transparent;
       border-radius: 10px;
-      font-size: 0.92rem;
-      font-weight: 750;
+      font-size: 0.88rem;
+      font-weight: 800;
       text-decoration: none;
-      transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+      cursor: pointer;
+      transition: 0.2s ease;
     }
 
-    .hm-confirmation .hm-btn:hover {
+    .md-confirmation .md-btn:hover {
       transform: translateY(-2px);
     }
 
-    .hm-confirmation .hm-btn-primary {
-      border-color: #fbbf24;
-      background: #fbbf24;
-      color: #171911;
+    .md-confirmation .md-btn-primary {
+      background: #635bff;
+      border-color: #635bff;
+      color: #fff;
     }
 
-    .hm-confirmation .hm-btn-primary:hover {
-      border-color: #e7cd8d;
-      background: #e7cd8d;
-      color: #171911;
+    .md-confirmation .md-btn-primary:hover {
+      background: #5148e5;
+      border-color: #5148e5;
+      color: #fff;
     }
 
-    .hm-confirmation .hm-btn-secondary {
-      border-color: #465046;
-      background: transparent;
-      color: #e9e9df;
+    .md-confirmation .md-btn-secondary {
+      background: #fff;
+      border-color: #e0e4ec;
+      color: #344054;
     }
 
-    .hm-confirmation .hm-btn-secondary:hover {
-      border-color: #fbbf24;
-      background: rgba(251, 191, 36, 0.06);
-      color: #e7cd8d;
+    .md-confirmation .md-btn-secondary:hover {
+      border-color: #635bff;
+      color: #635bff;
     }
 
-    .hm-confirmation .hm-empty-icon {
+    .md-confirmation .md-empty {
+      padding: 55px 24px;
+      border: 1px solid #e7eaf0;
+      border-radius: 18px;
+      background: #fff;
+      text-align: center;
+      box-shadow: 0 8px 28px rgba(23, 32, 51, 0.045);
+    }
+
+    .md-confirmation .md-empty-icon {
+      width: 78px;
+      height: 78px;
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 92px;
-      height: 92px;
-      margin: 0 auto 24px;
-      border: 1px solid #41483e;
+      margin: 0 auto 20px;
       border-radius: 50%;
-      background: #1a201a;
-      color: #fbbf24;
-      font-size: 2.5rem;
+      background: #f0f1ff;
+      color: #635bff;
+      font-size: 2rem;
     }
 
-    .hm-confirmation .hm-empty-panel {
-      padding: 60px 25px;
-      border: 1px solid #30372f;
-      border-radius: 20px;
-      background: #191e19;
-      text-align: center;
+    .md-confirmation .md-muted {
+      color: #8790a0;
     }
 
     @media (max-width: 600px) {
-      .hm-confirmation {
-        padding: 35px 14px 55px;
+      .md-confirmation {
+        padding: 30px 13px 48px;
       }
 
-      .hm-confirmation .hm-panel-header {
+      .md-confirmation .md-panel-header,
+      .md-confirmation .md-panel-body {
         padding: 19px;
       }
 
-      .hm-confirmation .hm-panel-body {
-        padding: 20px;
+      .md-confirmation .md-item {
+        gap: 10px;
       }
 
-      .hm-confirmation .hm-item {
-        gap: 12px;
-      }
-
-      .hm-confirmation .hm-info {
-        padding: 18px;
-      }
-
-      .hm-confirmation .hm-actions {
+      .md-confirmation .md-actions {
         flex-direction: column;
       }
 
-      .hm-confirmation .hm-btn {
+      .md-confirmation .md-btn {
         width: 100%;
       }
     }
 
     @media print {
-      .hm-confirmation {
+      .md-confirmation {
         padding: 0;
         background: #fff;
-        color: #111;
       }
 
-      .hm-confirmation .hm-panel,
-      .hm-confirmation .hm-empty-panel {
-        border: 1px solid #ddd;
-        background: #fff;
+      .md-confirmation .md-panel,
+      .md-confirmation .md-empty {
         box-shadow: none;
+        border: 1px solid #ddd;
       }
 
-      .hm-confirmation .hm-heading,
-      .hm-confirmation .hm-section-title,
-      .hm-confirmation .hm-value,
-      .hm-confirmation .hm-item-name,
-      .hm-confirmation .hm-item-total {
-        color: #111;
-      }
-
-      .hm-confirmation .hm-muted,
-      .hm-confirmation .hm-label,
-      .hm-confirmation .hm-item-detail {
-        color: #555;
-      }
-
-      .hm-confirmation .hm-actions {
+      .md-confirmation .md-actions {
         display: none;
       }
     }
   `;
 
+  const formatMoney = (amount) =>
+    Number(amount || 0).toLocaleString("en-KE", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+
   if (!order) {
     return (
-      <div className="hm-confirmation">
+      <div className="md-confirmation">
         <style>{styles}</style>
 
-        <div className="hm-container">
-          <div className="hm-empty-panel">
-            <div className="hm-empty-icon">
+        <div className="md-container">
+          <div className="md-empty">
+            <div className="md-empty-icon">
               <i className="bi bi-receipt" aria-hidden="true"></i>
             </div>
 
-            <p className="hm-eyebrow">MyDuka</p>
+            <p className="md-eyebrow">MyDuka</p>
+            <h1 className="md-heading">No order found</h1>
 
-            <h1 className="hm-heading">
-              No order found
-            </h1>
-
-            <p className="hm-subheading">
-              We couldn't find the order details for this page.
-              If you recently placed an order, check your order confirmation
-              page or return to the shop to continue browsing.
+            <p className="md-subheading">
+              We couldn't find order details for this page. If you recently
+              placed an order, return to the shop and check your order
+              confirmation details.
             </p>
 
-            <div className="hm-actions">
-              <Link to="/products" className="hm-btn hm-btn-primary">
-                <i className="bi bi-shop" aria-hidden="true"></i>
-                Browse Products
-              </Link>
-
-              <Link to="/" className="hm-btn hm-btn-secondary">
-                Back to Home
+            <div className="md-actions">
+              <Link to={storePath} className="md-btn md-btn-primary">
+                <i className="bi bi-shop"></i>
+                Return to Shop
               </Link>
             </div>
           </div>
@@ -415,13 +401,11 @@ function OrderConfirmation() {
   const customer = order.customer || {};
 
   const paymentMethod = String(
-    customer.paymentMethod ||
-      order.payment_method ||
+    order.payment_method ||
       order.paymentMethod ||
+      customer.paymentMethod ||
       ""
   ).toLowerCase();
-
-  const isMpesa = paymentMethod === "mpesa";
 
   const paymentStatus = String(
     order.payment_status ||
@@ -431,59 +415,86 @@ function OrderConfirmation() {
   ).toLowerCase();
 
   const isPaid = paymentStatus === "paid";
+  const isFailed = paymentStatus === "failed";
+  const isMpesa = paymentMethod === "mpesa";
 
-  const displayedPaymentStatus = isPaid
+  const paymentLabel = isPaid
     ? "Paid"
-    : paymentStatus === "failed"
-      ? "Failed"
+    : isFailed
+      ? "Payment Failed"
       : paymentStatus === "pending"
         ? "Payment Pending"
         : "Unpaid";
 
-  const paymentBadgeClass = isPaid
-    ? "hm-badge-success"
-    : paymentStatus === "failed"
-      ? "hm-badge-danger"
-      : "hm-badge-warning";
+  const paymentBadge = isPaid
+    ? "md-success"
+    : isFailed
+      ? "md-danger"
+      : "md-warning";
 
   const orderStatus = String(order.status || "pending");
   const normalizedOrderStatus = orderStatus.toLowerCase();
 
-  const orderBadgeClass =
-    normalizedOrderStatus === "completed" ||
-    normalizedOrderStatus === "delivered"
-      ? "hm-badge-success"
+  const orderBadge =
+    ["completed", "delivered"].includes(normalizedOrderStatus)
+      ? "md-success"
       : normalizedOrderStatus === "cancelled"
-        ? "hm-badge-danger"
-        : "hm-badge-warning";
+        ? "md-danger"
+        : "md-warning";
 
-  const items = Array.isArray(order.items)
-    ? order.items
-    : [];
+  const items = Array.isArray(order.items) ? order.items : [];
 
   const total = Number(
-    order.total ?? order.total_amount ?? 0
+    order.total ??
+      order.total_amount ??
+      order.grand_total ??
+      0
   );
 
-  const formatMoney = (amount) =>
-    Number(amount || 0).toLocaleString("en-KE", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-
-  const paymentMethodLabel = isMpesa
-    ? "M-Pesa"
-    : paymentMethod === "cash" ||
-        paymentMethod === "cod" ||
-        paymentMethod === "cash_on_delivery" ||
-        paymentMethod === "pay_on_delivery"
-      ? "Cash on Delivery"
-      : paymentMethod === "pickup" ||
-          paymentMethod === "pay_on_pickup"
-        ? "Pay on Pickup"
+  const paymentMethodLabel =
+    paymentMethod === "mpesa"
+      ? "M-Pesa"
+      : ["cash", "cod", "cash_on_delivery", "pay_on_delivery"].includes(
+            paymentMethod
+          )
+        ? "Cash"
         : paymentMethod
           ? paymentMethod.replace(/_/g, " ")
           : "Not specified";
+
+  const fulfilment = String(
+    order.fulfilment ||
+      order.fulfillment ||
+      order.order_type ||
+      order.orderType ||
+      customer.orderType ||
+      "Not specified"
+  ).replace(/_/g, " ");
+
+  const deliveryLocation =
+    order.delivery_location ||
+    order.deliveryLocation ||
+    order.location ||
+    customer.location ||
+    "";
+
+  const customerName =
+    order.customer_name ||
+    customer.name ||
+    "Customer";
+
+  const customerPhone =
+    order.customer_phone ||
+    order.phone ||
+    customer.phone ||
+    "Not provided";
+
+  const orderNumber =
+    order.order_number ||
+    order.orderNumber ||
+    order.reference ||
+    order.id ||
+    "Pending";
 
   const receiptNumber =
     order.mpesa_receipt_number ||
@@ -492,201 +503,180 @@ function OrderConfirmation() {
     order.payment?.receipt ||
     null;
 
-  const fulfilment = String(
-    customer.orderType ||
-      order.order_type ||
-      "N/A"
-  ).replace(/_/g, " ");
+  const itemPrice = (item) =>
+    Number(
+      item.unit_price ??
+        item.price ??
+        item.selling_price ??
+        0
+    );
 
-  const deliveryLocation =
-    customer.location ||
-    order.delivery_location ||
-    order.deliveryLocation ||
-    null;
+  const itemName = (item) =>
+    item.product_name ||
+    item.name ||
+    "Product";
+
+  const itemQuantity = (item) =>
+    Number(item.quantity || 0);
 
   return (
-    <div className="hm-confirmation">
+    <div className="md-confirmation">
       <style>{styles}</style>
 
-      <div className="hm-container">
-        {/* Confirmation heading */}
-        <header className="text-center mb-5">
-          <div className="hm-success-icon">
+      <div className="md-container">
+        <header className="md-header">
+          <div className="md-success-icon">
             <i className="bi bi-check-lg" aria-hidden="true"></i>
           </div>
 
-          <p className="hm-eyebrow mt-4 mb-0">
-            MyDuka
-          </p>
+          <p className="md-eyebrow">MyDuka Order Confirmation</p>
 
-          <h1 className="hm-heading">
-            Order Received!
-          </h1>
+          <h1 className="md-heading">Order received!</h1>
 
-          <p className="hm-subheading">
-            Thank you, {customer.name || "Customer"}.
-            Your order has been received successfully.
-            Here's your order summary for reference.
+          <p className="md-subheading">
+            Thank you, {customerName}. Your order has been submitted.
+            Here is your order summary for reference.
           </p>
         </header>
 
-        {/* Order summary */}
-        <section className="hm-panel">
-          <div className="hm-panel-header">
-            <div className="d-flex justify-content-between align-items-center flex-wrap gap-3">
-              <div>
-                <span className="hm-label">Order Number</span>
-
-                <div className="hm-order-number">
-                  {order.orderNumber || order.order_number || order.id || "N/A"}
-                </div>
-              </div>
-
-              <span className={`hm-badge ${orderBadgeClass}`}>
-                <i
-                  className={
-                    normalizedOrderStatus === "cancelled"
-                      ? "bi bi-x-circle"
-                      : normalizedOrderStatus === "completed" ||
-                          normalizedOrderStatus === "delivered"
-                        ? "bi bi-check-circle"
-                        : "bi bi-clock"
-                  }
-                  aria-hidden="true"
-                ></i>
-
-                {orderStatus.replace(/_/g, " ")}
-              </span>
+        <section className="md-panel">
+          <div className="md-panel-header">
+            <div>
+              <span className="md-label">Order number</span>
+              <div className="md-order-number">{orderNumber}</div>
             </div>
+
+            <span className={`md-badge ${orderBadge}`}>
+              <i className="bi bi-clock" aria-hidden="true"></i>
+              {orderStatus.replace(/_/g, " ")}
+            </span>
           </div>
 
-          <div className="hm-panel-body">
-            <h2 className="hm-section-title mb-3">
-              <i className="bi bi-receipt hm-gold me-2" aria-hidden="true"></i>
-              Order Items
+          <div className="md-panel-body">
+            <h2 className="md-section-title mb-3">
+              <i className="bi bi-bag-check me-2"></i>
+              Order items
             </h2>
 
             {items.length > 0 ? (
               items.map((item, index) => {
-                const itemPrice = Number(item.price) || 0;
-                const itemQuantity = Number(item.quantity) || 0;
+                const quantity = itemQuantity(item);
+                const price = itemPrice(item);
+                const purchaseType = item.purchase_type || item.purchaseType;
 
                 return (
                   <div
-                    key={item.id ?? index}
-                    className="hm-item"
+                    key={`${item.product_id || item.id || index}-${purchaseType || "unit"}-${index}`}
+                    className="md-item"
                   >
                     <div>
-                      <div className="hm-item-name">
-                        {item.name || item.product_name || "Product"}
+                      <div className="md-item-name">
+                        {itemName(item)}
                       </div>
 
-                      <div className="hm-item-detail">
-                        {itemQuantity} × KSh {formatMoney(itemPrice)}
+                      <div className="md-item-detail">
+                        {quantity} × KSh {formatMoney(price)}
+                        {purchaseType === "portion" ? " · Portion" : ""}
+                        {item.unit ? ` · ${item.unit}` : ""}
                       </div>
                     </div>
 
-                    <div className="hm-item-total">
-                      KSh {formatMoney(itemPrice * itemQuantity)}
+                    <div className="md-item-total">
+                      KSh {formatMoney(quantity * price)}
                     </div>
                   </div>
                 );
               })
             ) : (
-              <p className="hm-muted mb-0">
-                No item details are available for this order.
+              <p className="md-muted mb-0">
+                Item details are not available for this order.
               </p>
             )}
 
-            <hr className="hm-divider" />
+            <hr className="md-divider" />
 
-            <div className="hm-total-row">
+            <div className="md-total-row">
               <div>
-                <div className="hm-label mb-1">Order Total</div>
-                <span className="hm-muted small">
-                  {items.length} {items.length === 1 ? "item" : "items"}
+                <span className="md-label mb-1">Order total</span>
+                <span className="md-muted small">
+                  {items.length} {items.length === 1 ? "line item" : "line items"}
                 </span>
               </div>
 
-              <div className="hm-grand-total">
+              <div className="md-grand-total">
                 KSh {formatMoney(total)}
               </div>
             </div>
           </div>
         </section>
 
-        {/* Order and payment information */}
-        <section className="hm-panel">
-          <div className="hm-panel-header">
-            <h2 className="hm-section-title">
-              <i className="bi bi-clipboard-check hm-gold me-2" aria-hidden="true"></i>
-              Order Information
+        <section className="md-panel">
+          <div className="md-panel-header">
+            <h2 className="md-section-title">
+              <i className="bi bi-clipboard-check me-2"></i>
+              Order information
             </h2>
           </div>
 
-          <div className="hm-panel-body">
+          <div className="md-panel-body">
             <div className="row g-4">
               <div className="col-sm-6">
-                <span className="hm-label">Customer</span>
-                <div className="hm-value">
-                  {customer.name || "N/A"}
-                </div>
+                <span className="md-label">Customer</span>
+                <div className="md-value">{customerName}</div>
               </div>
 
               <div className="col-sm-6">
-                <span className="hm-label">Phone</span>
-                <div className="hm-value">
-                  {customer.phone || order.phone || "N/A"}
-                </div>
+                <span className="md-label">Phone number</span>
+                <div className="md-value">{customerPhone}</div>
               </div>
 
               <div className="col-sm-6">
-                <span className="hm-label">Fulfilment</span>
-                <div className="hm-value text-capitalize">
+                <span className="md-label">Fulfilment</span>
+                <div className="md-value text-capitalize">
                   {fulfilment}
                 </div>
               </div>
 
               <div className="col-sm-6">
-                <span className="hm-label">Payment Method</span>
-                <div className="hm-value">
+                <span className="md-label">Payment method</span>
+                <div className="md-value text-capitalize">
                   {paymentMethodLabel}
                 </div>
               </div>
 
               <div className="col-sm-6">
-                <span className="hm-label">Payment Status</span>
-
-                <span className={`hm-badge ${paymentBadgeClass}`}>
-                  <i
-                    className={
-                      isPaid
-                        ? "bi bi-check-circle"
-                        : paymentStatus === "failed"
-                          ? "bi bi-x-circle"
-                          : "bi bi-clock"
-                    }
-                    aria-hidden="true"
-                  ></i>
-
-                  {displayedPaymentStatus}
+                <span className="md-label">Payment status</span>
+                <span className={`md-badge ${paymentBadge}`}>
+                  {isPaid ? (
+                    <i className="bi bi-check-circle"></i>
+                  ) : isFailed ? (
+                    <i className="bi bi-x-circle"></i>
+                  ) : (
+                    <i className="bi bi-clock"></i>
+                  )}
+                  {paymentLabel}
                 </span>
               </div>
 
               {receiptNumber && (
                 <div className="col-sm-6">
-                  <span className="hm-label">M-Pesa Receipt</span>
-                  <div className="hm-value">
-                    {receiptNumber}
-                  </div>
+                  <span className="md-label">M-Pesa receipt</span>
+                  <div className="md-value">{receiptNumber}</div>
                 </div>
               )}
 
               {deliveryLocation && (
                 <div className="col-12">
-                  <span className="hm-label">Delivery Location</span>
-                  <div className="hm-value">
-                    {deliveryLocation}
+                  <span className="md-label">Delivery location</span>
+                  <div className="md-value">{deliveryLocation}</div>
+                </div>
+              )}
+
+              {(order.customer_email || customer.email) && (
+                <div className="col-12">
+                  <span className="md-label">Email</span>
+                  <div className="md-value">
+                    {order.customer_email || customer.email}
                   </div>
                 </div>
               )}
@@ -694,67 +684,50 @@ function OrderConfirmation() {
           </div>
         </section>
 
-        {/* Next steps */}
-        <section className="hm-info">
-          <i
-            className="bi bi-info-circle hm-info-icon"
-            aria-hidden="true"
-          ></i>
+        <section className="md-info">
+          <i className="bi bi-info-circle md-info-icon" aria-hidden="true"></i>
 
           <div>
-            <h2 className="hm-info-title">
+            <h2 className="md-info-title">
               {isPaid
                 ? "Payment confirmed"
-                : isMpesa && paymentStatus === "failed"
+                : isMpesa && isFailed
                   ? "Payment was not successful"
                   : isMpesa
                     ? "Payment confirmation pending"
-                    : "What's next?"}
+                    : "What happens next?"}
             </h2>
 
-            <p className="hm-info-text">
+            <p className="md-info-text">
               {isPaid
-                ? "Your payment has been confirmed. Our team will review your order and contact you about collection or delivery."
-                : isMpesa && paymentStatus === "failed"
-                  ? "Your M-Pesa payment was not confirmed as successful. Please check your payment status before attempting another payment."
+                ? "Your payment has been confirmed. The shop will process your order and contact you about collection or delivery."
+                : isMpesa && isFailed
+                  ? "Your M-Pesa payment was not confirmed. Check your M-Pesa messages and payment status before trying again."
                   : isMpesa
-                    ? "Your M-Pesa payment has not yet been confirmed. Please wait for verification before assuming your order is paid."
-                    : "Your order has been received. Payment is due when you collect your order or receive your delivery, as applicable."}
+                    ? "Your M-Pesa payment is awaiting confirmation. Please wait for verification before assuming the order has been paid."
+                    : "Your order has been received. Payment will be due according to the shop's collection or delivery arrangements."}
             </p>
           </div>
         </section>
 
-        {/* Navigation */}
-        <div className="hm-actions">
-          <Link
-            to="/products"
-            className="hm-btn hm-btn-primary"
-          >
-            <i className="bi bi-shop" aria-hidden="true"></i>
-            Continue Shopping
-          </Link>
-
-          <Link
-            to="/"
-            className="hm-btn hm-btn-secondary"
-          >
-            <i className="bi bi-house" aria-hidden="true"></i>
-            Back to Home
+        <div className="md-actions">
+          <Link to={storePath} className="md-btn md-btn-primary">
+            <i className="bi bi-shop"></i>
+            Continue shopping
           </Link>
 
           <button
             type="button"
-            className="hm-btn hm-btn-secondary"
+            className="md-btn md-btn-secondary"
             onClick={() => window.print()}
           >
-            <i className="bi bi-printer" aria-hidden="true"></i>
-            Print Receipt
+            <i className="bi bi-printer"></i>
+            Print receipt
           </button>
         </div>
 
-        <p className="text-center hm-muted small mt-4 mb-0">
+        <p className="text-center md-muted small mt-4 mb-0">
           Thank you for shopping with MyDuka.
-          Please enjoy responsibly.
         </p>
       </div>
     </div>
