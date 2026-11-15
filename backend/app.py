@@ -10,6 +10,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from extensions import db
 from routes.business_routes import business_bp
 from routes.superadmin_routes import superadmin_bp
+from routes.profile_routes import profile_bp
 
 
 # ============================================================
@@ -171,6 +172,7 @@ db.init_app(app)
 
 app.register_blueprint(business_bp)
 app.register_blueprint(superadmin_bp)
+app.register_blueprint(profile_bp)
 
 
 # ============================================================
