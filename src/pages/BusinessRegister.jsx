@@ -384,7 +384,7 @@ function BusinessRegister() {
                 type={showPassword ? "text" : "password"}
                 value={form.confirmPassword}
                 onChange={(e) => updateField("confirmPassword", e.target.value)}
-                placeholder="Repeat password"
+                placeholder="Confirm password"
                 autoComplete="new-password"
                 required
               />
@@ -400,7 +400,7 @@ function BusinessRegister() {
                 className="md-register-input"
                 value={form.businessName}
                 onChange={(e) => handleBusinessName(e.target.value)}
-                placeholder="e.g. Alex Retail Store"
+                placeholder="e.g. xxxx Retail Store"
                 required
               />
             </div>
@@ -411,7 +411,7 @@ function BusinessRegister() {
                 className="md-register-input"
                 value={form.slug}
                 onChange={(e) => updateField("slug", createSlug(e.target.value))}
-                placeholder="alex-retail-store"
+                placeholder="xxxx-retail-store"
                 required
               />
               <div className="md-register-hint">
