@@ -1,1560 +1,1353 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import api from "../../api/api";
+import React, { useMemo, useState } from "react";
 
-const styles = {
-page: {
-padding: "24px",
-maxWidth: "1500px",
-margin: "0 auto",
-color: "#172033",
-},
-headingRow: {
-display: "flex",
-justifyContent: "space-between",
-alignItems: "center",
-flexWrap: "wrap",
-gap: "14px",
-marginBottom: "22px",
-},
-heading: {
-margin: 0,
-fontSize: "28px",
-fontWeight: 750,
-},
-subtitle: {
-margin: "7px 0 0",
-color: "#64748b",
-fontSize: "14px",
-},
-button: {
-border: "1px solid #dbe2ea",
-borderRadius: "9px",
-padding: "10px 14px",
-fontSize: "13px",
-fontWeight: 650,
-cursor: "pointer",
-background: "#fff",
-color: "#172033",
-},
-primaryButton: {
-background: "#172033",
-color: "#fff",
-borderColor: "#172033",
-},
-dangerButton: {
-background: "#b42318",
-color: "#fff",
-borderColor: "#b42318",
-},
-card: {
-background: "#fff",
-border: "1px solid #e5eaf1",
-borderRadius: "14px",
-padding: "18px",
-marginBottom: "20px",
-boxShadow: "0 3px 12px rgba(15, 23, 42, 0.035)",
-},
-filters: {
-display: "grid",
-gridTemplateColumns: "repeat(auto-fit, minmax(155px, 1fr))",
-gap: "12px",
-},
-label: {
-display: "block",
-fontSize: "12px",
-fontWeight: 700,
-color: "#475569",
-marginBottom: "7px",
-},
-input: {
-boxSizing: "border-box",
-width: "100%",
-minHeight: "42px",
-padding: "10px 11px",
-border: "1px solid #d6dee8",
-borderRadius: "8px",
-background: "#fff",
-color: "#172033",
-fontSize: "13px",
-},
-tableWrap: {
-width: "100%",
-overflowX: "auto",
-},
-table: {
-width: "100%",
-borderCollapse: "collapse",
-fontSize: "13px",
-minWidth: "850px",
-},
-th: {
-textAlign: "left",
-padding: "13px 12px",
-color: "#64748b",
-background: "#f8fafc",
-borderBottom: "1px solid #e5eaf1",
-fontSize: "11px",
-textTransform: "uppercase",
-letterSpacing: ".04em",
-whiteSpace: "nowrap",
-},
-td: {
-padding: "14px 12px",
-borderBottom: "1px solid #edf1f5",
-verticalAlign: "middle",
-},
-muted: {
-color: "#64748b",
-},
-badge: {
-display: "inline-block",
-padding: "5px 8px",
-borderRadius: "999px",
-fontSize: "11px",
-fontWeight: 750,
-whiteSpace: "nowrap",
-},
-error: {
-padding: "12px 14px",
-borderRadius: "9px",
-color: "#991b1b",
-background: "#fef2f2",
-border: "1px solid #fecaca",
-fontSize: "13px",
-marginBottom: "16px",
-},
-success: {
-padding: "12px 14px",
-borderRadius: "9px",
-color: "#166534",
-background: "#f0fdf4",
-border: "1px solid #bbf7d0",
-fontSize: "13px",
-marginBottom: "16px",
-},
-warning: {
-padding: "12px 14px",
-borderRadius: "9px",
-color: "#92400e",
-background: "#fffbeb",
-border: "1px solid #fde68a",
-fontSize: "13px",
-marginBottom: "16px",
-lineHeight: 1.6,
-},
-overlay: {
-position: "fixed",
-inset: 0,
-background: "rgba(15, 23, 42, 0.58)",
-display: "flex",
-alignItems: "center",
-justifyContent: "center",
-padding: "16px",
-zIndex: 2000,
-},
-modal: {
-background: "#fff",
-width: "100%",
-maxWidth: "950px",
-maxHeight: "92vh",
-overflowY: "auto",
-borderRadius: "16px",
-padding: "22px",
-boxSizing: "border-box",
-boxShadow: "0 20px 60px rgba(0,0,0,.2)",
-},
-smallModal: {
-background: "#fff",
-width: "100%",
-maxWidth: "520px",
-maxHeight: "92vh",
-overflowY: "auto",
-borderRadius: "16px",
-padding: "22px",
-boxSizing: "border-box",
-},
-sectionHeading: {
-margin: "0 0 14px",
-fontSize: "17px",
-fontWeight: 750,
-},
-summaryGrid: {
-display: "grid",
-gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-gap: "12px",
-marginBottom: "20px",
-},
-summaryBox: {
-padding: "13px",
-background: "#f8fafc",
-border: "1px solid #e8edf3",
-borderRadius: "10px",
-},
-summaryLabel: {
-fontSize: "11px",
-color: "#64748b",
-marginBottom: "6px",
-},
-summaryValue: {
-fontSize: "15px",
-fontWeight: 750,
-overflowWrap: "anywhere",
-},
-modalActions: {
-display: "flex",
-flexWrap: "wrap",
-justifyContent: "flex-end",
-gap: "9px",
-marginTop: "20px",
-},
-itemRow: {
-display: "grid",
-gridTemplateColumns: "minmax(160px, 1fr) 100px 110px 40px",
-gap: "10px",
-alignItems: "end",
-marginBottom: "12px",
-},
-auditItem: {
-border: "1px solid #e5eaf1",
-borderRadius: "10px",
-padding: "13px",
-marginBottom: "10px",
-},
-};
+const INITIAL_POS_SALES = [];
 
-function formatMoney(value) {
-const amount = Number(value ?? 0);
-
-return `KES ${amount.toLocaleString("en-KE", {
-    minimumFractionDigits: 2,
+const money = (value) =>
+  new Intl.NumberFormat("en-KE", {
+    style: "currency",
+    currency: "KES",
     maximumFractionDigits: 2,
-  })}`;
-}
+  }).format(Number(value || 0));
 
-function formatDate(value) {
-if (!value) return "—";
+const formatDate = (value) => {
+  if (!value) return "—";
 
-const date = new Date(value);
+  const date = new Date(value);
 
-if (Number.isNaN(date.getTime())) return "—";
-
-return date.toLocaleString("en-KE", {
-dateStyle: "medium",
-timeStyle: "short",
-});
-}
-
-function normaliseStatus(value) {
-return String(value ?? "").trim().toLowerCase();
-}
-
-function getStatusStyle(value) {
-const status = normaliseStatus(value);
-
-if (["completed", "paid", "successful", "success"].includes(status)) {
-return {
-background: "#dcfce7",
-color: "#166534",
+  return Number.isNaN(date.getTime())
+    ? value
+    : date.toLocaleString("en-KE", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      });
 };
+
+const csvValue = (value) =>
+  `"${String(value ?? "").replace(/"/g, '""')}"`;
+
+function Icon({ name, size = 18 }) {
+  const paths = {
+    search: (
+      <>
+        <circle cx="11" cy="11" r="7" />
+        <path d="m20 20-4-4" />
+      </>
+    ),
+    download: (
+      <>
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+        <path d="m7 10 5 5 5-5M12 15V3" />
+      </>
+    ),
+    receipt: (
+      <>
+        <path d="M4 3h16v18l-3-2-3 2-2-2-3 2-2-2-3 2z" />
+        <path d="M8 8h8M8 12h8M8 16h4" />
+      </>
+    ),
+    wallet: (
+      <>
+        <rect x="3" y="5" width="18" height="15" rx="2" />
+        <path d="M3 9h18M16 14h2" />
+      </>
+    ),
+    users: (
+      <>
+        <path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+        <circle cx="10" cy="7" r="4" />
+        <path d="M20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+      </>
+    ),
+    chart: (
+      <>
+        <path d="M3 3v18h18" />
+        <path d="m7 14 4-4 4 3 6-7" />
+      </>
+    ),
+    eye: (
+      <>
+        <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
+        <circle cx="12" cy="12" r="3" />
+      </>
+    ),
+    close: <path d="m18 6-12 12M6 6l12 12" />,
+    filter: (
+      <>
+        <path d="M4 6h16M7 12h10M10 18h4" />
+      </>
+    ),
+    refresh: (
+      <>
+        <path d="M20 7v5h-5M4 17v-5h5" />
+        <path d="M5.5 9A7 7 0 0 1 18 6l2 6M18.5 15A7 7 0 0 1 6 18l-2-6" />
+      </>
+    ),
+  };
+
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {paths[name] || null}
+    </svg>
+  );
 }
 
-if (["voided", "cancelled", "canceled", "failed"].includes(status)) {
-return {
-background: "#fee2e2",
-color: "#991b1b",
-};
-}
+function Badge({ value, type = "status" }) {
+  const normalized = String(value || "unknown").toLowerCase();
 
-if (["pending", "unpaid"].includes(status)) {
-return {
-background: "#fef3c7",
-color: "#92400e",
-};
-}
+  const labels = {
+    paid: "Paid",
+    pending: "Pending",
+    partially_paid: "Partially paid",
+    refunded: "Refunded",
+    completed: "Completed",
+    voided: "Voided",
+    cancelled: "Cancelled",
+    cash: "Cash",
+    mpesa: "M-Pesa",
+    card: "Card",
+    bank: "Bank",
+  };
 
-return {
-background: "#e2e8f0",
-color: "#334155",
-};
-}
-
-function StatusBadge({ value }) {
-return (
-<span
-style={{
-...styles.badge,
-...getStatusStyle(value),
-}}
->
-{value || "Unknown"} </span>
-);
-}
-
-function SummaryBox({ label, value }) {
-return ( <div style={styles.summaryBox}> <div style={styles.summaryLabel}>{label}</div> <div style={styles.summaryValue}>{value}</div> </div>
-);
-}
-
-function extractError(error, fallback) {
-return (
-error?.response?.data?.message ||
-error?.response?.data?.error ||
-error?.message ||
-fallback
-);
+  return (
+    <span className={`md-pos-badge md-pos-${type}-${normalized}`}>
+      {labels[normalized] || normalized.replaceAll("_", " ")}
+    </span>
+  );
 }
 
 export default function POSSales() {
-const [allSales, setAllSales] = useState([]);
-const [pageState, setPageState] = useState(1);
-const PAGE_SIZE = 50;
+  const [sales] = useState(INITIAL_POS_SALES);
 
-const [searchInput, setSearchInput] = useState("");
-const [filters, setFilters] = useState({
-search: "",
-status: "",
-branch_id: "",
-cashier_id: "",
-start_date: "",
-end_date: "",
-});
+  const [search, setSearch] = useState("");
+  const [branchFilter, setBranchFilter] = useState("all");
+  const [cashierFilter, setCashierFilter] = useState("all");
+  const [paymentFilter, setPaymentFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedSale, setSelectedSale] = useState(null);
 
-const [loading, setLoading] = useState(true);
-const [error, setError] = useState("");
-const [notice, setNotice] = useState("");
-
-const [selectedSale, setSelectedSale] = useState(null);
-const [auditHistory, setAuditHistory] = useState([]);
-const [detailsLoading, setDetailsLoading] = useState(false);
-
-const [editorOpen, setEditorOpen] = useState(false);
-const [editItems, setEditItems] = useState([]);
-const [editReason, setEditReason] = useState("");
-const [savingEdit, setSavingEdit] = useState(false);
-
-const [voidOpen, setVoidOpen] = useState(false);
-const [voidReason, setVoidReason] = useState("");
-const [voiding, setVoiding] = useState(false);
-
-const [branches, setBranches] = useState([]);
-const [cashiers, setCashiers] = useState([]);
-
-const [branchFilter, setBranchFilter] = useState("");
-const [cashierFilter, setCashierFilter] = useState("");
-
-const fetchSales = useCallback(
-async (page = 1) => {
-  setLoading(true);
-  setError("");
-
-  try {
-    // The current backend returns all POS sales and does not implement
-    // search/status/cashier filters or pagination. Fetch once, then filter
-    // and paginate the complete result in this component.
-    const response = await api.get("/admin/pos-sales");
-    const data = response?.data ?? {};
-
-    setAllSales(Array.isArray(data.sales) ? data.sales : []);
-    setPageState(Math.max(1, Number(page) || 1));
-  } catch (requestError) {
-    setError(extractError(requestError, "Failed to load POS sales."));
-  } finally {
-    setLoading(false);
-  }
-},
-[]
-);
-
-const fetchSaleDetails = useCallback(async (saleId) => {
-setDetailsLoading(true);
-setError("");
-
-
-try {
-  const response = await api.get(`/admin/pos-sales/${saleId}`);
-  const data = response?.data ?? {};
-
-  setSelectedSale(data.sale ?? null);
-
-  setAuditHistory(
-    Array.isArray(data.audit_history) ? data.audit_history : []
+  const branches = useMemo(
+    () => [
+      ...new Set(sales.map((sale) => sale.branch_name).filter(Boolean)),
+    ],
+    [sales]
   );
-} catch (requestError) {
-  setError(
-    extractError(requestError, "Failed to load sale details.")
+
+  const cashiers = useMemo(
+    () => [
+      ...new Set(sales.map((sale) => sale.cashier_name).filter(Boolean)),
+    ],
+    [sales]
   );
-} finally {
-  setDetailsLoading(false);
-}
 
+  const filteredSales = useMemo(() => {
+    return sales.filter((sale) => {
+      const query = search.trim().toLowerCase();
 
-}, []);
+      const matchesSearch =
+        !query ||
+        [
+          sale.sale_number,
+          sale.cashier_name,
+          sale.branch_name,
+          sale.customer_name,
+          sale.customer_phone,
+        ]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(query));
 
-useEffect(() => {
-fetchSales(1);
-}, [fetchSales]);
+      const matchesBranch =
+        branchFilter === "all" || sale.branch_name === branchFilter;
 
-useEffect(() => {
-  let cancelled = false;
+      const matchesCashier =
+        cashierFilter === "all" || sale.cashier_name === cashierFilter;
 
-  // Load these independently: one endpoint failing must not prevent the
-  // other dropdown from loading. The dropdowns also fall back to sales data.
-  async function loadBranches() {
-    try {
-      const response = await api.get("/admin/branches");
-      if (cancelled) return;
-      const data = response?.data ?? {};
-      const list = Array.isArray(data)
-        ? data
-        : data.branches ?? data.data ?? data.items ?? data.results ?? [];
-      setBranches(Array.isArray(list) ? list : []);
-    } catch {
-      if (!cancelled) setBranches([]);
-    }
-  }
+      const matchesPayment =
+        paymentFilter === "all" ||
+        String(sale.payment_method || "").toLowerCase() === paymentFilter;
 
-  async function loadCashiers() {
-    try {
-      const response = await api.get("/admin/cashiers");
-      if (cancelled) return;
-      const data = response?.data ?? {};
-      const list = Array.isArray(data)
-        ? data
-        : data.cashiers ?? data.data ?? data.items ?? data.results ?? [];
-      setCashiers(Array.isArray(list) ? list : []);
-    } catch {
-      if (!cancelled) setCashiers([]);
-    }
-  }
+      const matchesStatus =
+        statusFilter === "all" ||
+        String(sale.status || "").toLowerCase() === statusFilter;
 
-  loadBranches();
-  loadCashiers();
+      const saleDate = sale.created_at
+        ? new Date(sale.created_at).toISOString().slice(0, 10)
+        : "";
 
-  return () => {
-    cancelled = true;
+      const matchesFrom = !dateFrom || saleDate >= dateFrom;
+      const matchesTo = !dateTo || saleDate <= dateTo;
+
+      return (
+        matchesSearch &&
+        matchesBranch &&
+        matchesCashier &&
+        matchesPayment &&
+        matchesStatus &&
+        matchesFrom &&
+        matchesTo
+      );
+    });
+  }, [
+    sales,
+    search,
+    branchFilter,
+    cashierFilter,
+    paymentFilter,
+    statusFilter,
+    dateFrom,
+    dateTo,
+  ]);
+
+  const summary = useMemo(() => {
+    const completed = filteredSales.filter(
+      (sale) => String(sale.status).toLowerCase() === "completed"
+    );
+
+    const paid = completed.filter(
+      (sale) => String(sale.payment_status).toLowerCase() === "paid"
+    );
+
+    return {
+      transactions: filteredSales.length,
+      completed: completed.length,
+      revenue: completed.reduce(
+        (total, sale) => total + Number(sale.total_amount || 0),
+        0
+      ),
+      cashiers: new Set(
+        filteredSales.map((sale) => sale.cashier_name).filter(Boolean)
+      ).size,
+      paidAmount: paid.reduce(
+        (total, sale) => total + Number(sale.total_amount || 0),
+        0
+      ),
+    };
+  }, [filteredSales]);
+
+  const clearFilters = () => {
+    setSearch("");
+    setBranchFilter("all");
+    setCashierFilter("all");
+    setPaymentFilter("all");
+    setStatusFilter("all");
+    setDateFrom("");
+    setDateTo("");
   };
-}, []);
 
-const branchOptions = useMemo(() => {
-  const options = new Map();
-  branches.forEach((branch) => {
-    const id = branch?.id ?? branch?.branch_id;
-    const name = branch?.name ?? branch?.branch_name ?? branch?.title;
-    if (id !== undefined && id !== null && name) {
-      options.set(String(id), { id: String(id), name: String(name) });
-    }
-  });
-  allSales.forEach((sale) => {
-    const id = sale?.branch_id;
-    const name = sale?.branch_name;
-    if (id !== undefined && id !== null && name && !options.has(String(id))) {
-      options.set(String(id), { id: String(id), name: String(name) });
-    }
-  });
-  return [...options.values()].sort((a, b) => a.name.localeCompare(b.name));
-}, [branches, allSales]);
+  const exportCSV = () => {
+    if (!filteredSales.length) return;
 
-const cashierOptions = useMemo(() => {
-  const options = new Map();
-  cashiers.forEach((cashier) => {
-    const id = cashier?.id ?? cashier?.cashier_id;
-    const name = cashier?.full_name ?? cashier?.name ?? cashier?.username ?? cashier?.cashier_name;
-    if (id !== undefined && id !== null && name) {
-      options.set(String(id), { id: String(id), name: String(name) });
-    }
-  });
-  allSales.forEach((sale) => {
-    const id = sale?.cashier_id;
-    const name = sale?.cashier_name ?? sale?.username;
-    if (id !== undefined && id !== null && name && !options.has(String(id))) {
-      options.set(String(id), { id: String(id), name: String(name) });
-    }
-  });
-  return [...options.values()].sort((a, b) => a.name.localeCompare(b.name));
-}, [cashiers, allSales]);
+    const headers = [
+      "Sale Number",
+      "Date",
+      "Branch",
+      "Cashier",
+      "Customer",
+      "Payment Method",
+      "Payment Status",
+      "Subtotal",
+      "Discount",
+      "Total",
+      "Sale Status",
+    ];
 
-const filteredSales = useMemo(() => {
-  const search = String(filters.search ?? "").trim().toLowerCase();
-  const status = String(filters.status ?? "").trim().toLowerCase();
-  const branchId = String(filters.branch_id ?? "");
-  const cashierId = String(filters.cashier_id ?? "");
-  const startDate = filters.start_date || "";
-  const endDate = filters.end_date || "";
+    const rows = filteredSales.map((sale) => [
+      sale.sale_number,
+      formatDate(sale.created_at),
+      sale.branch_name,
+      sale.cashier_name,
+      sale.customer_name,
+      sale.payment_method,
+      sale.payment_status,
+      sale.subtotal,
+      sale.discount,
+      sale.total_amount,
+      sale.status,
+    ]);
 
-  return allSales.filter((sale) => {
-    if (status && normaliseStatus(sale.status) !== status) return false;
-    if (branchId && String(sale.branch_id ?? "") !== branchId) return false;
-    if (cashierId && String(sale.cashier_id ?? "") !== cashierId) return false;
+    const csv = [
+      headers.map(csvValue).join(","),
+      ...rows.map((row) => row.map(csvValue).join(",")),
+    ].join("\n");
 
-    const saleDate = sale.created_at ? String(sale.created_at).slice(0, 10) : "";
-    if (startDate && (!saleDate || saleDate < startDate)) return false;
-    if (endDate && (!saleDate || saleDate > endDate)) return false;
+    const blob = new Blob(["\uFEFF" + csv], {
+      type: "text/csv;charset=utf-8;",
+    });
 
-    if (search) {
-      const searchable = [
-        sale.sale_number,
-        sale.id,
-        sale.branch_name,
-        sale.cashier_name,
-        sale.payment_method,
-        sale.payment_status,
-        sale.status,
-      ].filter((value) => value !== null && value !== undefined)
-        .join(" ")
-        .toLowerCase();
-      if (!searchable.includes(search)) return false;
-    }
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
 
-    return true;
-  });
-}, [allSales, filters]);
+    link.href = url;
+    link.download = `MyDuka_POS_Sales_${new Date()
+      .toISOString()
+      .slice(0, 10)}.csv`;
 
-const pagination = useMemo(() => {
-  const pages = Math.ceil(filteredSales.length / PAGE_SIZE);
-  const page = Math.min(pageState, Math.max(pages, 1));
-  return {
-    page,
-    per_page: PAGE_SIZE,
-    total: filteredSales.length,
-    pages,
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
   };
-}, [filteredSales.length, pageState]);
 
-const sales = useMemo(() => {
-  const start = (pagination.page - 1) * PAGE_SIZE;
-  return filteredSales.slice(start, start + PAGE_SIZE);
-}, [filteredSales, pagination.page]);
-
-const visibleTotal = useMemo(
-() =>
-sales.reduce(
-(total, sale) => total + Number(sale.total ?? 0),
-0
-),
-[sales]
-);
-
-function applyFilters(event) {
-event.preventDefault();
-
-
-const nextFilters = {
-  search: searchInput.trim(),
-  status: filters.status,
-  branch_id: branchFilter,
-  cashier_id: cashierFilter,
-  start_date: filters.start_date,
-  end_date: filters.end_date,
-};
-
-setFilters(nextFilters);
-fetchSales(1);
-
-
-}
-
-function resetFilters() {
-const emptyFilters = {
-search: "",
-status: "",
-branch_id: "",
-cashier_id: "",
-start_date: "",
-end_date: "",
-};
-
-
-setSearchInput("");
-setBranchFilter("");
-setCashierFilter("");
-setFilters(emptyFilters);
-setNotice("");
-fetchSales(1);
-
-
-}
-
-async function openDetails(sale) {
-setSelectedSale(sale);
-setAuditHistory([]);
-setEditorOpen(false);
-setVoidOpen(false);
-
-
-await fetchSaleDetails(sale.id);
-
-
-}
-
-function closeDetails() {
-if (savingEdit || voiding) return;
-
-
-setSelectedSale(null);
-setAuditHistory([]);
-setEditorOpen(false);
-setVoidOpen(false);
-
-
-}
-
-function startEditing() {
-if (!selectedSale) return;
-
-
-const status = normaliseStatus(selectedSale.status);
-const paymentStatus = normaliseStatus(selectedSale.payment_status);
-
-const successfulPayment = (selectedSale.payments ?? []).some(
-  (payment) =>
-    ["paid", "success", "successful", "completed"].includes(
-      normaliseStatus(payment.status)
-    )
-);
-
-if (
-  ["voided", "cancelled", "canceled"].includes(status) ||
-  paymentStatus === "paid" ||
-  successfulPayment
-) {
-  setError(
-    "This sale cannot be edited because it is cancelled, voided, or has a successful payment."
-  );
-  return;
-}
-
-setError("");
-setEditReason("");
-
-setEditItems(
-  (selectedSale.items ?? []).map((item) => ({
-    product_id: Number(item.product_id),
-    quantity: String(item.quantity),
-    product_name: item.product_name ?? "Product",
-    price: Number(item.price ?? 0),
-  }))
-);
-
-setEditorOpen(true);
-
-
-}
-
-function updateItem(index, field, value) {
-setEditItems((current) =>
-current.map((item, itemIndex) =>
-itemIndex === index
-? { ...item, [field]: value }
-: item
-)
-);
-}
-
-function removeItem(index) {
-setEditItems((current) =>
-current.filter((_, itemIndex) => itemIndex !== index)
-);
-}
-
-function addItem() {
-setError(
-"Adding a different product requires selecting a valid product ID. "
-+ "This editor currently supports correcting quantities of existing sale items."
-);
-}
-
-const editedTotal = useMemo(
-() =>
-editItems.reduce((total, item) => {
-const quantity = Number(item.quantity);
-const price = Number(item.price);
-
-
-    if (
-      !Number.isFinite(quantity) ||
-      !Number.isFinite(price) ||
-      quantity <= 0 ||
-      price < 0
-    ) {
-      return total;
-    }
-
-    return total + quantity * price;
-  }, 0),
-[editItems]
-
-
-);
-
-async function saveEdit(event) {
-event.preventDefault();
-
-
-if (!selectedSale) return;
-
-if (editReason.trim().length < 5) {
-  setError("Please enter a meaningful reason of at least 5 characters.");
-  return;
-}
-
-if (!editItems.length) {
-  setError("A sale must contain at least one item.");
-  return;
-}
-
-for (const item of editItems) {
-  const quantity = Number(item.quantity);
-
-  if (!Number.isInteger(quantity) || quantity < 1) {
-    setError("Every item must have a positive whole-number quantity.");
-    return;
-  }
-}
-
-setSavingEdit(true);
-setError("");
-setNotice("");
-
-try {
-  await api.put(`/admin/pos-sales/${selectedSale.id}`, {
-    reason: editReason.trim(),
-    items: editItems.map((item) => ({
-      product_id: Number(item.product_id),
-      quantity: Number(item.quantity),
-    })),
-  });
-
-  setNotice("POS sale updated successfully.");
-  setEditorOpen(false);
-
-  await fetchSaleDetails(selectedSale.id);
-  await fetchSales(pagination.page);
-} catch (requestError) {
-  setError(
-    extractError(requestError, "Failed to update the POS sale.")
-  );
-} finally {
-  setSavingEdit(false);
-}
-
-
-}
-
-function startVoiding() {
-if (!selectedSale) return;
-
-
-if (
-  ["voided", "cancelled", "canceled"].includes(
-    normaliseStatus(selectedSale.status)
-  )
-) {
-  setError("This sale has already been voided or cancelled.");
-  return;
-}
-
-setVoidReason("");
-setError("");
-setVoidOpen(true);
-
-
-}
-
-async function confirmVoid(event) {
-event.preventDefault();
-
-
-if (!selectedSale) return;
-
-if (voidReason.trim().length < 5) {
-  setError("Please provide a reason of at least 5 characters.");
-  return;
-}
-
-const hasSuccessfulPayment = (
-  selectedSale.payments ?? []
-).some((payment) =>
-  ["paid", "success", "successful", "completed"].includes(
-    normaliseStatus(payment.status)
-  )
-);
-
-const confirmation = hasSuccessfulPayment
-  ? "This sale has a successful payment record. Voiding it will NOT issue a refund. Continue?"
-  : "Void this sale and restore its branch stock? This cannot be undone through this page.";
-
-if (!window.confirm(confirmation)) return;
-
-setVoiding(true);
-setError("");
-setNotice("");
-
-try {
-  const response = await api.post(
-    `/admin/pos-sales/${selectedSale.id}/void`,
-    {
-      reason: voidReason.trim(),
-    }
-  );
-
-  const data = response?.data ?? {};
-
-  setNotice(
-    data.payment_notice
-      ? `${data.message} ${data.payment_notice}`
-      : data.message || "POS sale voided."
-  );
-
-  setVoidOpen(false);
-
-  await fetchSaleDetails(selectedSale.id);
-  await fetchSales(pagination.page);
-} catch (requestError) {
-  setError(
-    extractError(requestError, "Failed to void the POS sale.")
-  );
-} finally {
-  setVoiding(false);
-}
-
-
-}
-
-return ( <div style={styles.page}> <div style={styles.headingRow}> <div> <h1 style={styles.heading}>POS Sales</h1> <p style={styles.subtitle}>
-Review branch transactions, correct eligible sales, and maintain
-a clear audit trail. </p> </div>
-
-
-    <button
-      type="button"
-      style={{ ...styles.button, ...styles.primaryButton }}
-      onClick={() => fetchSales(pagination.page)}
-      disabled={loading}
-    >
-      {loading ? "Refreshing..." : "Refresh sales"}
-    </button>
-  </div>
-
-  {error && (
-    <div style={styles.error} role="alert">
-      {error}
-      <button
-        type="button"
-        onClick={() => setError("")}
-        style={{
-          ...styles.button,
-          padding: "3px 8px",
-          float: "right",
-        }}
-      >
-        Dismiss
-      </button>
-    </div>
-  )}
-
-  {notice && (
-    <div style={styles.success} role="status">
-      {notice}
-      <button
-        type="button"
-        onClick={() => setNotice("")}
-        style={{
-          ...styles.button,
-          padding: "3px 8px",
-          float: "right",
-        }}
-      >
-        Dismiss
-      </button>
-    </div>
-  )}
-
-  <div style={styles.summaryGrid}>
-    <SummaryBox
-      label="Matching transactions"
-      value={pagination.total.toLocaleString("en-KE")}
-    />
-    <SummaryBox
-      label="Transactions on this page"
-      value={sales.length.toLocaleString("en-KE")}
-    />
-    <SummaryBox
-      label="Page total"
-      value={formatMoney(visibleTotal)}
-    />
-  </div>
-
-  <section style={styles.card}>
-    <h2 style={styles.sectionHeading}>Find transactions</h2>
-
-    <form onSubmit={applyFilters}>
-      <div style={styles.filters}>
-        <div>
-          <label style={styles.label}>Search</label>
-          <input
-            style={styles.input}
-            value={searchInput}
-            onChange={(event) => setSearchInput(event.target.value)}
-            placeholder="Sale number..."
-          />
-        </div>
-
-        <div>
-          <label style={styles.label}>Status</label>
-          <select
-            style={styles.input}
-            value={filters.status}
-            onChange={(event) =>
-              setFilters((current) => ({
-                ...current,
-                status: event.target.value,
-              }))
-            }
-          >
-            <option value="">All statuses</option>
-            <option value="completed">Completed</option>
-            <option value="pending">Pending</option>
-            <option value="voided">Voided</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
-        </div>
-
-        <div>
-          <label style={styles.label}>Branch</label>
-          <select
-            style={styles.input}
-            value={branchFilter}
-            onChange={(event) => setBranchFilter(event.target.value)}
-          >
-            <option value="">All branches</option>
-            {branchOptions.map((branch) => (
-              <option key={branch.id} value={branch.id}>
-                {branch.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label style={styles.label}>Cashier</label>
-          <select
-            style={styles.input}
-            value={cashierFilter}
-            onChange={(event) => setCashierFilter(event.target.value)}
-          >
-            <option value="">All cashiers</option>
-            {cashierOptions.map((cashier) => (
-              <option key={cashier.id} value={cashier.id}>
-                {cashier.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label style={styles.label}>From date</label>
-          <input
-            type="date"
-            style={styles.input}
-            value={filters.start_date}
-            onChange={(event) =>
-              setFilters((current) => ({
-                ...current,
-                start_date: event.target.value,
-              }))
-            }
-          />
-        </div>
-
-        <div>
-          <label style={styles.label}>To date</label>
-          <input
-            type="date"
-            style={styles.input}
-            value={filters.end_date}
-            onChange={(event) =>
-              setFilters((current) => ({
-                ...current,
-                end_date: event.target.value,
-              }))
-            }
-          />
-        </div>
-      </div>
-
-      <div style={styles.modalActions}>
-        <button type="button" style={styles.button} onClick={resetFilters}>
-          Reset
-        </button>
-
-        <button
-          type="submit"
-          style={{ ...styles.button, ...styles.primaryButton }}
-        >
-          Apply filters
-        </button>
-      </div>
-    </form>
-  </section>
-
-  <section style={styles.card}>
-    <div style={styles.headingRow}>
-      <div>
-        <h2 style={{ ...styles.sectionHeading, marginBottom: "4px" }}>
-          Transactions
-        </h2>
-        <span style={{ ...styles.subtitle, margin: 0 }}>
-          Showing {sales.length} of {pagination.total} matching sales.
-        </span>
-      </div>
-    </div>
-
-    <div style={styles.tableWrap}>
-      <table style={styles.table}>
-        <thead>
-          <tr>
-            <th style={styles.th}>Sale number</th>
-            <th style={styles.th}>Date</th>
-            <th style={styles.th}>Branch</th>
-            <th style={styles.th}>Cashier</th>
-            <th style={styles.th}>Payment</th>
-            <th style={styles.th}>Total</th>
-            <th style={styles.th}>Status</th>
-            <th style={styles.th}>Action</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {loading ? (
-            <tr>
-              <td style={styles.td} colSpan={8}>
-                Loading POS sales...
-              </td>
-            </tr>
-          ) : sales.length === 0 ? (
-            <tr>
-              <td style={styles.td} colSpan={8}>
-                No POS sales match your filters.
-              </td>
-            </tr>
-          ) : (
-            sales.map((sale) => (
-              <tr key={sale.id}>
-                <td style={styles.td}>
-                  <strong>{sale.sale_number || `Sale #${sale.id}`}</strong>
-                </td>
-
-                <td style={styles.td}>
-                  {formatDate(sale.created_at)}
-                </td>
-
-                <td style={styles.td}>
-                  {sale.branch_name || "—"}
-                </td>
-
-                <td style={styles.td}>
-                  {sale.cashier_name || "—"}
-                </td>
-
-                <td style={styles.td}>
-                  <div>{sale.payment_method || "—"}</div>
-                  <div style={{ marginTop: "5px" }}>
-                    <StatusBadge value={sale.payment_status} />
-                  </div>
-                </td>
-
-                <td style={styles.td}>
-                  <strong>{formatMoney(sale.total)}</strong>
-                </td>
-
-                <td style={styles.td}>
-                  <StatusBadge value={sale.status} />
-                </td>
-
-                <td style={styles.td}>
-                  <button
-                    type="button"
-                    style={styles.button}
-                    onClick={() => openDetails(sale)}
-                  >
-                    View details
-                  </button>
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-    </div>
-
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        flexWrap: "wrap",
-        gap: "12px",
-        marginTop: "18px",
-      }}
-    >
-      <span style={{ ...styles.muted, fontSize: "13px" }}>
-        Page {pagination.page} of {Math.max(pagination.pages, 1)}
-      </span>
-
-      <div style={{ display: "flex", gap: "8px" }}>
-        <button
-          type="button"
-          style={styles.button}
-          disabled={loading || pagination.page <= 1}
-          onClick={() => fetchSales(pagination.page - 1)}
-        >
-          Previous
-        </button>
-
-        <button
-          type="button"
-          style={styles.button}
-          disabled={
-            loading ||
-            pagination.pages === 0 ||
-            pagination.page >= pagination.pages
+  return (
+    <div className="md-pos-sales">
+      <style>{`
+        .md-pos-sales {
+          width: 100%;
+          min-width: 0;
+          color: var(--text-primary, #172033);
+          padding: 4px 0 30px;
+        }
+
+        .md-pos-sales * {
+          box-sizing: border-box;
+        }
+
+        .md-pos-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 16px;
+          margin-bottom: 23px;
+        }
+
+        .md-pos-title {
+          margin: 0;
+          font-size: 25px;
+          font-weight: 750;
+          letter-spacing: -0.7px;
+        }
+
+        .md-pos-subtitle {
+          margin: 7px 0 0;
+          color: var(--text-secondary, #64748b);
+          font-size: 13px;
+          line-height: 1.6;
+        }
+
+        .md-pos-actions {
+          display: flex;
+          gap: 9px;
+        }
+
+        .md-pos-btn {
+          min-height: 40px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 9px 14px;
+          border: 1px solid var(--border-color, #e2e8f0);
+          border-radius: 9px;
+          background: var(--card-bg, #fff);
+          color: var(--text-primary, #172033);
+          font-size: 12px;
+          font-weight: 650;
+          cursor: pointer;
+        }
+
+        .md-pos-btn:hover:not(:disabled) {
+          border-color: var(--primary-color, #4f46e5);
+          color: var(--primary-color, #4f46e5);
+        }
+
+        .md-pos-btn:disabled {
+          opacity: 0.45;
+          cursor: not-allowed;
+        }
+
+        .md-pos-btn-primary {
+          background: var(--primary-color, #4f46e5);
+          color: white;
+          border-color: var(--primary-color, #4f46e5);
+        }
+
+        .md-pos-btn-primary:hover:not(:disabled) {
+          background: var(--primary-hover, #4338ca);
+          color: white;
+        }
+
+        .md-pos-preview {
+          display: flex;
+          align-items: flex-start;
+          gap: 11px;
+          padding: 13px 15px;
+          border: 1px solid #bfdbfe;
+          border-radius: 11px;
+          background: #eff6ff;
+          color: #1e40af;
+          margin-bottom: 21px;
+          font-size: 12px;
+          line-height: 1.6;
+        }
+
+        .md-pos-preview strong {
+          display: block;
+          margin-bottom: 3px;
+        }
+
+        .md-pos-preview p {
+          margin: 0;
+          color: #1d4ed8;
+        }
+
+        .md-pos-stats {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 14px;
+          margin-bottom: 22px;
+        }
+
+        .md-pos-stat {
+          min-width: 0;
+          padding: 17px;
+          background: var(--card-bg, #fff);
+          border: 1px solid var(--border-color, #e2e8f0);
+          border-radius: 13px;
+        }
+
+        .md-pos-stat-top {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 17px;
+        }
+
+        .md-pos-stat-label {
+          color: var(--text-secondary, #64748b);
+          font-size: 12px;
+          font-weight: 550;
+        }
+
+        .md-pos-stat-icon {
+          width: 34px;
+          height: 34px;
+          display: grid;
+          place-items: center;
+          border-radius: 9px;
+          background: var(--hover-bg, #f1f5f9);
+          color: var(--primary-color, #4f46e5);
+        }
+
+        .md-pos-stat-value {
+          font-size: 21px;
+          font-weight: 750;
+          letter-spacing: -0.5px;
+          overflow-wrap: anywhere;
+        }
+
+        .md-pos-stat-note {
+          color: var(--text-secondary, #94a3b8);
+          font-size: 11px;
+          margin-top: 5px;
+        }
+
+        .md-pos-toolbar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          margin-bottom: 13px;
+          flex-wrap: wrap;
+        }
+
+        .md-pos-search {
+          position: relative;
+          flex: 1;
+          max-width: 420px;
+          min-width: 220px;
+        }
+
+        .md-pos-search svg {
+          position: absolute;
+          top: 50%;
+          left: 12px;
+          transform: translateY(-50%);
+          color: var(--text-secondary, #94a3b8);
+        }
+
+        .md-pos-input,
+        .md-pos-select {
+          width: 100%;
+          min-height: 41px;
+          padding: 9px 11px;
+          border: 1px solid var(--border-color, #e2e8f0);
+          border-radius: 9px;
+          background: var(--input-bg, var(--card-bg, #fff));
+          color: var(--text-primary, #172033);
+          outline: none;
+          font-size: 12px;
+        }
+
+        .md-pos-search .md-pos-input {
+          padding-left: 39px;
+        }
+
+        .md-pos-input:focus,
+        .md-pos-select:focus {
+          border-color: var(--primary-color, #4f46e5);
+          box-shadow: 0 0 0 3px rgba(79,70,229,0.09);
+        }
+
+        .md-pos-filter-actions {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .md-pos-filter-actions .md-pos-select {
+          width: auto;
+          min-width: 130px;
+        }
+
+        .md-pos-filter-panel {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 12px;
+          padding: 15px;
+          border: 1px solid var(--border-color, #e2e8f0);
+          border-radius: 11px;
+          background: var(--card-bg, #fff);
+          margin-bottom: 14px;
+        }
+
+        .md-pos-filter-field label {
+          display: block;
+          margin-bottom: 6px;
+          color: var(--text-secondary, #64748b);
+          font-size: 11px;
+          font-weight: 650;
+        }
+
+        .md-pos-table-card {
+          border: 1px solid var(--border-color, #e2e8f0);
+          border-radius: 13px;
+          overflow: hidden;
+          background: var(--card-bg, #fff);
+        }
+
+        .md-pos-table-heading {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 17px 18px;
+          border-bottom: 1px solid var(--border-color, #e2e8f0);
+        }
+
+        .md-pos-table-heading h3 {
+          margin: 0;
+          font-size: 14px;
+          font-weight: 700;
+        }
+
+        .md-pos-table-heading span {
+          font-size: 11px;
+          color: var(--text-secondary, #64748b);
+        }
+
+        .md-pos-table-wrap {
+          overflow-x: auto;
+          width: 100%;
+        }
+
+        .md-pos-table {
+          width: 100%;
+          min-width: 900px;
+          border-collapse: collapse;
+          text-align: left;
+        }
+
+        .md-pos-table th {
+          padding: 12px 15px;
+          background: var(--table-header-bg, var(--hover-bg, #f8fafc));
+          color: var(--text-secondary, #64748b);
+          font-size: 10px;
+          font-weight: 700;
+          letter-spacing: .5px;
+          text-transform: uppercase;
+          white-space: nowrap;
+        }
+
+        .md-pos-table td {
+          padding: 14px 15px;
+          border-top: 1px solid var(--border-color, #e2e8f0);
+          font-size: 12px;
+          white-space: nowrap;
+        }
+
+        .md-pos-table tbody tr:hover {
+          background: var(--hover-bg, #f8fafc);
+        }
+
+        .md-pos-sale-number {
+          color: var(--primary-color, #4f46e5);
+          font-weight: 700;
+        }
+
+        .md-pos-main-text {
+          font-weight: 650;
+        }
+
+        .md-pos-muted {
+          margin-top: 4px;
+          color: var(--text-secondary, #64748b);
+          font-size: 11px;
+        }
+
+        .md-pos-amount {
+          font-weight: 700;
+        }
+
+        .md-pos-badge {
+          display: inline-flex;
+          align-items: center;
+          padding: 5px 9px;
+          border-radius: 20px;
+          font-size: 10px;
+          font-weight: 700;
+          text-transform: capitalize;
+          white-space: nowrap;
+        }
+
+        .md-pos-status-completed,
+        .md-pos-status-paid {
+          background: #dcfce7;
+          color: #15803d;
+        }
+
+        .md-pos-status-pending,
+        .md-pos-status-partially_paid {
+          background: #fef3c7;
+          color: #a16207;
+        }
+
+        .md-pos-status-voided,
+        .md-pos-status-cancelled {
+          background: #fee2e2;
+          color: #b91c1c;
+        }
+
+        .md-pos-status-refunded {
+          background: #f3e8ff;
+          color: #7e22ce;
+        }
+
+        .md-pos-payment-cash {
+          background: #dcfce7;
+          color: #15803d;
+        }
+
+        .md-pos-payment-mpesa {
+          background: #d1fae5;
+          color: #047857;
+        }
+
+        .md-pos-payment-card,
+        .md-pos-payment-bank {
+          background: #dbeafe;
+          color: #1d4ed8;
+        }
+
+        .md-pos-icon-btn {
+          display: grid;
+          place-items: center;
+          width: 32px;
+          height: 32px;
+          border: 1px solid var(--border-color, #e2e8f0);
+          border-radius: 8px;
+          background: transparent;
+          color: var(--text-secondary, #64748b);
+          cursor: pointer;
+        }
+
+        .md-pos-icon-btn:hover {
+          color: var(--primary-color, #4f46e5);
+          border-color: var(--primary-color, #4f46e5);
+        }
+
+        .md-pos-empty {
+          padding: 55px 20px;
+          text-align: center;
+        }
+
+        .md-pos-empty-icon {
+          width: 54px;
+          height: 54px;
+          display: grid;
+          place-items: center;
+          margin: 0 auto 14px;
+          border-radius: 15px;
+          background: var(--hover-bg, #f1f5f9);
+          color: var(--text-secondary, #64748b);
+        }
+
+        .md-pos-empty h3 {
+          margin: 0 0 7px;
+          font-size: 14px;
+        }
+
+        .md-pos-empty p {
+          max-width: 370px;
+          margin: 0 auto;
+          color: var(--text-secondary, #64748b);
+          font-size: 12px;
+          line-height: 1.6;
+        }
+
+        .md-pos-pagination {
+          display: flex;
+          justify-content: space-between;
+          padding: 13px 17px;
+          border-top: 1px solid var(--border-color, #e2e8f0);
+          color: var(--text-secondary, #64748b);
+          font-size: 11px;
+        }
+
+        .md-pos-modal-backdrop {
+          position: fixed;
+          inset: 0;
+          z-index: 1000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 16px;
+          background: rgba(15,23,42,.55);
+        }
+
+        .md-pos-modal {
+          width: 100%;
+          max-width: 610px;
+          max-height: 90vh;
+          overflow-y: auto;
+          border-radius: 15px;
+          background: var(--card-bg, #fff);
+          color: var(--text-primary, #172033);
+          box-shadow: 0 20px 60px rgba(0,0,0,.2);
+        }
+
+        .md-pos-modal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          padding: 19px 21px;
+          border-bottom: 1px solid var(--border-color, #e2e8f0);
+        }
+
+        .md-pos-modal-header h3 {
+          margin: 0;
+          font-size: 16px;
+        }
+
+        .md-pos-modal-header p {
+          margin: 5px 0 0;
+          font-size: 11px;
+          color: var(--text-secondary, #64748b);
+        }
+
+        .md-pos-modal-body {
+          padding: 20px;
+        }
+
+        .md-pos-detail-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 17px;
+        }
+
+        .md-pos-detail-label {
+          margin-bottom: 5px;
+          color: var(--text-secondary, #64748b);
+          font-size: 10px;
+        }
+
+        .md-pos-detail-value {
+          font-size: 12px;
+          font-weight: 650;
+          overflow-wrap: anywhere;
+        }
+
+        .md-pos-modal-section {
+          margin-top: 20px;
+          padding-top: 17px;
+          border-top: 1px solid var(--border-color, #e2e8f0);
+        }
+
+        .md-pos-modal-section h4 {
+          margin: 0 0 12px;
+          font-size: 12px;
+        }
+
+        .md-pos-line {
+          display: flex;
+          justify-content: space-between;
+          gap: 15px;
+          padding: 8px 0;
+          font-size: 12px;
+        }
+
+        .md-pos-line-total {
+          margin-top: 7px;
+          padding-top: 13px;
+          border-top: 1px solid var(--border-color, #e2e8f0);
+          font-size: 14px;
+          font-weight: 750;
+        }
+
+        @media (max-width: 1000px) {
+          .md-pos-stats {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
           }
-          onClick={() => fetchSales(pagination.page + 1)}
-        >
-          Next
-        </button>
-      </div>
-    </div>
-  </section>
+        }
 
-  {selectedSale && (
-    <div style={styles.overlay} onMouseDown={closeDetails}>
-      <section
-        style={styles.modal}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="pos-sale-details-heading"
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <div style={styles.headingRow}>
-          <div>
-            <h2
-              id="pos-sale-details-heading"
-              style={{ ...styles.heading, fontSize: "22px" }}
-            >
-              {selectedSale.sale_number || `Sale #${selectedSale.id}`}
-            </h2>
+        @media (max-width: 650px) {
+          .md-pos-header {
+            flex-direction: column;
+          }
 
-            <p style={styles.subtitle}>
-              Created {formatDate(selectedSale.created_at)}
-            </p>
-          </div>
+          .md-pos-actions {
+            width: 100%;
+          }
+
+          .md-pos-actions .md-pos-btn {
+            flex: 1;
+          }
+
+          .md-pos-toolbar {
+            align-items: stretch;
+          }
+
+          .md-pos-search {
+            max-width: none;
+            min-width: 100%;
+          }
+
+          .md-pos-filter-actions {
+            width: 100%;
+          }
+
+          .md-pos-filter-actions .md-pos-select {
+            flex: 1;
+            min-width: 0;
+          }
+
+          .md-pos-filter-panel {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        @media (max-width: 380px) {
+          .md-pos-stats {
+            grid-template-columns: 1fr;
+          }
+
+          .md-pos-detail-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
+
+      <div className="md-pos-header">
+        <div>
+          <h1 className="md-pos-title">POS Sales</h1>
+          <p className="md-pos-subtitle">
+            Review cashier transactions, branch sales and payment records.
+          </p>
+        </div>
+
+        <div className="md-pos-actions">
+          <button
+            type="button"
+            className="md-pos-btn"
+            onClick={clearFilters}
+          >
+            <Icon name="refresh" size={15} />
+            Reset
+          </button>
 
           <button
             type="button"
-            style={styles.button}
-            onClick={closeDetails}
-            disabled={savingEdit || voiding}
+            className="md-pos-btn md-pos-btn-primary"
+            onClick={exportCSV}
+            disabled={!filteredSales.length}
           >
-            Close
+            <Icon name="download" size={15} />
+            Export CSV
           </button>
         </div>
+      </div>
 
-        {detailsLoading ? (
-          <p>Loading sale details...</p>
+      <div className="md-pos-preview">
+        <Icon name="receipt" size={19} />
+        <div>
+          <strong>Frontend preview mode</strong>
+          <p>
+            This page will display actual cashier POS transactions after
+            backend integration. It currently contains no sample transactions
+            and does not create or modify sales.
+          </p>
+        </div>
+      </div>
+
+      <div className="md-pos-stats">
+        <div className="md-pos-stat">
+          <div className="md-pos-stat-top">
+            <span className="md-pos-stat-label">Transactions</span>
+            <span className="md-pos-stat-icon">
+              <Icon name="receipt" />
+            </span>
+          </div>
+          <div className="md-pos-stat-value">
+            {summary.transactions.toLocaleString("en-KE")}
+          </div>
+          <div className="md-pos-stat-note">Selected records</div>
+        </div>
+
+        <div className="md-pos-stat">
+          <div className="md-pos-stat-top">
+            <span className="md-pos-stat-label">Completed sales</span>
+            <span className="md-pos-stat-icon">
+              <Icon name="chart" />
+            </span>
+          </div>
+          <div className="md-pos-stat-value">
+            {summary.completed.toLocaleString("en-KE")}
+          </div>
+          <div className="md-pos-stat-note">Completed POS transactions</div>
+        </div>
+
+        <div className="md-pos-stat">
+          <div className="md-pos-stat-top">
+            <span className="md-pos-stat-label">POS revenue</span>
+            <span className="md-pos-stat-icon">
+              <Icon name="wallet" />
+            </span>
+          </div>
+          <div className="md-pos-stat-value">
+            {money(summary.revenue)}
+          </div>
+          <div className="md-pos-stat-note">Completed transaction value</div>
+        </div>
+
+        <div className="md-pos-stat">
+          <div className="md-pos-stat-top">
+            <span className="md-pos-stat-label">Active cashiers</span>
+            <span className="md-pos-stat-icon">
+              <Icon name="users" />
+            </span>
+          </div>
+          <div className="md-pos-stat-value">
+            {summary.cashiers.toLocaleString("en-KE")}
+          </div>
+          <div className="md-pos-stat-note">Cashiers in selected records</div>
+        </div>
+      </div>
+
+      <div className="md-pos-toolbar">
+        <div className="md-pos-search">
+          <Icon name="search" size={17} />
+          <input
+            className="md-pos-input"
+            placeholder="Search receipt, cashier, customer or branch..."
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+        </div>
+
+        <div className="md-pos-filter-actions">
+          <select
+            className="md-pos-select"
+            value={branchFilter}
+            onChange={(event) => setBranchFilter(event.target.value)}
+            aria-label="Filter by branch"
+          >
+            <option value="all">All branches</option>
+            {branches.map((branch) => (
+              <option key={branch} value={branch}>
+                {branch}
+              </option>
+            ))}
+          </select>
+
+          <select
+            className="md-pos-select"
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value)}
+            aria-label="Filter by sale status"
+          >
+            <option value="all">All statuses</option>
+            <option value="completed">Completed</option>
+            <option value="voided">Voided</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+
+          <button
+            className="md-pos-btn"
+            type="button"
+            onClick={() => setShowFilters(!showFilters)}
+          >
+            <Icon name="filter" size={15} />
+            More filters
+          </button>
+        </div>
+      </div>
+
+      {showFilters && (
+        <div className="md-pos-filter-panel">
+          <div className="md-pos-filter-field">
+            <label htmlFor="pos-cashier">Cashier</label>
+            <select
+              id="pos-cashier"
+              className="md-pos-select"
+              value={cashierFilter}
+              onChange={(event) => setCashierFilter(event.target.value)}
+            >
+              <option value="all">All cashiers</option>
+              {cashiers.map((cashier) => (
+                <option key={cashier} value={cashier}>
+                  {cashier}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="md-pos-filter-field">
+            <label htmlFor="pos-payment">Payment method</label>
+            <select
+              id="pos-payment"
+              className="md-pos-select"
+              value={paymentFilter}
+              onChange={(event) => setPaymentFilter(event.target.value)}
+            >
+              <option value="all">All methods</option>
+              <option value="cash">Cash</option>
+              <option value="mpesa">M-Pesa</option>
+              <option value="card">Card</option>
+              <option value="bank">Bank</option>
+            </select>
+          </div>
+
+          <div className="md-pos-filter-field">
+            <label htmlFor="pos-date-from">From date</label>
+            <input
+              id="pos-date-from"
+              className="md-pos-input"
+              type="date"
+              value={dateFrom}
+              onChange={(event) => setDateFrom(event.target.value)}
+            />
+          </div>
+
+          <div className="md-pos-filter-field">
+            <label htmlFor="pos-date-to">To date</label>
+            <input
+              id="pos-date-to"
+              className="md-pos-input"
+              type="date"
+              min={dateFrom || undefined}
+              value={dateTo}
+              onChange={(event) => setDateTo(event.target.value)}
+            />
+          </div>
+        </div>
+      )}
+
+      <div className="md-pos-table-card">
+        <div className="md-pos-table-heading">
+          <h3>POS transaction records</h3>
+          <span>
+            {filteredSales.length}{" "}
+            {filteredSales.length === 1 ? "transaction" : "transactions"}
+          </span>
+        </div>
+
+        {filteredSales.length === 0 ? (
+          <div className="md-pos-empty">
+            <div className="md-pos-empty-icon">
+              <Icon name="receipt" size={25} />
+            </div>
+
+            <h3>
+              {sales.length === 0
+                ? "No POS transactions yet"
+                : "No matching transactions"}
+            </h3>
+
+            <p>
+              {sales.length === 0
+                ? "Cashier transactions will appear here when the POS module is connected to the backend."
+                : "Try changing your filters or search terms."}
+            </p>
+          </div>
         ) : (
-          <>
-            <div style={styles.summaryGrid}>
-              <SummaryBox
-                label="Branch"
-                value={selectedSale.branch_name || "—"}
-              />
-              <SummaryBox
-                label="Cashier"
-                value={selectedSale.cashier_name || "—"}
-              />
-              <SummaryBox
-                label="Total"
-                value={formatMoney(selectedSale.total)}
-              />
-              <SummaryBox
-                label="Payment method"
-                value={selectedSale.payment_method || "—"}
-              />
-              <SummaryBox
-                label="Payment status"
-                value={<StatusBadge value={selectedSale.payment_status} />}
-              />
-              <SummaryBox
-                label="Sale status"
-                value={<StatusBadge value={selectedSale.status} />}
-              />
-            </div>
+          <div className="md-pos-table-wrap">
+            <table className="md-pos-table">
+              <thead>
+                <tr>
+                  <th>Receipt number</th>
+                  <th>Date</th>
+                  <th>Branch</th>
+                  <th>Cashier</th>
+                  <th>Customer</th>
+                  <th>Payment</th>
+                  <th>Total</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
 
-            {normaliseStatus(selectedSale.status) === "voided" &&
-              (selectedSale.payments ?? []).some((payment) =>
-                ["paid", "success", "successful", "completed"].includes(
-                  normaliseStatus(payment.status)
-                )
-              ) && (
-                <div style={styles.warning}>
-                  <strong>Payment reconciliation required.</strong>
-                  This sale is voided, but a successful payment record
-                  exists. Voiding does not confirm that the customer
-                  received a refund.
-                </div>
-              )}
+              <tbody>
+                {filteredSales.map((sale) => (
+                  <tr key={sale.id}>
+                    <td>
+                      <span className="md-pos-sale-number">
+                        {sale.sale_number || `POS-${sale.id}`}
+                      </span>
+                    </td>
 
-            <h3 style={styles.sectionHeading}>Sale items</h3>
+                    <td>{formatDate(sale.created_at)}</td>
 
-            <div style={styles.tableWrap}>
-              <table style={styles.table}>
-                <thead>
-                  <tr>
-                    <th style={styles.th}>Product</th>
-                    <th style={styles.th}>Quantity</th>
-                    <th style={styles.th}>Unit price</th>
-                    <th style={styles.th}>Subtotal</th>
-                    <th style={styles.th}>Gross profit</th>
-                  </tr>
-                </thead>
+                    <td>{sale.branch_name || "—"}</td>
 
-                <tbody>
-                  {(selectedSale.items ?? []).map((item) => (
-                    <tr key={item.id ?? item.product_id}>
-                      <td style={styles.td}>
-                        {item.product_name || `Product #${item.product_id}`}
-                      </td>
-                      <td style={styles.td}>{item.quantity}</td>
-                      <td style={styles.td}>{formatMoney(item.price)}</td>
-                      <td style={styles.td}>
-                        {formatMoney(
-                          Number(item.price ?? 0) *
-                          Number(item.quantity ?? 0)
-                        )}
-                      </td>
-                      <td style={styles.td}>
-                        {item.buying_price == null
-                          ? "Unavailable"
-                          : formatMoney(
-                              (
-                                Number(item.price) -
-                                Number(item.buying_price)
-                              ) * Number(item.quantity)
-                            )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                    <td>
+                      <span className="md-pos-main-text">
+                        {sale.cashier_name || "—"}
+                      </span>
+                    </td>
 
-            <h3 style={{ ...styles.sectionHeading, marginTop: "24px" }}>
-              Payment history
-            </h3>
+                    <td>
+                      {sale.customer_name || "Walk-in customer"}
+                    </td>
 
-            {(selectedSale.payments ?? []).length === 0 ? (
-              <p style={styles.muted}>
-                No payment records are attached to this sale.
-              </p>
-            ) : (
-              <div style={styles.tableWrap}>
-                <table style={styles.table}>
-                  <thead>
-                    <tr>
-                      <th style={styles.th}>Method</th>
-                      <th style={styles.th}>Amount</th>
-                      <th style={styles.th}>Status</th>
-                      <th style={styles.th}>Receipt</th>
-                      <th style={styles.th}>Date</th>
-                    </tr>
-                  </thead>
+                    <td>
+                      <Badge value={sale.payment_method} type="payment" />
+                    </td>
 
-                  <tbody>
-                    {selectedSale.payments.map((payment) => (
-                      <tr key={payment.id}>
-                        <td style={styles.td}>
-                          {payment.payment_method}
-                        </td>
-                        <td style={styles.td}>
-                          {formatMoney(payment.amount)}
-                        </td>
-                        <td style={styles.td}>
-                          <StatusBadge value={payment.status} />
-                        </td>
-                        <td style={styles.td}>
-                          {payment.mpesa_receipt_number || "—"}
-                        </td>
-                        <td style={styles.td}>
-                          {formatDate(payment.created_at)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                    <td className="md-pos-amount">
+                      {money(sale.total_amount)}
+                    </td>
 
-            <h3 style={{ ...styles.sectionHeading, marginTop: "24px" }}>
-              Audit history
-            </h3>
+                    <td>
+                      <Badge value={sale.status} />
+                    </td>
 
-            {auditHistory.length === 0 ? (
-              <p style={styles.muted}>
-                No administrative changes have been recorded for this sale.
-              </p>
-            ) : (
-              auditHistory.map((audit) => (
-                <div key={audit.id} style={styles.auditItem}>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      flexWrap: "wrap",
-                      gap: "8px",
-                      marginBottom: "8px",
-                    }}
-                  >
-                    <strong>
-                      {audit.action === "voided"
-                        ? "Sale voided"
-                        : "Sale edited"}
-                    </strong>
-
-                    <span style={styles.muted}>
-                      {formatDate(audit.created_at)}
-                    </span>
-                  </div>
-
-                  <div style={{ fontSize: "13px", marginBottom: "5px" }}>
-                    <strong>Administrator:</strong>{" "}
-                    {audit.admin_username}
-                  </div>
-
-                  <div style={{ fontSize: "13px" }}>
-                    <strong>Reason:</strong> {audit.reason}
-                  </div>
-                </div>
-              ))
-            )}
-
-            {editorOpen && (
-              <form
-                onSubmit={saveEdit}
-                style={{
-                  ...styles.card,
-                  marginTop: "24px",
-                  background: "#f8fafc",
-                }}
-              >
-                <h3 style={styles.sectionHeading}>Correct sale quantities</h3>
-
-                <div style={styles.warning}>
-                  This editor corrects quantities for existing sale items.
-                  Unit prices and buying-price snapshots remain controlled
-                  by the backend. A successful payment cannot be edited.
-                </div>
-
-                {editItems.map((item, index) => (
-                  <div key={item.product_id} style={styles.itemRow}>
-                    <div>
-                      <label style={styles.label}>Product</label>
-                      <div style={{ fontSize: "13px", padding: "11px 0" }}>
-                        {item.product_name}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label style={styles.label}>Quantity</label>
-                      <input
-                        type="number"
-                        min="1"
-                        step="1"
-                        style={styles.input}
-                        value={item.quantity}
-                        onChange={(event) =>
-                          updateItem(
-                            index,
-                            "quantity",
-                            event.target.value
-                          )
-                        }
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label style={styles.label}>Unit price</label>
-                      <div style={{ fontSize: "13px", padding: "11px 0" }}>
-                        {formatMoney(item.price)}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label style={styles.label}>Remove</label>
+                    <td>
                       <button
                         type="button"
-                        style={{
-                          ...styles.button,
-                          padding: "10px",
-                          color: "#b42318",
-                        }}
-                        onClick={() => removeItem(index)}
-                        aria-label={`Remove ${item.product_name}`}
+                        className="md-pos-icon-btn"
+                        title="View transaction"
+                        onClick={() => setSelectedSale(sale)}
                       >
-                        ×
+                        <Icon name="eye" size={16} />
                       </button>
-                    </div>
-                  </div>
+                    </td>
+                  </tr>
                 ))}
-
-                <button
-                  type="button"
-                  style={styles.button}
-                  onClick={addItem}
-                >
-                  Add another product
-                </button>
-
-                <div style={{ marginTop: "16px" }}>
-                  <label style={styles.label}>Reason for correction *</label>
-                  <textarea
-                    style={{
-                      ...styles.input,
-                      minHeight: "85px",
-                      resize: "vertical",
-                    }}
-                    value={editReason}
-                    onChange={(event) =>
-                      setEditReason(event.target.value)
-                    }
-                    placeholder="Explain why this sale is being corrected..."
-                    minLength={5}
-                    maxLength={2000}
-                    required
-                  />
-                </div>
-
-                <div style={{ marginTop: "14px" }}>
-                  <strong>Recalculated total: </strong>
-                  {formatMoney(editedTotal)}
-                </div>
-
-                <div style={styles.modalActions}>
-                  <button
-                    type="button"
-                    style={styles.button}
-                    onClick={() => setEditorOpen(false)}
-                    disabled={savingEdit}
-                  >
-                    Cancel
-                  </button>
-
-                  <button
-                    type="submit"
-                    style={{
-                      ...styles.button,
-                      ...styles.primaryButton,
-                    }}
-                    disabled={savingEdit}
-                  >
-                    {savingEdit ? "Saving..." : "Save correction"}
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {voidOpen && (
-              <form
-                onSubmit={confirmVoid}
-                style={{
-                  ...styles.card,
-                  marginTop: "24px",
-                  borderColor: "#fecaca",
-                  background: "#fffafa",
-                }}
-              >
-                <h3 style={styles.sectionHeading}>Void this sale</h3>
-
-                <div style={styles.warning}>
-                  Voiding restores the recorded quantities to this
-                  branch's stock. The original sale and payment history
-                  remain in the database. A refund is not automatically
-                  issued or confirmed.
-                </div>
-
-                <label style={styles.label}>Reason for voiding *</label>
-                <textarea
-                  style={{
-                    ...styles.input,
-                    minHeight: "90px",
-                    resize: "vertical",
-                  }}
-                  value={voidReason}
-                  onChange={(event) =>
-                    setVoidReason(event.target.value)
-                  }
-                  placeholder="Explain why this transaction must be voided..."
-                  minLength={5}
-                  maxLength={2000}
-                  required
-                />
-
-                <div style={styles.modalActions}>
-                  <button
-                    type="button"
-                    style={styles.button}
-                    onClick={() => setVoidOpen(false)}
-                    disabled={voiding}
-                  >
-                    Cancel
-                  </button>
-
-                  <button
-                    type="submit"
-                    style={{
-                      ...styles.button,
-                      ...styles.dangerButton,
-                    }}
-                    disabled={voiding}
-                  >
-                    {voiding ? "Voiding..." : "Confirm void"}
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {!editorOpen && !voidOpen && (
-              <div style={styles.modalActions}>
-                <button
-                  type="button"
-                  style={styles.button}
-                  onClick={startEditing}
-                  disabled={detailsLoading}
-                >
-                  Edit quantities
-                </button>
-
-                <button
-                  type="button"
-                  style={{
-                    ...styles.button,
-                    ...styles.dangerButton,
-                  }}
-                  onClick={startVoiding}
-                  disabled={detailsLoading}
-                >
-                  Void sale
-                </button>
-              </div>
-            )}
-          </>
+              </tbody>
+            </table>
+          </div>
         )}
-      </section>
+
+        <div className="md-pos-pagination">
+          <span>
+            Showing {filteredSales.length} of {sales.length} transactions
+          </span>
+          <span>All records</span>
+        </div>
+      </div>
+
+      {selectedSale && (
+        <div
+          className="md-pos-modal-backdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setSelectedSale(null);
+            }
+          }}
+        >
+          <div
+            className="md-pos-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="pos-detail-title"
+          >
+            <div className="md-pos-modal-header">
+              <div>
+                <h3 id="pos-detail-title">POS transaction details</h3>
+                <p>
+                  {selectedSale.sale_number || `POS-${selectedSale.id}`}
+                </p>
+              </div>
+
+              <button
+                className="md-pos-icon-btn"
+                type="button"
+                onClick={() => setSelectedSale(null)}
+                aria-label="Close transaction details"
+              >
+                <Icon name="close" size={17} />
+              </button>
+            </div>
+
+            <div className="md-pos-modal-body">
+              <div className="md-pos-detail-grid">
+                <div>
+                  <div className="md-pos-detail-label">Date</div>
+                  <div className="md-pos-detail-value">
+                    {formatDate(selectedSale.created_at)}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="md-pos-detail-label">Branch</div>
+                  <div className="md-pos-detail-value">
+                    {selectedSale.branch_name || "—"}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="md-pos-detail-label">Cashier</div>
+                  <div className="md-pos-detail-value">
+                    {selectedSale.cashier_name || "—"}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="md-pos-detail-label">Customer</div>
+                  <div className="md-pos-detail-value">
+                    {selectedSale.customer_name || "Walk-in customer"}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="md-pos-detail-label">Payment method</div>
+                  <div className="md-pos-detail-value">
+                    <Badge
+                      value={selectedSale.payment_method}
+                      type="payment"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="md-pos-detail-label">Payment status</div>
+                  <div className="md-pos-detail-value">
+                    <Badge value={selectedSale.payment_status} />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="md-pos-detail-label">Sale status</div>
+                  <div className="md-pos-detail-value">
+                    <Badge value={selectedSale.status} />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="md-pos-detail-label">Reference</div>
+                  <div className="md-pos-detail-value">
+                    {selectedSale.payment_reference || "—"}
+                  </div>
+                </div>
+              </div>
+
+              {Array.isArray(selectedSale.items) &&
+                selectedSale.items.length > 0 && (
+                  <div className="md-pos-modal-section">
+                    <h4>Items sold</h4>
+
+                    {selectedSale.items.map((item, index) => (
+                      <div className="md-pos-line" key={item.id || index}>
+                        <span>
+                          {item.product_name || item.name || "Product"} ×{" "}
+                          {item.quantity}
+                        </span>
+                        <strong>
+                          {money(
+                            item.total_price ??
+                              Number(item.quantity || 0) *
+                                Number(item.unit_price || 0)
+                          )}
+                        </strong>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+              <div className="md-pos-modal-section">
+                <h4>Payment summary</h4>
+
+                <div className="md-pos-line">
+                  <span>Subtotal</span>
+                  <span>{money(selectedSale.subtotal)}</span>
+                </div>
+
+                <div className="md-pos-line">
+                  <span>Discount</span>
+                  <span>{money(selectedSale.discount)}</span>
+                </div>
+
+                <div className="md-pos-line">
+                  <span>Tax</span>
+                  <span>{money(selectedSale.tax)}</span>
+                </div>
+
+                <div className="md-pos-line md-pos-line-total">
+                  <span>Total</span>
+                  <span>{money(selectedSale.total_amount)}</span>
+                </div>
+
+                <div className="md-pos-line">
+                  <span>Amount paid</span>
+                  <span>{money(selectedSale.amount_paid)}</span>
+                </div>
+
+                <div className="md-pos-line">
+                  <span>Balance</span>
+                  <span>
+                    {money(
+                      Math.max(
+                        0,
+                        Number(selectedSale.total_amount || 0) -
+                          Number(selectedSale.amount_paid || 0)
+                      )
+                    )}
+                  </span>
+                </div>
+              </div>
+
+              {selectedSale.notes && (
+                <div className="md-pos-modal-section">
+                  <h4>Notes</h4>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 12,
+                      lineHeight: 1.6,
+                      color: "var(--text-secondary, #64748b)",
+                    }}
+                  >
+                    {selectedSale.notes}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
-  )}
-</div>
-
-
-);
+  );
 }
