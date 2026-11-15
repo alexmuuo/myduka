@@ -1,7 +1,6 @@
 import {
   Suspense,
   lazy,
-  useMemo,
 } from "react";
 
 import {
@@ -10,6 +9,7 @@ import {
   Navigate,
   Outlet,
   useLocation,
+  Link,
 } from "react-router-dom";
 
 // Shared navigation
@@ -64,24 +64,39 @@ function PagePlaceholder({ title }) {
 }
 
 // =====================================================
-// AUTOMATIC PAGE LOADER
-// Supports one path or multiple possible file paths.
+// CACHED AUTOMATIC PAGE LOADER
 // =====================================================
 
+const lazyPageCache = new Map();
+
+function getLazyPage(file) {
+  const possibleFiles = Array.isArray(file)
+    ? file
+    : [file];
+
+  const matchedPath = possibleFiles.find(
+    (path) => typeof pageModules[path] === "function"
+  );
+
+  if (!matchedPath) {
+    return null;
+  }
+
+  // Reuse an existing lazy component.
+  if (lazyPageCache.has(matchedPath)) {
+    return lazyPageCache.get(matchedPath);
+  }
+
+  // Create and cache the lazy component once.
+  const LazyPage = lazy(() => pageModules[matchedPath]());
+
+  lazyPageCache.set(matchedPath, LazyPage);
+
+  return LazyPage;
+}
+
 function AutoPage({ file, title }) {
-  const importer = useMemo(() => {
-    const possibleFiles = Array.isArray(file)
-      ? file
-      : [file];
-
-    return possibleFiles
-      .map((path) => pageModules[path])
-      .find(Boolean);
-  }, [file]);
-
-  const PageComponent = useMemo(() => {
-    return importer ? lazy(importer) : null;
-  }, [importer]);
+  const PageComponent = getLazyPage(file);
 
   if (!PageComponent) {
     console.error(
@@ -135,9 +150,16 @@ function NotFound() {
   return (
     <div className="page-placeholder">
       <h1>404</h1>
+
       <h2>Page not found</h2>
-      <p>The page you requested does not exist.</p>
-      <a href="/">Return home</a>
+
+      <p>
+        The page you requested does not exist.
+      </p>
+
+      <Link to="/">
+        Return home
+      </Link>
     </div>
   );
 }
@@ -198,7 +220,7 @@ function App() {
       <Routes>
 
         {/* =================================================
-            CUSTOMER STOREFRONT
+            PUBLIC HOMEPAGE
         ================================================= */}
 
         <Route
@@ -210,6 +232,10 @@ function App() {
             />
           }
         />
+
+        {/* =================================================
+            CUSTOMER STOREFRONT
+        ================================================= */}
 
         <Route
           path="/store/:slug"
@@ -473,8 +499,6 @@ function App() {
 
         <Route element={<SuperAdminRouteGate />}>
 
-          {/* Default Super Admin route */}
-
           <Route
             path="/superadmin"
             element={
@@ -485,7 +509,7 @@ function App() {
             }
           />
 
-          {/* 1. Dashboard */}
+          {/* Dashboard */}
 
           <Route
             path="/superadmin/dashboard"
@@ -497,7 +521,7 @@ function App() {
             }
           />
 
-          {/* 2. Businesses */}
+          {/* Businesses */}
 
           <Route
             path="/superadmin/businesses"
@@ -512,7 +536,7 @@ function App() {
             }
           />
 
-          {/* 3. Business details */}
+          {/* Business details */}
 
           <Route
             path="/superadmin/businesses/:id"
@@ -527,7 +551,7 @@ function App() {
             }
           />
 
-          {/* 4. Subscriptions */}
+          {/* Subscriptions */}
 
           <Route
             path="/superadmin/subscriptions"
@@ -542,7 +566,7 @@ function App() {
             }
           />
 
-          {/* 5. Subscription plans */}
+          {/* Subscription plans */}
 
           <Route
             path="/superadmin/plans"
@@ -557,7 +581,7 @@ function App() {
             }
           />
 
-          {/* 6. Platform users */}
+          {/* Platform users */}
 
           <Route
             path="/superadmin/users"
@@ -572,7 +596,7 @@ function App() {
             }
           />
 
-          {/* 7. Analytics */}
+          {/* Analytics */}
 
           <Route
             path="/superadmin/analytics"
@@ -587,7 +611,7 @@ function App() {
             }
           />
 
-          {/* 8. Support */}
+          {/* Support */}
 
           <Route
             path="/superadmin/support"
@@ -602,7 +626,7 @@ function App() {
             }
           />
 
-          {/* 9. Notifications */}
+          {/* Notifications */}
 
           <Route
             path="/superadmin/notifications"
@@ -617,7 +641,7 @@ function App() {
             }
           />
 
-          {/* 10. Audit logs */}
+          {/* Audit logs */}
 
           <Route
             path="/superadmin/audit-logs"
@@ -632,7 +656,7 @@ function App() {
             }
           />
 
-          {/* 11. Platform settings */}
+          {/* Platform settings */}
 
           <Route
             path="/superadmin/settings"
@@ -647,7 +671,7 @@ function App() {
             }
           />
 
-          {/* 12. Super Admin profile */}
+          {/* Super Admin profile */}
 
           <Route
             path="/superadmin/profile"
