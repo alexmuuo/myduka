@@ -21,8 +21,6 @@ function AdminLogin() {
       "mydukaPendingBusiness"
     );
 
-    // Complete a business registration that was interrupted
-    // before the user authenticated.
     if (pendingBusiness) {
       let businessDetails;
 
@@ -60,13 +58,12 @@ function AdminLogin() {
       return;
     }
 
-    // Retrieve businesses belonging to the authenticated user.
     const response = await api.get("/businesses");
     const userBusinesses = response.data?.businesses || [];
 
     if (!userBusinesses.length) {
       setError(
-        "Your account has no business yet. Register a business to continue."
+        "Your account has no business yet. Please register your business."
       );
       return;
     }
@@ -131,39 +128,48 @@ function AdminLogin() {
   };
 
   return (
-    <div className="md-login">
+    <main className="md-admin-login">
       <style>{`
-        .md-login {
+        .md-admin-login {
+          --login-primary: var(--md-primary, var(--primary, #4f46e5));
+          --login-primary-hover: var(--md-primary-hover, var(--primary-hover, #4338ca));
+          --login-primary-light: var(--md-primary-light, var(--primary-light, #eef2ff));
+          --login-bg: var(--md-background, var(--background, #f8fafc));
+          --login-surface: var(--md-surface, var(--surface, #ffffff));
+          --login-secondary: var(--md-surface-secondary, var(--surface-secondary, #f1f5f9));
+          --login-text: var(--md-text, var(--text-primary, #0f172a));
+          --login-muted: var(--md-text-secondary, var(--text-muted, #64748b));
+          --login-border: var(--md-border, var(--border, #e2e8f0));
+          --login-radius: var(--md-radius, var(--radius-md, 14px));
+          --login-shadow: var(--md-shadow, var(--shadow-md, 0 4px 18px rgba(15,23,42,.05)));
+
           min-height: 100vh;
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: 36px 20px;
-          background:
-            radial-gradient(circle at 12% 15%, rgba(34, 197, 94, .09), transparent 30%),
-            radial-gradient(circle at 90% 85%, rgba(16, 185, 129, .08), transparent 28%),
-            var(--background-color, #f5f7f6);
-          color: var(--text-color, #17231d);
+          padding: 35px 20px;
+          background: var(--login-bg);
+          color: var(--login-text);
           font-family: inherit;
         }
 
-        .md-login *,
-        .md-login *::before,
-        .md-login *::after {
+        .md-admin-login *,
+        .md-admin-login *::before,
+        .md-admin-login *::after {
           box-sizing: border-box;
         }
 
-        .md-login-shell {
+        .md-login-container {
           width: 100%;
-          max-width: 1050px;
+          max-width: 1040px;
           min-height: 620px;
           display: grid;
           grid-template-columns: 1fr 1fr;
           overflow: hidden;
-          border: 1px solid var(--border-color, #e5ebe7);
-          border-radius: 24px;
-          background: var(--surface-color, #ffffff);
-          box-shadow: 0 24px 75px rgba(20, 45, 31, .10);
+          border: 1px solid var(--login-border);
+          border-radius: 20px;
+          background: var(--login-surface);
+          box-shadow: var(--login-shadow);
         }
 
         .md-login-brand {
@@ -171,50 +177,52 @@ function AdminLogin() {
           display: flex;
           flex-direction: column;
           justify-content: space-between;
-          padding: 48px;
           overflow: hidden;
-          color: #ffffff;
-          background: linear-gradient(145deg, #123d2a 0%, #116b43 55%, #15945b 100%);
-        }
-
-        .md-login-brand::before,
-        .md-login-brand::after {
-          content: "";
-          position: absolute;
-          border: 1px solid rgba(255,255,255,.12);
-          border-radius: 50%;
-          pointer-events: none;
+          padding: 45px;
+          background: var(--login-secondary);
+          border-right: 1px solid var(--login-border);
         }
 
         .md-login-brand::before {
-          width: 420px;
-          height: 420px;
+          content: "";
+          position: absolute;
+          width: 380px;
+          height: 380px;
           right: -190px;
-          top: -130px;
+          top: -170px;
+          border-radius: 50%;
+          background: var(--login-primary-light);
+          opacity: .85;
         }
 
         .md-login-brand::after {
-          width: 330px;
-          height: 330px;
-          right: -120px;
-          bottom: -150px;
+          content: "";
+          position: absolute;
+          width: 280px;
+          height: 280px;
+          left: -170px;
+          bottom: -170px;
+          border-radius: 50%;
+          border: 45px solid var(--login-primary-light);
+          opacity: .6;
         }
 
+        .md-login-logo,
         .md-login-brand-content,
-        .md-login-brand-footer,
-        .md-login-logo {
+        .md-login-brand-footer {
           position: relative;
           z-index: 1;
         }
 
         .md-login-logo {
-          display: flex;
+          display: inline-flex;
           align-items: center;
-          gap: 12px;
+          gap: 11px;
+          width: fit-content;
+          color: var(--login-text);
           font-size: 23px;
           font-weight: 800;
-          letter-spacing: -.8px;
-          color: #ffffff;
+          letter-spacing: -1px;
           text-decoration: none;
         }
 
@@ -224,9 +232,9 @@ function AdminLogin() {
           display: grid;
           place-items: center;
           border-radius: 13px;
-          background: rgba(255,255,255,.17);
-          border: 1px solid rgba(255,255,255,.2);
-          font-size: 23px;
+          background: var(--login-primary);
+          color: white;
+          font-size: 22px;
         }
 
         .md-login-brand-content {
@@ -239,46 +247,47 @@ function AdminLogin() {
           align-items: center;
           gap: 8px;
           padding: 8px 12px;
-          border: 1px solid rgba(255,255,255,.2);
+          border: 1px solid var(--login-border);
           border-radius: 30px;
-          background: rgba(255,255,255,.10);
-          color: #e4ffed;
-          font-size: 12px;
-          font-weight: 700;
-          letter-spacing: .8px;
+          background: var(--login-surface);
+          color: var(--login-primary);
+          font-size: 11px;
+          font-weight: 750;
+          letter-spacing: .7px;
           text-transform: uppercase;
         }
 
         .md-login-brand h1 {
-          max-width: 410px;
-          margin: 25px 0 17px;
-          color: #ffffff;
-          font-size: clamp(34px, 4vw, 49px);
-          line-height: 1.12;
+          max-width: 390px;
+          margin: 25px 0 18px;
+          color: var(--login-text);
+          font-size: clamp(35px, 4vw, 48px);
+          line-height: 1.13;
           font-weight: 800;
-          letter-spacing: -1.8px;
+          letter-spacing: -2px;
         }
 
-        .md-login-brand-content > p {
-          max-width: 390px;
+        .md-login-brand-description {
+          max-width: 385px;
           margin: 0;
-          color: rgba(255,255,255,.78);
-          font-size: 15px;
-          line-height: 1.8;
+          color: var(--login-muted);
+          font-size: 14px;
+          line-height: 1.85;
         }
 
         .md-login-benefits {
           display: grid;
           gap: 17px;
-          margin-top: 36px;
+          margin-top: 35px;
         }
 
         .md-login-benefit {
           display: flex;
           align-items: center;
           gap: 12px;
-          color: rgba(255,255,255,.92);
-          font-size: 14px;
+          color: var(--login-text);
+          font-size: 13px;
+          font-weight: 550;
         }
 
         .md-login-benefit-icon {
@@ -288,20 +297,22 @@ function AdminLogin() {
           flex-shrink: 0;
           place-items: center;
           border-radius: 9px;
-          background: rgba(255,255,255,.15);
-          font-size: 14px;
+          background: var(--login-primary-light);
+          color: var(--login-primary);
+          font-weight: 800;
         }
 
         .md-login-brand-footer {
-          color: rgba(255,255,255,.62);
-          font-size: 12px;
+          color: var(--login-muted);
+          font-size: 11px;
         }
 
         .md-login-form-panel {
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: 55px 50px;
+          padding: 50px;
+          background: var(--login-surface);
         }
 
         .md-login-form-content {
@@ -312,7 +323,7 @@ function AdminLogin() {
         .md-login-mobile-logo {
           display: none;
           margin-bottom: 35px;
-          color: #147548;
+          color: var(--login-primary);
           font-size: 22px;
           font-weight: 800;
           text-decoration: none;
@@ -320,16 +331,16 @@ function AdminLogin() {
 
         .md-login-heading {
           margin: 0 0 9px;
-          color: var(--text-color, #17231d);
+          color: var(--login-text);
           font-size: 29px;
           font-weight: 800;
-          letter-spacing: -.9px;
+          letter-spacing: -1px;
         }
 
         .md-login-subheading {
           margin: 0 0 34px;
-          color: var(--muted-color, #748078);
-          font-size: 14px;
+          color: var(--login-muted);
+          font-size: 13px;
           line-height: 1.7;
         }
 
@@ -340,7 +351,7 @@ function AdminLogin() {
         .md-login-field label {
           display: block;
           margin-bottom: 9px;
-          color: var(--text-color, #26352c);
+          color: var(--login-text);
           font-size: 13px;
           font-weight: 700;
         }
@@ -351,25 +362,29 @@ function AdminLogin() {
 
         .md-login-input {
           width: 100%;
-          height: 51px;
-          padding: 0 15px;
-          border: 1px solid var(--border-color, #dfe7e1);
+          height: 49px;
+          padding: 0 14px;
+          border: 1px solid var(--login-border);
           border-radius: 10px;
           outline: none;
-          background: var(--input-background, var(--surface-color, #ffffff));
-          color: var(--text-color, #17231d);
-          font: inherit;
-          font-size: 14px;
+          background: #ffffff;
+          color: #0f172a;
+          font-family: inherit;
+          font-size: 13px;
           transition: border-color .2s, box-shadow .2s;
         }
 
+        .md-login-input::placeholder {
+          color: #94a3b8;
+        }
+
         .md-login-input:focus {
-          border-color: #16945b;
-          box-shadow: 0 0 0 4px rgba(22,148,91,.10);
+          border-color: var(--login-primary);
+          box-shadow: 0 0 0 3px var(--login-primary-light);
         }
 
         .md-login-password {
-          padding-right: 67px;
+          padding-right: 65px;
         }
 
         .md-login-password-toggle {
@@ -377,58 +392,90 @@ function AdminLogin() {
           top: 50%;
           right: 13px;
           transform: translateY(-50%);
-          padding: 5px;
           border: 0;
           background: transparent;
-          color: #168451;
+          color: var(--login-primary);
           font-size: 12px;
-          font-weight: 700;
+          font-weight: 750;
           cursor: pointer;
+        }
+
+        .md-login-forgot {
+          display: block;
+          margin-top: -8px;
+          margin-bottom: 23px;
+          color: var(--login-primary);
+          text-align: right;
+          font-size: 12px;
+          font-weight: 650;
+          text-decoration: none;
+        }
+
+        .md-login-forgot:hover,
+        .md-login-register a:hover,
+        .md-login-back:hover {
+          text-decoration: underline;
         }
 
         .md-login-button {
           width: 100%;
-          min-height: 51px;
+          min-height: 49px;
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 10px;
-          border: 0;
+          border: 1px solid var(--login-primary);
           border-radius: 10px;
-          background: linear-gradient(135deg, #16834f, #0c9b5b);
+          background: var(--login-primary);
           color: #ffffff;
-          font-size: 14px;
+          font-family: inherit;
+          font-size: 13px;
           font-weight: 750;
           cursor: pointer;
-          box-shadow: 0 7px 17px rgba(18, 131, 78, .18);
-          transition: transform .2s, box-shadow .2s, opacity .2s;
+          transition: background .2s, transform .2s, box-shadow .2s;
         }
 
         .md-login-button:hover:not(:disabled) {
-          transform: translateY(-2px);
-          box-shadow: 0 10px 22px rgba(18, 131, 78, .25);
+          background: var(--login-primary-hover);
+          border-color: var(--login-primary-hover);
+          transform: translateY(-1px);
+          box-shadow: 0 5px 14px rgba(79,70,229,.2);
         }
 
         .md-login-button:disabled {
-          opacity: .65;
+          opacity: .6;
           cursor: not-allowed;
+        }
+
+        .md-login-button-secondary {
+          margin-top: 12px;
+          background: var(--login-surface);
+          border-color: var(--login-border);
+          color: var(--login-text);
+        }
+
+        .md-login-button-secondary:hover:not(:disabled) {
+          background: var(--login-secondary);
+          border-color: var(--login-border);
+          color: var(--login-text);
+          box-shadow: none;
         }
 
         .md-login-error {
           margin-bottom: 22px;
-          padding: 13px 15px;
+          padding: 13px 14px;
           border: 1px solid #fecaca;
           border-radius: 10px;
           background: #fff1f2;
           color: #b42332;
-          font-size: 13px;
+          font-size: 12px;
           line-height: 1.6;
         }
 
         .md-login-error a {
           display: inline-block;
-          margin-top: 6px;
-          color: #a31628;
+          margin-top: 5px;
+          color: #9f1239;
           font-weight: 750;
         }
 
@@ -437,11 +484,11 @@ function AdminLogin() {
           align-items: center;
           gap: 13px;
           margin: 27px 0;
-          color: var(--muted-color, #929b95);
-          font-size: 11px;
+          color: var(--login-muted);
+          font-size: 10px;
           font-weight: 700;
-          text-transform: uppercase;
           letter-spacing: .7px;
+          text-transform: uppercase;
         }
 
         .md-login-divider::before,
@@ -449,55 +496,48 @@ function AdminLogin() {
           content: "";
           height: 1px;
           flex: 1;
-          background: var(--border-color, #e5ebe7);
+          background: var(--login-border);
         }
 
         .md-login-register {
           margin: 0;
-          color: var(--muted-color, #748078);
+          color: var(--login-muted);
           text-align: center;
-          font-size: 13px;
+          font-size: 12px;
+          line-height: 1.8;
         }
 
         .md-login-register a {
-          color: #168451;
+          color: var(--login-primary);
           font-weight: 750;
           text-decoration: none;
         }
 
-        .md-login-register a:hover {
-          text-decoration: underline;
-        }
-
         .md-login-back {
           display: block;
-          margin-top: 24px;
-          color: var(--muted-color, #87928a);
+          margin-top: 25px;
+          color: var(--login-muted);
           text-align: center;
-          font-size: 12px;
+          font-size: 11px;
           text-decoration: none;
         }
 
-        .md-login-back:hover {
-          color: #168451;
-        }
-
         .md-login-select-intro {
-          margin-bottom: 25px;
-          padding: 15px;
-          border: 1px solid #d9eee1;
-          border-radius: 11px;
-          background: #f0faf3;
-          color: #24613e;
-          font-size: 13px;
-          line-height: 1.6;
+          margin-bottom: 24px;
+          padding: 14px;
+          border: 1px solid var(--login-border);
+          border-radius: 10px;
+          background: var(--login-secondary);
+          color: var(--login-muted);
+          font-size: 12px;
+          line-height: 1.7;
         }
 
         .md-login-spinner {
           width: 16px;
           height: 16px;
-          border: 2px solid rgba(255,255,255,.45);
-          border-top-color: #ffffff;
+          border: 2px solid rgba(255,255,255,.4);
+          border-top-color: white;
           border-radius: 50%;
           animation: md-login-spin .7s linear infinite;
         }
@@ -507,7 +547,7 @@ function AdminLogin() {
         }
 
         @media (max-width: 800px) {
-          .md-login-shell {
+          .md-login-container {
             max-width: 490px;
             min-height: auto;
             grid-template-columns: 1fr;
@@ -518,7 +558,7 @@ function AdminLogin() {
           }
 
           .md-login-form-panel {
-            padding: 48px 35px;
+            padding: 45px 35px;
           }
 
           .md-login-mobile-logo {
@@ -527,31 +567,25 @@ function AdminLogin() {
         }
 
         @media (max-width: 480px) {
-          .md-login {
-            min-height: 100vh;
+          .md-admin-login {
             padding: 15px;
           }
 
-          .md-login-shell {
-            border-radius: 18px;
+          .md-login-container {
+            border-radius: 16px;
           }
 
           .md-login-form-panel {
-            padding: 35px 23px;
+            padding: 34px 22px;
           }
 
           .md-login-heading {
             font-size: 26px;
           }
-
-          .md-login-subheading {
-            margin-bottom: 27px;
-          }
         }
       `}</style>
 
-      <div className="md-login-shell">
-        {/* LEFT BRAND PANEL */}
+      <div className="md-login-container">
         <section className="md-login-brand">
           <Link to="/" className="md-login-logo">
             <span className="md-login-logo-icon">✦</span>
@@ -564,15 +598,14 @@ function AdminLogin() {
             </span>
 
             <h1>
-              Your business.
+              Run your business.
               <br />
-              Your control.
+              Smarter.
             </h1>
 
-            <p>
-              Everything you need to manage your business,
-              monitor performance and serve your customers
-              from one place.
+            <p className="md-login-brand-description">
+              Your business operations, team, inventory and
+              performance come together in one organised workspace.
             </p>
 
             <div className="md-login-benefits">
@@ -583,7 +616,7 @@ function AdminLogin() {
 
               <div className="md-login-benefit">
                 <span className="md-login-benefit-icon">✓</span>
-                Track sales and business performance
+                Monitor sales and business performance
               </div>
 
               <div className="md-login-benefit">
@@ -598,7 +631,6 @@ function AdminLogin() {
           </div>
         </section>
 
-        {/* RIGHT LOGIN PANEL */}
         <section className="md-login-form-panel">
           <div className="md-login-form-content">
             <Link to="/" className="md-login-mobile-logo">
@@ -646,7 +678,6 @@ function AdminLogin() {
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
                     autoComplete="email"
-                    autoFocus
                     required
                   />
                 </div>
@@ -685,19 +716,12 @@ function AdminLogin() {
                   </div>
                 </div>
 
-                <div style={{ textAlign: "right", marginTop: "-8px", marginBottom: "24px" }}>
-                  <Link
-                    to="/forgot-password"
-                    style={{
-                      color: "#168451",
-                      fontSize: "12px",
-                      fontWeight: 650,
-                      textDecoration: "none",
-                    }}
-                  >
-                    Forgot password?
-                  </Link>
-                </div>
+                <Link
+                  to="/forgot-password"
+                  className="md-login-forgot"
+                >
+                  Forgot password?
+                </Link>
 
                 <button
                   type="submit"
@@ -712,7 +736,7 @@ function AdminLogin() {
                   ) : (
                     <>
                       Sign in to your account
-                      <span aria-hidden="true">→</span>
+                      <span>→</span>
                     </>
                   )}
                 </button>
@@ -766,23 +790,15 @@ function AdminLogin() {
                   onClick={handleBusinessSelection}
                   disabled={!selectedBusiness}
                 >
-                  Continue to workspace
-                  <span aria-hidden="true">→</span>
+                  Continue to workspace →
                 </button>
 
                 <button
                   type="button"
-                  className="md-login-button"
+                  className="md-login-button md-login-button-secondary"
                   onClick={() => {
                     setSelectingBusiness(false);
                     setError("");
-                  }}
-                  style={{
-                    marginTop: "12px",
-                    background: "transparent",
-                    color: "var(--text-color, #26352c)",
-                    border: "1px solid var(--border-color, #dfe7e1)",
-                    boxShadow: "none",
                   }}
                 >
                   Back to login
@@ -796,7 +812,7 @@ function AdminLogin() {
           </div>
         </section>
       </div>
-    </div>
+    </main>
   );
 }
 
