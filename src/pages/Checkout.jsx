@@ -1023,8 +1023,10 @@ function Checkout() {
         payment_method: formData.paymentMethod,
         notes: formData.notes.trim() || null,
         items: cartItems.map((item) => ({
-          product_id: item.id,
+          product_id: item.product_id || item.id,
           quantity: item.quantity,
+          purchase_type: item.purchase_type || "unit",
+          unit_price: Number(item.price || 0),
         })),
       };
 
