@@ -7,29 +7,19 @@ import ThemeSwitcher from "./ThemeSwitcher";
 
 const NAV_GROUPS = [
   {
-    title: "Overview",
-    items: [
-      {
-        label: "Dashboard",
-        path: "/admin",
-        icon: "bi-speedometer2",
-      },
-    ],
-  },
-  {
-    title: "Inventory",
+    label: "Inventory",
     icon: "bi-box-seam",
+    paths: [
+      "/admin/products",
+      "/admin/categories",
+      "/admin/inventory",
+      "/admin/stock-history",
+      "/admin/stock-transfers",
+      "/admin/branches",
+    ],
     items: [
-      {
-        label: "Products",
-        path: "/admin/products",
-        icon: "bi-box",
-      },
-      {
-        label: "Categories",
-        path: "/admin/categories",
-        icon: "bi-tags",
-      },
+      { label: "Products", path: "/admin/products", icon: "bi-box" },
+      { label: "Categories", path: "/admin/categories", icon: "bi-tags" },
       {
         label: "Stock Management",
         path: "/admin/inventory",
@@ -45,16 +35,20 @@ const NAV_GROUPS = [
         path: "/admin/stock-transfers",
         icon: "bi-arrow-left-right",
       },
-      {
-        label: "Branches",
-        path: "/admin/branches",
-        icon: "bi-shop",
-      },
+      { divider: true },
+      { label: "Branches", path: "/admin/branches", icon: "bi-shop" },
     ],
   },
   {
-    title: "Transactions",
+    label: "Transactions",
     icon: "bi-receipt",
+    paths: [
+      "/admin/orders",
+      "/admin/sales",
+      "/admin/pos-sales",
+      "/admin/deliveries",
+      "/admin/payments",
+    ],
     items: [
       {
         label: "Website Orders",
@@ -72,6 +66,7 @@ const NAV_GROUPS = [
         icon: "bi-cash-register",
         badge: "POS",
       },
+      { divider: true },
       {
         label: "Deliveries",
         path: "/admin/deliveries",
@@ -85,8 +80,15 @@ const NAV_GROUPS = [
     ],
   },
   {
-    title: "Business",
+    label: "Business",
     icon: "bi-grid",
+    paths: [
+      "/admin/reports",
+      "/admin/customers",
+      "/admin/cashiers",
+      "/admin/messages",
+      "/admin/subscription",
+    ],
     items: [
       {
         label: "Reports & Analytics",
@@ -109,6 +111,7 @@ const NAV_GROUPS = [
         icon: "bi-chat-dots",
         unread: true,
       },
+      { divider: true },
       {
         label: "Subscription & Billing",
         path: "/admin/subscription",
@@ -122,6 +125,8 @@ function AdminNavbar() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
+
   const [admin, setAdmin] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem("admin") || "null");
@@ -129,11 +134,6 @@ function AdminNavbar() {
       return null;
     }
   });
-
-  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
-  const [expanded, setExpanded] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [openGroups, setOpenGroups] = useState({});
 
   // ---------------------------------------------------------
   // ADMIN DETAILS
@@ -149,12 +149,9 @@ function AdminNavbar() {
     };
 
     loadAdmin();
-
     window.addEventListener("storage", loadAdmin);
 
-    return () => {
-      window.removeEventListener("storage", loadAdmin);
-    };
+    return () => window.removeEventListener("storage", loadAdmin);
   }, []);
 
   const adminName =
@@ -179,7 +176,7 @@ function AdminNavbar() {
         : "Business Owner";
 
   // ---------------------------------------------------------
-  // ACTIVE ROUTE
+  // ACTIVE ROUTES
   // ---------------------------------------------------------
 
   const isActive = (path) => {
@@ -194,21 +191,7 @@ function AdminNavbar() {
   };
 
   const isGroupActive = (group) =>
-    group.items.some((item) => isActive(item.path));
-
-  // Automatically open the group containing the current page.
-  useEffect(() => {
-    const activeGroup = NAV_GROUPS.find(
-      (group) => group.items.length > 1 && isGroupActive(group)
-    );
-
-    if (activeGroup) {
-      setOpenGroups((previous) => ({
-        ...previous,
-        [activeGroup.title]: true,
-      }));
-    }
-  }, [location.pathname]);
+    group.paths.some((path) => isActive(path));
 
   // ---------------------------------------------------------
   // UNREAD MESSAGES
@@ -257,67 +240,22 @@ function AdminNavbar() {
   }, []);
 
   // ---------------------------------------------------------
-  // DESKTOP SIDEBAR SPACE
+  // CLOSE MOBILE NAVIGATION AFTER ROUTE CHANGE
   // ---------------------------------------------------------
 
   useEffect(() => {
-    const desktopQuery = window.matchMedia("(min-width: 768px)");
+    const navbar = document.getElementById("adminNavbar");
 
-    const updateBodySpacing = () => {
-      document.body.classList.toggle(
-        "md-admin-sidebar-active",
-        desktopQuery.matches
-      );
-    };
+    if (!navbar?.classList.contains("show")) return;
 
-    updateBodySpacing();
-
-    desktopQuery.addEventListener("change", updateBodySpacing);
-
-    return () => {
-      desktopQuery.removeEventListener("change", updateBodySpacing);
-      document.body.classList.remove("md-admin-sidebar-active");
-    };
-  }, []);
-
-  // ---------------------------------------------------------
-  // ROUTE CHANGE
-  // ---------------------------------------------------------
-
-  useEffect(() => {
-    setMobileOpen(false);
+    if (window.bootstrap?.Collapse) {
+      window.bootstrap.Collapse
+        .getOrCreateInstance(navbar, { toggle: false })
+        .hide();
+    } else {
+      navbar.classList.remove("show");
+    }
   }, [location.pathname]);
-
-  // ---------------------------------------------------------
-  // MOBILE ESCAPE KEY
-  // ---------------------------------------------------------
-
-  useEffect(() => {
-    if (!mobileOpen) return;
-
-    const handleEscape = (event) => {
-      if (event.key === "Escape") {
-        setMobileOpen(false);
-      }
-    };
-
-    document.addEventListener("keydown", handleEscape);
-
-    return () => {
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [mobileOpen]);
-
-  // ---------------------------------------------------------
-  // GROUP TOGGLE
-  // ---------------------------------------------------------
-
-  const toggleGroup = (title) => {
-    setOpenGroups((previous) => ({
-      ...previous,
-      [title]: !previous[title],
-    }));
-  };
 
   // ---------------------------------------------------------
   // LOGOUT
@@ -329,440 +267,273 @@ function AdminNavbar() {
 
     setAdmin(null);
     setUnreadMessageCount(0);
-    setMobileOpen(false);
 
     navigate("/admin-login", { replace: true });
   };
 
   // ---------------------------------------------------------
-  // NAVIGATION ITEM
+  // NAVIGATION CLASSES
   // ---------------------------------------------------------
 
-  const renderNavigationItem = (item) => {
-    const active = isActive(item.path);
+  const normalLinkClass = (path) =>
+    `nav-link md-admin-nav-link ${
+      isActive(path) ? "active" : ""
+    }`;
 
-    return (
-      <Link
-        key={item.path}
-        to={item.path}
-        className={`md-sidebar-link ${active ? "active" : ""}`}
-        title={!expanded && !mobileOpen ? item.label : undefined}
-        aria-current={active ? "page" : undefined}
-      >
-        <span className="md-sidebar-icon">
-          <i className={`bi ${item.icon}`} />
-        </span>
+  const dropdownClass = (group) =>
+    `nav-link md-admin-nav-link md-admin-dropdown-toggle ${
+      isGroupActive(group) ? "active" : ""
+    }`;
 
-        <span className="md-sidebar-link-label">
-          {item.label}
-        </span>
-
-        {item.badge && (
-          <span className="md-sidebar-pos-badge">
-            {item.badge}
-          </span>
-        )}
-
-        {item.unread && unreadMessageCount > 0 && (
-          <span className="md-sidebar-unread">
-            {unreadMessageCount > 99
-              ? "99+"
-              : unreadMessageCount}
-          </span>
-        )}
-
-        {active && <span className="md-sidebar-active-dot" />}
-      </Link>
-    );
-  };
+  const linkClass = (path) =>
+    `dropdown-item md-admin-dropdown-item ${
+      isActive(path) ? "active" : ""
+    }`;
 
   // ---------------------------------------------------------
-  // SIDEBAR
+  // NAVBAR
   // ---------------------------------------------------------
 
   return (
     <>
-      {/* MOBILE TOP BAR */}
+      <nav className="navbar navbar-expand-xl sticky-top md-admin-navbar">
+        <div className="container-fluid px-3 px-lg-4">
 
-      <div className="md-mobile-topbar">
-        <button
-          type="button"
-          className="md-mobile-menu-button"
-          onClick={() => setMobileOpen(true)}
-          aria-label="Open navigation"
-          aria-expanded={mobileOpen}
-        >
-          <i className="bi bi-list" />
-        </button>
+          {/* BRAND */}
 
-        <Link to="/admin" className="md-mobile-brand">
-          <span className="md-mobile-brand-icon">
-            <i className="bi bi-grid-1x2-fill" />
-          </span>
-
-          <span>{businessName}</span>
-        </Link>
-
-        <span className="md-mobile-topbar-label">
-          ADMIN
-        </span>
-      </div>
-
-      {/* MOBILE BACKDROP */}
-
-      <div
-        className={`md-sidebar-backdrop ${
-          mobileOpen ? "visible" : ""
-        }`}
-        onClick={() => setMobileOpen(false)}
-        aria-hidden="true"
-      />
-
-      {/* SIDEBAR */}
-
-      <aside
-        className={`md-admin-sidebar ${
-          expanded ? "expanded" : ""
-        } ${mobileOpen ? "mobile-open" : ""}`}
-        onMouseEnter={() => {
-          if (window.matchMedia("(min-width: 768px)").matches) {
-            setExpanded(true);
-          }
-        }}
-        onMouseLeave={() => {
-          if (window.matchMedia("(min-width: 768px)").matches) {
-            setExpanded(false);
-          }
-        }}
-      >
-        {/* BRAND */}
-
-        <div className="md-sidebar-header">
-          <Link
-            to="/admin"
-            className="md-sidebar-brand"
-            title={businessName}
-          >
-            <span className="md-sidebar-brand-icon">
+          <Link to="/admin" className="navbar-brand md-admin-brand">
+            <span className="md-admin-brand-icon">
               <i className="bi bi-grid-1x2-fill" />
             </span>
 
-            <span className="md-sidebar-brand-details">
-              <span className="md-sidebar-brand-name">
+            <span className="md-admin-brand-text">
+              <span className="md-admin-brand-name">
                 {businessName}
               </span>
 
-              <span className="md-sidebar-brand-caption">
+              <span className="md-admin-brand-label">
                 ADMIN CONSOLE
               </span>
             </span>
           </Link>
 
+          {/* MOBILE TOGGLE */}
+
           <button
+            className="navbar-toggler md-admin-toggler"
             type="button"
-            className="md-sidebar-mobile-close"
-            onClick={() => setMobileOpen(false)}
-            aria-label="Close navigation"
+            data-bs-toggle="collapse"
+            data-bs-target="#adminNavbar"
+            aria-controls="adminNavbar"
+            aria-expanded="false"
+            aria-label="Toggle administrator navigation"
           >
-            <i className="bi bi-x-lg" />
+            <span className="navbar-toggler-icon" />
           </button>
-        </div>
 
-        {/* NAVIGATION */}
+          {/* NAVIGATION */}
 
-        <div className="md-sidebar-scroll">
-          <div className="md-sidebar-section-caption">
-            WORKSPACE
-          </div>
+          <div className="collapse navbar-collapse" id="adminNavbar">
 
-          <nav className="md-sidebar-navigation">
-            {NAV_GROUPS.map((group) => {
-              const hasMultipleItems = group.items.length > 1;
-              const groupOpen = !!openGroups[group.title];
-              const groupActive = isGroupActive(group);
+            <ul className="navbar-nav me-auto mb-2 mb-xl-0 md-admin-nav-list">
 
-              if (!hasMultipleItems) {
-                return (
-                  <div
-                    className="md-sidebar-group"
-                    key={group.title}
-                  >
-                    {renderNavigationItem(group.items[0])}
-                  </div>
-                );
-              }
+              {/* DASHBOARD */}
 
-              return (
-                <div
-                  className={`md-sidebar-group ${
-                    groupActive ? "group-active" : ""
-                  }`}
-                  key={group.title}
+              <li className="nav-item">
+                <Link
+                  to="/admin"
+                  className={normalLinkClass("/admin")}
+                >
+                  <i className="bi bi-speedometer2" />
+                  <span>Dashboard</span>
+                </Link>
+              </li>
+
+              {/* DROPDOWN GROUPS */}
+
+              {NAV_GROUPS.map((group) => (
+                <li
+                  className="nav-item dropdown md-admin-nav-dropdown"
+                  key={group.label}
                 >
                   <button
                     type="button"
-                    className={`md-sidebar-group-button ${
-                      groupActive ? "active" : ""
-                    }`}
-                    onClick={() => {
-                      if (!expanded && !mobileOpen) {
-                        setExpanded(true);
-                        setOpenGroups((previous) => ({
-                          ...previous,
-                          [group.title]: true,
-                        }));
-                      } else {
-                        toggleGroup(group.title);
-                      }
-                    }}
-                    title={!expanded && !mobileOpen ? group.title : undefined}
-                    aria-expanded={groupOpen}
+                    className={dropdownClass(group)}
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false"
                   >
-                    <span className="md-sidebar-icon">
-                      <i className={`bi ${group.icon}`} />
-                    </span>
+                    <i className={`bi ${group.icon}`} />
 
-                    <span className="md-sidebar-link-label">
-                      {group.title}
-                    </span>
+                    <span>{group.label}</span>
 
-                    <i
-                      className={`bi bi-chevron-down md-sidebar-chevron ${
-                        groupOpen ? "rotated" : ""
-                      }`}
-                    />
+                    <i className="bi bi-chevron-down md-admin-chevron" />
                   </button>
 
-                  <div
-                    className={`md-sidebar-submenu ${
-                      groupOpen ? "open" : ""
-                    }`}
-                  >
-                    {group.items.map((item) =>
-                      renderNavigationItem(item)
-                    )}
-                  </div>
+                  <ul className="dropdown-menu md-admin-dropdown">
+
+                    {group.items.map((item, index) => {
+                      if (item.divider) {
+                        return (
+                          <li key={`${group.label}-divider-${index}`}>
+                            <hr className="dropdown-divider" />
+                          </li>
+                        );
+                      }
+
+                      return (
+                        <li key={item.path}>
+                          <Link
+                            to={item.path}
+                            className={linkClass(item.path)}
+                          >
+                            <i className={`bi ${item.icon}`} />
+
+                            <span>{item.label}</span>
+
+                            {item.badge && (
+                              <span className="md-admin-pos-badge">
+                                {item.badge}
+                              </span>
+                            )}
+
+                            {item.unread && unreadMessageCount > 0 && (
+                              <span className="md-admin-unread-badge">
+                                {unreadMessageCount > 99
+                                  ? "99+"
+                                  : unreadMessageCount}
+                              </span>
+                            )}
+                          </Link>
+                        </li>
+                      );
+                    })}
+
+                  </ul>
+                </li>
+              ))}
+
+            </ul>
+
+            {/* ACCOUNT AREA */}
+
+            <div className="md-admin-account-area">
+
+              <div className="md-admin-theme">
+                <ThemeSwitcher />
+              </div>
+
+              <div className="md-admin-account-divider" />
+
+              <Link
+                to="/admin/profile"
+                className={`md-admin-profile ${
+                  isActive("/admin/profile") ? "active" : ""
+                }`}
+              >
+                <div className="md-admin-avatar">
+                  <i className="bi bi-person-fill" />
                 </div>
-              );
-            })}
-          </nav>
 
-          {/* ACCOUNT SECTION */}
+                <div className="md-admin-profile-details">
+                  <span className="md-admin-profile-name">
+                    {adminName}
+                  </span>
 
-          <div className="md-sidebar-section-caption md-sidebar-account-caption">
-            ACCOUNT
-          </div>
+                  <span className="md-admin-profile-role">
+                    {adminRole}
+                  </span>
+                </div>
+              </Link>
 
-          <nav className="md-sidebar-navigation">
-            <Link
-              to="/admin/profile"
-              className={`md-sidebar-link ${
-                isActive("/admin/profile") ? "active" : ""
-              }`}
-              title={!expanded && !mobileOpen ? "My Profile" : undefined}
-            >
-              <span className="md-sidebar-icon">
-                <i className="bi bi-person-circle" />
-              </span>
-
-              <span className="md-sidebar-link-label">
-                My Profile
-              </span>
-            </Link>
-
-            <Link
-              to="/admin/settings"
-              className={`md-sidebar-link ${
-                isActive("/admin/settings") ? "active" : ""
-              }`}
-              title={!expanded && !mobileOpen ? "Settings" : undefined}
-            >
-              <span className="md-sidebar-icon">
+              <Link
+                to="/admin/settings"
+                className={`md-admin-icon-button ${
+                  isActive("/admin/settings") ? "active" : ""
+                }`}
+                title="Settings"
+                aria-label="Settings"
+              >
                 <i className="bi bi-gear" />
-              </span>
+              </Link>
 
-              <span className="md-sidebar-link-label">
-                Settings
-              </span>
-            </Link>
-          </nav>
-        </div>
+              <button
+                type="button"
+                className="md-admin-logout"
+                onClick={handleLogout}
+                title="Logout"
+              >
+                <i className="bi bi-box-arrow-right" />
+                <span>Logout</span>
+              </button>
 
-        {/* SIDEBAR FOOTER */}
-
-        <div className="md-sidebar-footer">
-          <div className="md-sidebar-theme">
-            <span className="md-sidebar-theme-icon">
-              <i className="bi bi-circle-half" />
-            </span>
-
-            <div className="md-sidebar-theme-control">
-              <ThemeSwitcher />
             </div>
           </div>
-
-          <Link
-            to="/admin/profile"
-            className={`md-sidebar-user ${
-              isActive("/admin/profile") ? "active" : ""
-            }`}
-            title={!expanded && !mobileOpen ? adminName : undefined}
-          >
-            <span className="md-sidebar-user-avatar">
-              <i className="bi bi-person-fill" />
-            </span>
-
-            <span className="md-sidebar-user-details">
-              <span className="md-sidebar-user-name">
-                {adminName}
-              </span>
-
-              <span className="md-sidebar-user-role">
-                {adminRole}
-              </span>
-            </span>
-
-            <i className="bi bi-three-dots-vertical md-sidebar-user-more" />
-          </Link>
-
-          <button
-            type="button"
-            className="md-sidebar-logout"
-            onClick={handleLogout}
-            title={!expanded && !mobileOpen ? "Logout" : undefined}
-          >
-            <span className="md-sidebar-icon">
-              <i className="bi bi-box-arrow-right" />
-            </span>
-
-            <span className="md-sidebar-link-label">
-              Sign out
-            </span>
-          </button>
         </div>
-      </aside>
+      </nav>
 
       {/* STYLES */}
 
       <style>{`
-        /* --------------------------------------------------
-           LAYOUT
-        -------------------------------------------------- */
 
-        body.md-admin-sidebar-active {
-          padding-left: 76px;
-          transition: padding-left 0.25s ease;
-        }
+        /* =========================================
+           MAIN NAVBAR
+        ========================================= */
 
-        .md-admin-sidebar,
-        .md-admin-sidebar * {
-          box-sizing: border-box;
-        }
-
-        .md-admin-sidebar {
-          position: fixed;
-          top: 14px;
-          left: 14px;
-          bottom: 14px;
-          width: 62px;
-          z-index: 1040;
-
-          display: flex;
-          flex-direction: column;
-
-          overflow: hidden;
+        .md-admin-navbar {
+          min-height: 68px;
+          padding: 8px 0;
 
           background: var(--surface);
           color: var(--text-primary);
 
-          border: 1px solid var(--border);
-          border-radius: 17px;
-
-          box-shadow: var(--shadow-lg);
-
-          transition:
-            width 0.25s ease,
-            transform 0.25s ease,
-            box-shadow 0.25s ease;
-        }
-
-        .md-admin-sidebar.expanded {
-          width: 260px;
-        }
-
-        /* --------------------------------------------------
-           HEADER / BRAND
-        -------------------------------------------------- */
-
-        .md-sidebar-header {
-          height: 76px;
-          min-height: 76px;
-
-          display: flex;
-          align-items: center;
-          justify-content: center;
-
-          padding: 0 10px;
-
           border-bottom: 1px solid var(--border);
+          box-shadow: var(--shadow-sm);
+
+          z-index: 1030;
         }
 
-        .md-admin-sidebar.expanded .md-sidebar-header {
-          justify-content: flex-start;
-          padding: 0 15px;
-        }
+        /* =========================================
+           BRAND
+        ========================================= */
 
-        .md-sidebar-brand {
+        .md-admin-brand {
           display: flex;
           align-items: center;
-          justify-content: center;
-          gap: 11px;
+          gap: 10px;
 
-          min-width: 0;
+          margin-right: 30px;
 
           color: var(--text-primary);
           text-decoration: none;
         }
 
-        .md-sidebar-brand:hover {
+        .md-admin-brand:hover {
           color: var(--text-primary);
         }
 
-        .md-sidebar-brand-icon {
-          width: 40px;
-          height: 40px;
-          min-width: 40px;
+        .md-admin-brand-icon {
+          width: 39px;
+          height: 39px;
 
           display: flex;
           align-items: center;
           justify-content: center;
 
-          border-radius: 12px;
+          border-radius: 11px;
 
           background: var(--primary);
           color: #fff;
 
-          font-size: 18px;
-
-          box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+          font-size: 17px;
         }
 
-        .md-sidebar-brand-details {
-          display: none;
-          flex-direction: column;
-          min-width: 0;
-          overflow: hidden;
-          white-space: nowrap;
-        }
-
-        .md-admin-sidebar.expanded .md-sidebar-brand-details {
+        .md-admin-brand-text {
           display: flex;
+          flex-direction: column;
+          line-height: 1.2;
         }
 
-        .md-sidebar-brand-name {
-          overflow: hidden;
-          text-overflow: ellipsis;
-
+        .md-admin-brand-name {
           color: var(--text-primary);
 
           font-size: 14px;
@@ -770,240 +541,198 @@ function AdminNavbar() {
           letter-spacing: -0.3px;
         }
 
-        .md-sidebar-brand-caption {
+        .md-admin-brand-label {
           margin-top: 4px;
 
           color: var(--text-muted);
 
           font-size: 9px;
           font-weight: 750;
-          letter-spacing: 1.3px;
+          letter-spacing: 1.2px;
         }
 
-        .md-sidebar-mobile-close {
-          display: none;
+        /* =========================================
+           MOBILE TOGGLER
+        ========================================= */
 
-          width: 34px;
-          height: 34px;
+        .md-admin-toggler {
+          padding: 6px 9px;
 
+          border: 1px solid var(--border) !important;
+          border-radius: 9px;
+
+          box-shadow: none !important;
+        }
+
+        /* =========================================
+           NAVIGATION
+        ========================================= */
+
+        .md-admin-nav-list {
+          align-items: center;
+          gap: 4px;
+        }
+
+        .md-admin-nav-link {
+          min-height: 39px;
+
+          display: flex;
           align-items: center;
           justify-content: center;
+          gap: 8px;
+
+          padding: 9px 11px !important;
 
           border: 0;
           border-radius: 9px;
 
-          background: var(--surface-secondary);
-          color: var(--text-secondary);
+          background: transparent;
+
+          color: var(--text-secondary, var(--text-muted)) !important;
+
+          font-size: 12.5px;
+          font-weight: 650;
+
+          white-space: nowrap;
+
+          transition:
+            background 0.18s ease,
+            color 0.18s ease;
+        }
+
+        .md-admin-nav-link > i:first-child {
+          font-size: 15px;
+        }
+
+        .md-admin-nav-link:hover,
+        .md-admin-nav-link.active,
+        .md-admin-nav-link.show {
+          background: var(--primary-light);
+          color: var(--primary) !important;
+        }
+
+        .md-admin-chevron {
+          margin-left: 2px;
+          font-size: 9px;
+          transition: transform 0.2s ease;
+        }
+
+        .md-admin-nav-dropdown:hover .md-admin-chevron,
+        .md-admin-nav-dropdown:focus-within .md-admin-chevron,
+        .md-admin-nav-dropdown .show + .md-admin-chevron {
+          transform: rotate(180deg);
+        }
+
+        /* =========================================
+           DROPDOWN MENUS
+        ========================================= */
+
+        .md-admin-dropdown {
+          min-width: 235px;
+
+          margin-top: 10px !important;
+          padding: 7px;
+
+          background: var(--surface);
+
+          border: 1px solid var(--border);
+          border-radius: 12px;
+
+          box-shadow: var(--shadow-lg);
+
+          opacity: 0;
+          transform: translateY(5px);
+
+          transition:
+            opacity 0.16s ease,
+            transform 0.16s ease;
+        }
+
+        /* Desktop: open automatically on hover */
+
+        @media (min-width: 1200px) and (hover: hover) and (pointer: fine) {
+
+          .md-admin-nav-dropdown:hover > .md-admin-dropdown,
+          .md-admin-nav-dropdown:focus-within > .md-admin-dropdown {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+          }
+
+          .md-admin-nav-dropdown:hover > .md-admin-dropdown,
+          .md-admin-nav-dropdown:focus-within > .md-admin-dropdown {
+            animation: mdDropdownEnter 0.17s ease both;
+          }
+
+          .md-admin-nav-dropdown > .md-admin-dropdown.show {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes mdDropdownEnter {
+          from {
+            opacity: 0;
+            transform: translateY(7px);
+          }
+
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .md-admin-dropdown-item {
+          min-height: 39px;
+
+          display: flex;
+          align-items: center;
+          gap: 10px;
+
+          padding: 9px 11px;
+
+          border-radius: 8px;
+
+          color: var(--text-primary);
+
+          font-size: 12.5px;
+          font-weight: 550;
+
+          transition:
+            background 0.15s ease,
+            color 0.15s ease;
+        }
+
+        .md-admin-dropdown-item > i {
+          width: 17px;
+
+          color: var(--text-muted);
 
           font-size: 15px;
         }
 
-        /* --------------------------------------------------
-           SCROLL AREA
-        -------------------------------------------------- */
-
-        .md-sidebar-scroll {
-          flex: 1;
-          min-height: 0;
-
-          overflow-x: hidden;
-          overflow-y: auto;
-
-          padding: 16px 8px;
-
-          scrollbar-width: thin;
-          scrollbar-color: var(--border) transparent;
-        }
-
-        .md-sidebar-scroll::-webkit-scrollbar {
-          width: 4px;
-        }
-
-        .md-sidebar-scroll::-webkit-scrollbar-thumb {
-          background: var(--border);
-          border-radius: 10px;
-        }
-
-        .md-sidebar-section-caption {
-          display: none;
-
-          padding: 7px 11px 10px;
-
-          color: var(--text-muted);
-
-          font-size: 9px;
-          font-weight: 800;
-          letter-spacing: 1.2px;
-          white-space: nowrap;
-        }
-
-        .md-admin-sidebar.expanded .md-sidebar-section-caption {
-          display: block;
-        }
-
-        .md-sidebar-account-caption {
-          margin-top: 20px;
-        }
-
-        /* --------------------------------------------------
-           NAVIGATION
-        -------------------------------------------------- */
-
-        .md-sidebar-navigation {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
-
-        .md-sidebar-group {
-          display: flex;
-          flex-direction: column;
-          gap: 3px;
-          margin-bottom: 3px;
-        }
-
-        .md-sidebar-link,
-        .md-sidebar-group-button,
-        .md-sidebar-logout {
-          position: relative;
-
-          width: 100%;
-          min-height: 43px;
-
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 12px;
-
-          padding: 0 9px;
-
-          border: 0;
-          border-radius: 10px;
-
-          background: transparent;
-          color: var(--text-secondary, var(--text-muted));
-
-          text-decoration: none;
-          text-align: left;
-
-          font-size: 12px;
-          font-weight: 650;
-
-          cursor: pointer;
-
-          transition:
-            background 0.18s ease,
-            color 0.18s ease,
-            transform 0.18s ease;
-        }
-
-        .md-admin-sidebar.expanded .md-sidebar-link,
-        .md-admin-sidebar.expanded .md-sidebar-group-button,
-        .md-admin-sidebar.expanded .md-sidebar-logout {
-          justify-content: flex-start;
-          padding: 0 11px;
-        }
-
-        .md-sidebar-link:hover,
-        .md-sidebar-group-button:hover,
-        .md-sidebar-logout:hover {
-          background: var(--surface-secondary);
-          color: var(--primary);
-        }
-
-        .md-sidebar-link.active,
-        .md-sidebar-group-button.active {
+        .md-admin-dropdown-item:hover,
+        .md-admin-dropdown-item.active {
           background: var(--primary-light);
           color: var(--primary);
         }
 
-        .md-sidebar-icon {
-          width: 25px;
-          min-width: 25px;
-          height: 25px;
-
-          display: flex;
-          align-items: center;
-          justify-content: center;
-
-          font-size: 17px;
+        .md-admin-dropdown-item.active > i,
+        .md-admin-dropdown-item:hover > i {
+          color: var(--primary);
         }
 
-        .md-sidebar-link-label {
-          display: none;
-
-          flex: 1;
-          min-width: 0;
-
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
+        .md-admin-dropdown .dropdown-divider {
+          margin: 5px 3px;
+          border-color: var(--border);
+          opacity: 1;
         }
 
-        .md-admin-sidebar.expanded .md-sidebar-link-label {
-          display: block;
-        }
+        .md-admin-pos-badge {
+          margin-left: auto;
 
-        .md-sidebar-active-dot {
-          display: none;
-
-          width: 6px;
-          height: 6px;
-          min-width: 6px;
-
-          border-radius: 50%;
-          background: var(--primary);
-        }
-
-        .md-admin-sidebar.expanded .md-sidebar-active-dot {
-          display: block;
-        }
-
-        .md-sidebar-chevron {
-          display: none;
-          font-size: 10px;
-          transition: transform 0.2s ease;
-        }
-
-        .md-admin-sidebar.expanded .md-sidebar-chevron {
-          display: block;
-        }
-
-        .md-sidebar-chevron.rotated {
-          transform: rotate(180deg);
-        }
-
-        /* --------------------------------------------------
-           SUBMENUS
-        -------------------------------------------------- */
-
-        .md-sidebar-submenu {
-          display: none;
-          flex-direction: column;
-          gap: 3px;
-
-          padding: 3px 0 5px 11px;
-          margin-left: 12px;
-
-          border-left: 1px solid var(--border);
-        }
-
-        .md-admin-sidebar.expanded .md-sidebar-submenu.open {
-          display: flex;
-        }
-
-        .md-sidebar-submenu .md-sidebar-link {
-          min-height: 38px;
-          padding-left: 10px;
-          font-size: 11.5px;
-        }
-
-        .md-sidebar-submenu .md-sidebar-icon {
-          font-size: 14px;
-        }
-
-        .md-sidebar-pos-badge {
-          padding: 3px 6px;
+          padding: 3px 7px;
 
           border-radius: 5px;
 
@@ -1014,9 +743,11 @@ function AdminNavbar() {
           font-weight: 800;
         }
 
-        .md-sidebar-unread {
-          min-width: 19px;
-          height: 19px;
+        .md-admin-unread-badge {
+          margin-left: auto;
+
+          min-width: 20px;
+          height: 20px;
 
           display: inline-flex;
           align-items: center;
@@ -1029,93 +760,55 @@ function AdminNavbar() {
           background: var(--danger);
           color: #fff;
 
-          font-size: 9px;
+          font-size: 10px;
           font-weight: 800;
         }
 
-        /* --------------------------------------------------
-           FOOTER
-        -------------------------------------------------- */
+        /* =========================================
+           ACCOUNT AREA
+        ========================================= */
 
-        .md-sidebar-footer {
-          display: flex;
-          flex-direction: column;
-          gap: 7px;
-
-          padding: 10px 8px 12px;
-
-          border-top: 1px solid var(--border);
-        }
-
-        .md-sidebar-theme {
-          min-height: 43px;
-
+        .md-admin-account-area {
           display: flex;
           align-items: center;
-          justify-content: center;
-          gap: 12px;
-
-          padding: 0 9px;
-
-          border-radius: 10px;
-        }
-
-        .md-admin-sidebar.expanded .md-sidebar-theme {
-          justify-content: flex-start;
-          padding: 0 11px;
-        }
-
-        .md-sidebar-theme-icon {
-          width: 25px;
-          min-width: 25px;
-
-          display: flex;
-          align-items: center;
-          justify-content: center;
-
-          color: var(--text-secondary);
-          font-size: 17px;
-        }
-
-        .md-sidebar-theme-control {
-          display: none;
-          flex: 1;
-          min-width: 0;
-        }
-
-        .md-admin-sidebar.expanded .md-sidebar-theme-control {
-          display: block;
-        }
-
-        .md-sidebar-user {
-          min-height: 49px;
-
-          display: flex;
-          align-items: center;
-          justify-content: center;
           gap: 10px;
 
-          padding: 5px 7px;
+          padding-left: 15px;
+        }
 
-          border-radius: 10px;
+        .md-admin-theme {
+          display: flex;
+          align-items: center;
+        }
 
-          color: var(--text-primary);
+        .md-admin-account-divider {
+          width: 1px;
+          height: 30px;
+
+          background: var(--border);
+        }
+
+        .md-admin-profile {
+          display: flex;
+          align-items: center;
+          gap: 9px;
+
+          padding: 4px 7px;
+
+          border-radius: 9px;
+
+          color: inherit;
           text-decoration: none;
 
-          transition: background 0.2s ease;
+          transition: background 0.18s ease;
         }
 
-        .md-admin-sidebar.expanded .md-sidebar-user {
-          justify-content: flex-start;
-          padding: 5px 8px;
+        .md-admin-profile:hover,
+        .md-admin-profile.active {
+          background: var(--primary-light);
         }
 
-        .md-sidebar-user:hover,
-        .md-sidebar-user.active {
-          background: var(--surface-secondary);
-        }
-
-        .md-sidebar-user-avatar {
+        .md-admin-avatar {
           width: 34px;
           height: 34px;
           min-width: 34px;
@@ -1132,30 +825,20 @@ function AdminNavbar() {
           font-size: 16px;
         }
 
-        .md-sidebar-user-details {
-          display: none;
-          flex: 1;
-          flex-direction: column;
-          min-width: 0;
-          overflow: hidden;
-        }
-
-        .md-admin-sidebar.expanded .md-sidebar-user-details {
+        .md-admin-profile-details {
           display: flex;
+          flex-direction: column;
+          line-height: 1.3;
         }
 
-        .md-sidebar-user-name {
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-
+        .md-admin-profile-name {
           color: var(--text-primary);
 
-          font-size: 11px;
+          font-size: 11.5px;
           font-weight: 750;
         }
 
-        .md-sidebar-user-role {
+        .md-admin-profile-role {
           margin-top: 3px;
 
           color: var(--text-muted);
@@ -1164,279 +847,168 @@ function AdminNavbar() {
           text-transform: capitalize;
         }
 
-        .md-sidebar-user-more {
-          display: none;
-          color: var(--text-muted);
-          font-size: 13px;
+        /* =========================================
+           SETTINGS
+        ========================================= */
+
+        .md-admin-icon-button {
+          width: 36px;
+          height: 36px;
+
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+
+          border: 1px solid var(--border);
+          border-radius: 9px;
+
+          background: var(--surface);
+
+          color: var(--text-secondary, var(--text-muted));
+
+          text-decoration: none;
+          font-size: 15px;
+
+          transition: all 0.18s ease;
         }
 
-        .md-admin-sidebar.expanded .md-sidebar-user-more {
-          display: block;
+        .md-admin-icon-button:hover,
+        .md-admin-icon-button.active {
+          border-color: var(--primary);
+          background: var(--primary-light);
+          color: var(--primary);
         }
 
-        .md-sidebar-logout {
-          color: var(--danger);
+        /* =========================================
+           LOGOUT
+        ========================================= */
+
+        .md-admin-logout {
+          min-height: 36px;
+
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 7px;
+
+          padding: 0 11px;
+
+          border: 1px solid var(--border);
+          border-radius: 9px;
+
+          background: var(--surface);
+
+          color: var(--text-secondary, var(--text-muted));
+
+          font-size: 11.5px;
+          font-weight: 650;
+
+          transition: all 0.18s ease;
         }
 
-        .md-sidebar-logout:hover {
+        .md-admin-logout:hover {
+          border-color: var(--danger);
           background: var(--danger-light, var(--surface-secondary));
           color: var(--danger);
         }
 
-        /* --------------------------------------------------
-           MOBILE TOP BAR
-        -------------------------------------------------- */
+        /* =========================================
+           RESPONSIVE NAVIGATION
+        ========================================= */
 
-        .md-mobile-topbar {
-          display: none;
-        }
+        @media (max-width: 1199px) {
 
-        .md-sidebar-backdrop {
-          display: none;
-        }
-
-        /* --------------------------------------------------
-           TABLET AND MOBILE
-        -------------------------------------------------- */
-
-        @media (max-width: 767px) {
-          body.md-admin-sidebar-active {
-            padding-left: 0;
+          .md-admin-navbar {
+            padding: 10px 0;
           }
 
-          .md-mobile-topbar {
-            position: sticky;
-            top: 0;
-            z-index: 1030;
-
-            min-height: 58px;
-
-            display: flex;
-            align-items: center;
-            gap: 12px;
-
-            padding: 0 15px;
-
-            background: var(--surface);
-            border-bottom: 1px solid var(--border);
-
-            box-shadow: var(--shadow-sm);
+          .md-admin-nav-list {
+            align-items: stretch;
+            gap: 3px;
+            padding-top: 12px;
           }
 
-          .md-mobile-menu-button {
-            width: 38px;
-            height: 38px;
+          .md-admin-nav-link {
+            width: 100%;
+            justify-content: flex-start;
+          }
 
-            display: flex;
-            align-items: center;
-            justify-content: center;
+          .md-admin-dropdown {
+            margin-top: 3px !important;
 
             border: 1px solid var(--border);
-            border-radius: 10px;
-
-            background: var(--surface);
-            color: var(--text-primary);
-
-            font-size: 22px;
+            box-shadow: none;
           }
 
-          .md-mobile-brand {
+          .md-admin-account-area {
             display: flex;
             align-items: center;
-            gap: 9px;
+            flex-wrap: wrap;
+            gap: 12px;
 
-            min-width: 0;
-            flex: 1;
+            margin-top: 12px;
+            padding: 15px 0 5px;
 
-            overflow: hidden;
+            border-top: 1px solid var(--border);
+          }
 
-            color: var(--text-primary);
-            text-decoration: none;
+          .md-admin-account-divider {
+            display: none;
+          }
+        }
 
+        @media (max-width: 575px) {
+
+          .md-admin-brand {
+            margin-right: 8px;
+          }
+
+          .md-admin-brand-name {
             font-size: 13px;
-            font-weight: 800;
           }
 
-          .md-mobile-brand-icon {
-            width: 31px;
-            height: 31px;
-            min-width: 31px;
-
-            display: flex;
-            align-items: center;
-            justify-content: center;
-
-            border-radius: 9px;
-
-            background: var(--primary);
-            color: #fff;
-
-            font-size: 14px;
+          .md-admin-brand-icon {
+            width: 36px;
+            height: 36px;
           }
 
-          .md-mobile-brand span:last-child {
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+          .md-admin-account-area {
+            align-items: stretch;
+            flex-direction: column;
           }
 
-          .md-mobile-topbar-label {
-            color: var(--text-muted);
-            font-size: 9px;
-            font-weight: 800;
-            letter-spacing: 1px;
+          .md-admin-theme {
+            padding: 5px 0;
           }
 
-          .md-admin-sidebar {
-            top: 0;
-            left: 0;
-            bottom: 0;
-
-            width: 285px;
-            max-width: 86vw;
-
-            border-radius: 0 17px 17px 0;
-
-            transform: translateX(-110%);
-            transition: transform 0.28s ease;
-
-            z-index: 1050;
+          .md-admin-profile {
+            padding: 7px;
           }
 
-          .md-admin-sidebar.expanded {
-            width: 285px;
-          }
-
-          .md-admin-sidebar.mobile-open {
-            transform: translateX(0);
-          }
-
-          .md-sidebar-header {
-            justify-content: flex-start;
-            padding: 0 15px;
-          }
-
-          .md-sidebar-brand-details {
-            display: flex;
-          }
-
-          .md-sidebar-mobile-close {
-            display: flex;
-            margin-left: auto;
-          }
-
-          .md-sidebar-scroll {
-            padding: 16px 12px;
-          }
-
-          .md-sidebar-section-caption {
-            display: block;
-          }
-
-          .md-sidebar-link,
-          .md-sidebar-group-button,
-          .md-sidebar-logout {
-            justify-content: flex-start;
-            padding: 0 11px;
-          }
-
-          .md-sidebar-link-label {
-            display: block;
-          }
-
-          .md-sidebar-chevron {
-            display: block;
-          }
-
-          .md-sidebar-submenu.open {
-            display: flex;
-          }
-
-          .md-sidebar-active-dot {
-            display: block;
-          }
-
-          .md-sidebar-theme {
-            justify-content: flex-start;
-            padding: 0 11px;
-          }
-
-          .md-sidebar-theme-control {
-            display: block;
-          }
-
-          .md-sidebar-user {
-            justify-content: flex-start;
-            padding: 5px 8px;
-          }
-
-          .md-sidebar-user-details {
-            display: flex;
-          }
-
-          .md-sidebar-user-more {
-            display: block;
-          }
-
-          .md-sidebar-backdrop {
-            position: fixed;
-            inset: 0;
-
-            display: block;
-
-            background: rgba(15, 23, 42, 0.48);
-            backdrop-filter: blur(2px);
-
-            opacity: 0;
-            visibility: hidden;
-
-            transition:
-              opacity 0.25s ease,
-              visibility 0.25s ease;
-
-            z-index: 1045;
-          }
-
-          .md-sidebar-backdrop.visible {
-            opacity: 1;
-            visibility: visible;
+          .md-admin-icon-button,
+          .md-admin-logout {
+            width: 100%;
           }
         }
 
-        /* --------------------------------------------------
-           SMALL PHONES
-        -------------------------------------------------- */
-
-        @media (max-width: 380px) {
-          .md-mobile-topbar {
-            padding: 0 10px;
-            gap: 8px;
-          }
-
-          .md-mobile-topbar-label {
-            font-size: 8px;
-          }
-        }
-
-        /* --------------------------------------------------
+        /* =========================================
            ACCESSIBILITY
-        -------------------------------------------------- */
+        ========================================= */
 
-        .md-admin-sidebar button:focus-visible,
-        .md-admin-sidebar a:focus-visible,
-        .md-mobile-topbar button:focus-visible {
+        .md-admin-navbar a:focus-visible,
+        .md-admin-navbar button:focus-visible {
           outline: 2px solid var(--primary);
           outline-offset: 3px;
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .md-admin-sidebar,
-          .md-sidebar-link,
-          .md-sidebar-group-button,
-          .md-sidebar-backdrop {
+          .md-admin-navbar *,
+          .md-admin-dropdown {
+            animation: none !important;
             transition: none !important;
           }
         }
+
       `}</style>
     </>
   );
