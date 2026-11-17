@@ -8,9 +8,11 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
 from extensions import db
+
 from routes.business_routes import business_bp
 from routes.superadmin_routes import superadmin_bp
 from routes.profile_routes import profile_bp
+from routes.category_routes import category_bp
 
 
 # ============================================================
@@ -19,14 +21,18 @@ from routes.profile_routes import profile_bp
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-load_dotenv(os.path.join(BASE_DIR, ".env"))
+load_dotenv(
+    os.path.join(BASE_DIR, ".env")
+)
 
 
 # ============================================================
 # LOGGING
 # ============================================================
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO
+)
 
 logger = logging.getLogger("myduka")
 
@@ -90,10 +96,14 @@ ALLOWED_ORIGINS = {
     "http://localhost:5173"
 }
 
-configured_origins = os.getenv("CORS_ORIGINS", "")
+configured_origins = os.getenv(
+    "CORS_ORIGINS",
+    ""
+)
 
 for origin in configured_origins.split(","):
     origin = origin.strip().rstrip("/")
+
     if origin:
         ALLOWED_ORIGINS.add(origin)
 
@@ -114,9 +124,15 @@ ALLOWED_HEADERS = (
 @app.before_request
 def handle_preflight():
 
-    if request.method == "OPTIONS" and request.path.startswith("/api/"):
+    if (
+        request.method == "OPTIONS"
+        and request.path.startswith("/api/")
+    ):
 
-        origin = request.headers.get("Origin", "")
+        origin = request.headers.get(
+            "Origin",
+            ""
+        )
 
         logger.info(
             "CORS PREFLIGHT: origin=%s path=%s",
@@ -124,9 +140,7 @@ def handle_preflight():
             request.path
         )
 
-        response = make_response("", 204)
-
-        return response
+        return make_response("", 204)
 
     return None
 
@@ -138,23 +152,33 @@ def handle_preflight():
 @app.after_request
 def add_cors_headers(response):
 
-    origin = request.headers.get("Origin", "")
+    origin = request.headers.get(
+        "Origin",
+        ""
+    )
 
     if origin in ALLOWED_ORIGINS:
 
-        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers[
+            "Access-Control-Allow-Origin"
+        ] = origin
 
-        response.headers["Access-Control-Allow-Methods"] = (
-            ALLOWED_METHODS
+        response.headers[
+            "Access-Control-Allow-Methods"
+        ] = ALLOWED_METHODS
+
+        response.headers[
+            "Access-Control-Allow-Headers"
+        ] = ALLOWED_HEADERS
+
+        response.headers[
+            "Access-Control-Max-Age"
+        ] = "600"
+
+        response.headers.add(
+            "Vary",
+            "Origin"
         )
-
-        response.headers["Access-Control-Allow-Headers"] = (
-            ALLOWED_HEADERS
-        )
-
-        response.headers["Access-Control-Max-Age"] = "600"
-
-        response.headers.add("Vary", "Origin")
 
     return response
 
@@ -173,6 +197,7 @@ db.init_app(app)
 app.register_blueprint(business_bp)
 app.register_blueprint(superadmin_bp)
 app.register_blueprint(profile_bp)
+app.register_blueprint(category_bp)
 
 
 # ============================================================
@@ -212,7 +237,9 @@ def database_test():
 
     try:
 
-        db.session.execute(text("SELECT 1"))
+        db.session.execute(
+            text("SELECT 1")
+        )
 
         return jsonify({
             "status": "ok",
@@ -221,7 +248,6 @@ def database_test():
         }), 200
 
     except SQLAlchemyError:
-
         db.session.rollback()
 
         logger.exception(
