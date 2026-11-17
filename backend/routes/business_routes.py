@@ -18,7 +18,6 @@ from auth import supabase_auth_required, business_member_required
 from models.business import Business
 from models.business_member import BusinessMember
 
-
 logger = logging.getLogger("myduka.business")
 
 business_bp = Blueprint(
@@ -26,7 +25,6 @@ business_bp = Blueprint(
     __name__,
     url_prefix="/api/businesses"
 )
-
 
 # ==================================================
 # HELPERS
@@ -71,6 +69,30 @@ def get_invited_user_id(response):
     return UUID(str(user_id))
 
 
+def get_auth_user_email(admin_client, user_id):
+    try:
+        response = admin_client.auth.admin.get_user_by_id(
+            str(user_id)
+        )
+
+        user = getattr(response, "user", None)
+
+        if user is None and isinstance(response, dict):
+            user = response.get("user")
+
+        if isinstance(user, dict):
+            return user.get("email")
+
+        return getattr(user, "email", None)
+
+    except Exception:
+        logger.exception(
+            "Could not retrieve email for user %s.",
+            user_id
+        )
+        return None
+
+
 def serialize_branch(row):
     return {
         "id": str(row["id"]),
@@ -89,6 +111,81 @@ def serialize_branch(row):
             if row["updated_at"] else None
         )
     }
+
+
+def validate_branch_ids(branch_ids, business_id):
+    if not isinstance(branch_ids, list) or not branch_ids:
+        raise ValueError(
+            "Assign the employee to at least one branch."
+        )
+
+    try:
+        branch_uuids = list(dict.fromkeys(
+            UUID(str(branch_id))
+            for branch_id in branch_ids
+        ))
+    except (ValueError, TypeError):
+        raise ValueError(
+            "One or more branch IDs are invalid."
+        )
+
+    valid_branches = []
+
+    for branch_id in branch_uuids:
+        branch = db.session.execute(
+            text("""
+                SELECT id, name
+                FROM public.branches
+                WHERE id = :branch_id
+                  AND business_id = :business_id
+                  AND is_active = TRUE
+                LIMIT 1
+            """),
+            {
+                "branch_id": branch_id,
+                "business_id": business_id
+            }
+        ).mappings().first()
+
+        if not branch:
+            raise ValueError(
+                "A selected branch is invalid or inactive."
+            )
+
+        valid_branches.append(branch)
+
+    return valid_branches
+
+
+def serialize_staff_member(member, branches, email=None):
+    return {
+        "membership_id": str(member["membership_id"]),
+        "user_id": str(member["user_id"]),
+        "email": email,
+        "role": member["role"],
+        "is_active": member["is_active"],
+        "created_at": (
+            member["created_at"].isoformat()
+            if member["created_at"] else None
+        ),
+        "branches": [
+            {
+                "id": str(branch["branch_id"]),
+                "name": branch["branch_name"]
+            }
+            for branch in branches
+        ]
+    }
+
+
+def check_business_access(business_id):
+    if business_id != g.business_id:
+        return jsonify({
+            "status": "error",
+            "message": "Business access denied."
+        }), 403
+
+    return None
 
 
 # ==================================================
@@ -283,11 +380,10 @@ def create_business():
 @business_member_required
 def list_branches(business_id):
 
-    if business_id != g.business_id:
-        return jsonify({
-            "status": "error",
-            "message": "Business access denied."
-        }), 403
+    denied = check_business_access(business_id)
+
+    if denied:
+        return denied
 
     try:
         result = db.session.execute(
@@ -348,11 +444,10 @@ def list_branches(business_id):
 @business_member_required("owner", "admin", "manager")
 def create_branch(business_id):
 
-    if business_id != g.business_id:
-        return jsonify({
-            "status": "error",
-            "message": "Business access denied."
-        }), 403
+    denied = check_business_access(business_id)
+
+    if denied:
+        return denied
 
     data = request.get_json(silent=True) or {}
 
@@ -470,264 +565,6 @@ def create_branch(business_id):
 
 
 # ==================================================
-# UPDATE BUSINESS BRANCH
-# ==================================================
-
-@business_bp.route(
-    "/<uuid:business_id>/branches/<uuid:branch_id>",
-    methods=["PUT"]
-)
-@business_member_required("owner", "admin")
-def update_branch(business_id, branch_id):
-
-    if business_id != g.business_id:
-        return jsonify({
-            "status": "error",
-            "message": "Business access denied."
-        }), 403
-
-    data = request.get_json(silent=True) or {}
-
-    name = str(data.get("name", "")).strip()
-    phone = data.get("phone")
-    address = data.get("address")
-
-    if not name:
-        return jsonify({
-            "status": "error",
-            "message": "Branch name is required."
-        }), 400
-
-    if len(name) > 150:
-        return jsonify({
-            "status": "error",
-            "message": "Branch name cannot exceed 150 characters."
-        }), 400
-
-    if phone is not None:
-        phone = str(phone).strip() or None
-
-        if len(phone or "") > 30:
-            return jsonify({
-                "status": "error",
-                "message": "Branch phone number is too long."
-            }), 400
-
-    if address is not None:
-        address = str(address).strip() or None
-
-    try:
-        existing_name = db.session.execute(
-            text("""
-                SELECT id
-                FROM public.branches
-                WHERE business_id = :business_id
-                  AND LOWER(TRIM(name)) = LOWER(TRIM(:name))
-                  AND id <> :branch_id
-                LIMIT 1
-            """),
-            {
-                "business_id": g.business_id,
-                "name": name,
-                "branch_id": branch_id
-            }
-        ).first()
-
-        if existing_name:
-            return jsonify({
-                "status": "error",
-                "message": "Another branch with this name already exists."
-            }), 409
-
-        result = db.session.execute(
-            text("""
-                UPDATE public.branches
-                SET
-                    name = :name,
-                    phone = :phone,
-                    address = :address,
-                    updated_at = NOW()
-                WHERE id = :branch_id
-                  AND business_id = :business_id
-                RETURNING
-                    id,
-                    business_id,
-                    name,
-                    phone,
-                    address,
-                    is_main,
-                    is_active,
-                    created_at,
-                    updated_at
-            """),
-            {
-                "name": name,
-                "phone": phone,
-                "address": address,
-                "branch_id": branch_id,
-                "business_id": g.business_id
-            }
-        )
-
-        row = result.mappings().first()
-
-        if not row:
-            db.session.rollback()
-
-            return jsonify({
-                "status": "error",
-                "message": "Branch not found."
-            }), 404
-
-        db.session.commit()
-
-        return jsonify({
-            "status": "success",
-            "message": "Branch updated successfully.",
-            "branch": serialize_branch(row)
-        }), 200
-
-    except Exception:
-        db.session.rollback()
-
-        logger.exception(
-            "Failed to update branch %s for business %s.",
-            branch_id,
-            business_id
-        )
-
-        return jsonify({
-            "status": "error",
-            "message": "Unable to update branch."
-        }), 500
-
-    finally:
-        db.session.remove()
-
-
-# ==================================================
-# ACTIVATE / DEACTIVATE BUSINESS BRANCH
-# ==================================================
-
-@business_bp.route(
-    "/<uuid:business_id>/branches/<uuid:branch_id>/status",
-    methods=["PATCH"]
-)
-@business_member_required("owner", "admin")
-def update_branch_status(business_id, branch_id):
-
-    if business_id != g.business_id:
-        return jsonify({
-            "status": "error",
-            "message": "Business access denied."
-        }), 403
-
-    data = request.get_json(silent=True) or {}
-    is_active = data.get("is_active")
-
-    if not isinstance(is_active, bool):
-        return jsonify({
-            "status": "error",
-            "message": "A boolean is_active value is required."
-        }), 400
-
-    try:
-        branch_result = db.session.execute(
-            text("""
-                SELECT
-                    id,
-                    business_id,
-                    name,
-                    phone,
-                    address,
-                    is_main,
-                    is_active,
-                    created_at,
-                    updated_at
-                FROM public.branches
-                WHERE id = :branch_id
-                  AND business_id = :business_id
-                LIMIT 1
-            """),
-            {
-                "branch_id": branch_id,
-                "business_id": g.business_id
-            }
-        )
-
-        branch = branch_result.mappings().first()
-
-        if not branch:
-            return jsonify({
-                "status": "error",
-                "message": "Branch not found."
-            }), 404
-
-        if branch["is_main"] and not is_active:
-            return jsonify({
-                "status": "error",
-                "message": "The Main Branch cannot be deactivated."
-            }), 400
-
-        result = db.session.execute(
-            text("""
-                UPDATE public.branches
-                SET
-                    is_active = :is_active,
-                    updated_at = NOW()
-                WHERE id = :branch_id
-                  AND business_id = :business_id
-                RETURNING
-                    id,
-                    business_id,
-                    name,
-                    phone,
-                    address,
-                    is_main,
-                    is_active,
-                    created_at,
-                    updated_at
-            """),
-            {
-                "is_active": is_active,
-                "branch_id": branch_id,
-                "business_id": g.business_id
-            }
-        )
-
-        updated_branch = result.mappings().one()
-
-        db.session.commit()
-
-        return jsonify({
-            "status": "success",
-            "message": (
-                "Branch activated successfully."
-                if is_active
-                else "Branch deactivated successfully."
-            ),
-            "branch": serialize_branch(updated_branch)
-        }), 200
-
-    except Exception:
-        db.session.rollback()
-
-        logger.exception(
-            "Failed to change status for branch %s in business %s.",
-            branch_id,
-            business_id
-        )
-
-        return jsonify({
-            "status": "error",
-            "message": "Unable to update branch status."
-        }), 500
-
-    finally:
-        db.session.remove()
-
-
-# ==================================================
 # LIST BUSINESS STAFF
 # ==================================================
 
@@ -738,11 +575,10 @@ def update_branch_status(business_id, branch_id):
 @business_member_required("owner", "admin", "manager")
 def list_business_staff(business_id):
 
-    if business_id != g.business_id:
-        return jsonify({
-            "status": "error",
-            "message": "Business access denied."
-        }), 403
+    denied = check_business_access(business_id)
+
+    if denied:
+        return denied
 
     try:
         members = db.session.execute(
@@ -762,6 +598,7 @@ def list_business_staff(business_id):
             }
         ).mappings().all()
 
+        admin_client = get_admin_supabase()
         staff = []
 
         for member in members:
@@ -786,23 +623,18 @@ def list_business_staff(business_id):
                 }
             ).mappings().all()
 
-            staff.append({
-                "membership_id": str(member["membership_id"]),
-                "user_id": str(member["user_id"]),
-                "role": member["role"],
-                "is_active": member["is_active"],
-                "created_at": (
-                    member["created_at"].isoformat()
-                    if member["created_at"] else None
-                ),
-                "branches": [
-                    {
-                        "id": str(branch["branch_id"]),
-                        "name": branch["branch_name"]
-                    }
-                    for branch in assignments
-                ]
-            })
+            email = get_auth_user_email(
+                admin_client,
+                member["user_id"]
+            )
+
+            staff.append(
+                serialize_staff_member(
+                    member,
+                    assignments,
+                    email
+                )
+            )
 
         return jsonify({
             "status": "success",
@@ -837,11 +669,10 @@ def list_business_staff(business_id):
 @business_member_required("owner", "admin")
 def invite_business_staff(business_id):
 
-    if business_id != g.business_id:
-        return jsonify({
-            "status": "error",
-            "message": "Business access denied."
-        }), 403
+    denied = check_business_access(business_id)
+
+    if denied:
+        return denied
 
     data = request.get_json(silent=True) or {}
 
@@ -864,52 +695,19 @@ def invite_business_staff(business_id):
             "message": "Role must be admin, manager or cashier."
         }), 400
 
-    if not isinstance(branch_ids, list) or not branch_ids:
+    try:
+        valid_branches = validate_branch_ids(
+            branch_ids,
+            g.business_id
+        )
+
+    except ValueError as error:
         return jsonify({
             "status": "error",
-            "message": "Assign the employee to at least one branch."
+            "message": str(error)
         }), 400
 
     try:
-        branch_uuids = list(dict.fromkeys(
-            UUID(str(branch_id))
-            for branch_id in branch_ids
-        ))
-
-    except (ValueError, TypeError):
-        return jsonify({
-            "status": "error",
-            "message": "One or more branch IDs are invalid."
-        }), 400
-
-    try:
-        valid_branches = []
-
-        for branch_id in branch_uuids:
-
-            branch = db.session.execute(
-                text("""
-                    SELECT id, name
-                    FROM public.branches
-                    WHERE id = :branch_id
-                      AND business_id = :business_id
-                      AND is_active = TRUE
-                    LIMIT 1
-                """),
-                {
-                    "branch_id": branch_id,
-                    "business_id": g.business_id
-                }
-            ).mappings().first()
-
-            if not branch:
-                return jsonify({
-                    "status": "error",
-                    "message": "A selected branch is invalid or inactive."
-                }), 400
-
-            valid_branches.append(branch)
-
         admin_client = get_admin_supabase()
 
         invitation = admin_client.auth.admin.invite_user_by_email(
@@ -940,7 +738,6 @@ def invite_business_staff(business_id):
         db.session.flush()
 
         for branch in valid_branches:
-
             db.session.execute(
                 text("""
                     INSERT INTO public.branch_staff (
@@ -972,6 +769,7 @@ def invite_business_staff(business_id):
                 "user_id": str(invited_user_id),
                 "email": email,
                 "role": role,
+                "is_active": True,
                 "branches": [
                     {
                         "id": str(branch["id"]),
@@ -1008,6 +806,267 @@ def invite_business_staff(business_id):
         return jsonify({
             "status": "error",
             "message": "Unable to invite this employee. Check the server logs."
+        }), 500
+
+    finally:
+        db.session.remove()
+
+
+# ==================================================
+# UPDATE STAFF ROLE AND BRANCH ASSIGNMENTS
+# ==================================================
+
+@business_bp.route(
+    "/<uuid:business_id>/staff/<uuid:user_id>",
+    methods=["PUT"]
+)
+@business_member_required("owner", "admin")
+def update_business_staff(business_id, user_id):
+
+    denied = check_business_access(business_id)
+
+    if denied:
+        return denied
+
+    data = request.get_json(silent=True) or {}
+
+    role = str(data.get("role", "")).strip().lower()
+    branch_ids = data.get("branch_ids")
+
+    if role not in ("admin", "manager", "cashier"):
+        return jsonify({
+            "status": "error",
+            "message": "Role must be admin, manager or cashier."
+        }), 400
+
+    try:
+        valid_branches = validate_branch_ids(
+            branch_ids,
+            g.business_id
+        )
+
+    except ValueError as error:
+        return jsonify({
+            "status": "error",
+            "message": str(error)
+        }), 400
+
+    try:
+        membership = BusinessMember.query.filter_by(
+            business_id=g.business_id,
+            user_id=user_id
+        ).first()
+
+        if not membership:
+            return jsonify({
+                "status": "error",
+                "message": "Staff member not found."
+            }), 404
+
+        if str(user_id) == str(g.current_user_id):
+            return jsonify({
+                "status": "error",
+                "message": "You cannot change your own staff role or assignments."
+            }), 403
+
+        membership.role = role
+
+        selected_ids = {
+            str(branch["id"])
+            for branch in valid_branches
+        }
+
+        existing_assignments = db.session.execute(
+            text("""
+                SELECT id, branch_id
+                FROM public.branch_staff
+                WHERE business_id = :business_id
+                  AND user_id = :user_id
+            """),
+            {
+                "business_id": g.business_id,
+                "user_id": user_id
+            }
+        ).mappings().all()
+
+        existing_by_branch = {
+            str(row["branch_id"]): row
+            for row in existing_assignments
+        }
+
+        for branch in valid_branches:
+            branch_id = str(branch["id"])
+
+            existing = existing_by_branch.get(branch_id)
+
+            if existing:
+                db.session.execute(
+                    text("""
+                        UPDATE public.branch_staff
+                        SET is_active = TRUE
+                        WHERE id = :assignment_id
+                    """),
+                    {
+                        "assignment_id": existing["id"]
+                    }
+                )
+            else:
+                db.session.execute(
+                    text("""
+                        INSERT INTO public.branch_staff (
+                            business_id,
+                            branch_id,
+                            user_id,
+                            is_active
+                        )
+                        VALUES (
+                            :business_id,
+                            :branch_id,
+                            :user_id,
+                            TRUE
+                        )
+                    """),
+                    {
+                        "business_id": g.business_id,
+                        "branch_id": branch["id"],
+                        "user_id": user_id
+                    }
+                )
+
+        for branch_id, assignment in existing_by_branch.items():
+            if branch_id not in selected_ids:
+                db.session.execute(
+                    text("""
+                        UPDATE public.branch_staff
+                        SET is_active = FALSE
+                        WHERE id = :assignment_id
+                    """),
+                    {
+                        "assignment_id": assignment["id"]
+                    }
+                )
+
+        db.session.commit()
+
+        return jsonify({
+            "status": "success",
+            "message": "Staff details updated successfully.",
+            "staff": {
+                "user_id": str(user_id),
+                "role": role,
+                "branches": [
+                    {
+                        "id": str(branch["id"]),
+                        "name": branch["name"]
+                    }
+                    for branch in valid_branches
+                ]
+            }
+        }), 200
+
+    except Exception:
+        db.session.rollback()
+
+        logger.exception(
+            "Failed to update staff member %s.",
+            user_id
+        )
+
+        return jsonify({
+            "status": "error",
+            "message": "Unable to update staff details."
+        }), 500
+
+    finally:
+        db.session.remove()
+
+
+# ==================================================
+# ACTIVATE OR SUSPEND STAFF ACCOUNT
+# ==================================================
+
+@business_bp.route(
+    "/<uuid:business_id>/staff/<uuid:user_id>/status",
+    methods=["PATCH"]
+)
+@business_member_required("owner", "admin")
+def update_business_staff_status(business_id, user_id):
+
+    denied = check_business_access(business_id)
+
+    if denied:
+        return denied
+
+    data = request.get_json(silent=True) or {}
+
+    is_active = data.get("is_active")
+
+    if not isinstance(is_active, bool):
+        return jsonify({
+            "status": "error",
+            "message": "is_active must be true or false."
+        }), 400
+
+    if str(user_id) == str(g.current_user_id):
+        return jsonify({
+            "status": "error",
+            "message": "You cannot suspend or deactivate your own account."
+        }), 403
+
+    try:
+        membership = BusinessMember.query.filter_by(
+            business_id=g.business_id,
+            user_id=user_id
+        ).first()
+
+        if not membership:
+            return jsonify({
+                "status": "error",
+                "message": "Staff member not found."
+            }), 404
+
+        membership.is_active = is_active
+
+        db.session.execute(
+            text("""
+                UPDATE public.branch_staff
+                SET is_active = :is_active
+                WHERE business_id = :business_id
+                  AND user_id = :user_id
+            """),
+            {
+                "is_active": is_active,
+                "business_id": g.business_id,
+                "user_id": user_id
+            }
+        )
+
+        db.session.commit()
+
+        return jsonify({
+            "status": "success",
+            "message": (
+                "Staff account activated successfully."
+                if is_active
+                else "Staff account suspended successfully."
+            ),
+            "staff": {
+                "user_id": str(user_id),
+                "is_active": is_active
+            }
+        }), 200
+
+    except Exception:
+        db.session.rollback()
+
+        logger.exception(
+            "Failed to change staff status for user %s.",
+            user_id
+        )
+
+        return jsonify({
+            "status": "error",
+            "message": "Unable to update staff account status."
         }), 500
 
     finally:
