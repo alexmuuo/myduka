@@ -1,5 +1,7 @@
-from sqlalchemy.dialects.postgresql import JSONB
+from copy import deepcopy
+
 from sqlalchemy import ForeignKey, func
+from sqlalchemy.dialects.postgresql import JSONB
 
 from extensions import db
 
@@ -9,30 +11,30 @@ DEFAULT_BUSINESS_SETTINGS = {
         "currency": "KES",
         "timezone": "Africa/Nairobi",
         "dateFormat": "DD/MM/YYYY",
-        "language": "English",
+        "language": "en",
         "storeName": "",
         "storeSlug": "",
         "storeEmail": "",
         "storePhone": "",
         "storeDescription": "",
         "primaryColor": "#4f46e5",
-        "secondaryColor": "#0f172a"
+        "secondaryColor": "#0f172a",
     },
     "orders": {
         "orderPrefix": "ORD",
         "taxEnabled": False,
-        "taxRate": 0,
+        "taxRate": 16,
         "requireCustomerPhone": True,
         "allowGuestCheckout": True,
-        "orderConfirmation": True
+        "orderConfirmation": True,
     },
     "notifications": {
         "newOrderNotification": True,
         "lowStockNotification": True,
         "paymentNotification": True,
         "emailNotifications": True,
-        "smsNotifications": False
-    }
+        "smsNotifications": False,
+    },
 }
 
 
@@ -41,14 +43,50 @@ class BusinessSettings(db.Model):
 
     business_id = db.Column(
         db.UUID(as_uuid=True),
-        ForeignKey("businesses.id", ondelete="CASCADE"),
-        primary_key=True
+        ForeignKey(
+            "businesses.id",
+            ondelete="CASCADE"
+        ),
+        primary_key=True,
+        nullable=False
     )
 
     settings = db.Column(
         JSONB,
         nullable=False,
-        default=lambda: DEFAULT_BUSINESS_SETTINGS.copy()
+        default=lambda: deepcopy(DEFAULT_BUSINESS_SETTINGS),
+        server_default=db.text(
+            """'{
+                "store": {
+                    "currency": "KES",
+                    "timezone": "Africa/Nairobi",
+                    "dateFormat": "DD/MM/YYYY",
+                    "language": "en",
+                    "storeName": "",
+                    "storeSlug": "",
+                    "storeEmail": "",
+                    "storePhone": "",
+                    "storeDescription": "",
+                    "primaryColor": "#4f46e5",
+                    "secondaryColor": "#0f172a"
+                },
+                "orders": {
+                    "orderPrefix": "ORD",
+                    "taxEnabled": false,
+                    "taxRate": 16,
+                    "requireCustomerPhone": true,
+                    "allowGuestCheckout": true,
+                    "orderConfirmation": true
+                },
+                "notifications": {
+                    "newOrderNotification": true,
+                    "lowStockNotification": true,
+                    "paymentNotification": true,
+                    "emailNotifications": true,
+                    "smsNotifications": false
+                }
+            }'::jsonb"""
+        )
     )
 
     created_at = db.Column(
@@ -67,7 +105,7 @@ class BusinessSettings(db.Model):
     def to_dict(self):
         return {
             "business_id": str(self.business_id),
-            "settings": self.settings or {},
+            "settings": deepcopy(self.settings or {}),
             "created_at": (
                 self.created_at.isoformat()
                 if self.created_at else None
