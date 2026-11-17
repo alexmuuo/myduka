@@ -26,6 +26,7 @@ business_bp = Blueprint(
     url_prefix="/api/businesses"
 )
 
+
 # ==================================================
 # HELPERS
 # ==================================================
@@ -179,7 +180,7 @@ def serialize_staff_member(member, branches, email=None):
 
 
 def check_business_access(business_id):
-    if business_id != g.business_id:
+    if str(business_id) != str(g.business_id):
         return jsonify({
             "status": "error",
             "message": "Business access denied."
@@ -258,7 +259,10 @@ def create_business():
     ):
         return jsonify({
             "status": "error",
-            "message": "Use a valid lowercase slug with letters, numbers and hyphens."
+            "message": (
+                "Use a valid lowercase slug with letters, "
+                "numbers and hyphens."
+            )
         }), 400
 
     if phone is not None and len(str(phone)) > 30:
@@ -275,7 +279,9 @@ def create_business():
 
         return jsonify({
             "status": "error",
-            "message": "Business registration service is not configured."
+            "message": (
+                "Business registration service is not configured."
+            )
         }), 503
 
     try:
@@ -304,13 +310,18 @@ def create_business():
 
             return jsonify({
                 "status": "error",
-                "message": "Business registration failed. Check the business details and try again."
+                "message": (
+                    "Business registration failed. Check the "
+                    "business details and try again."
+                )
             }), 400
 
         business_id = response.json()
 
         if isinstance(business_id, list):
-            business_id = business_id[0] if business_id else None
+            business_id = (
+                business_id[0] if business_id else None
+            )
 
         if isinstance(business_id, dict):
             business_id = business_id.get("create_business")
@@ -320,7 +331,9 @@ def create_business():
 
             return jsonify({
                 "status": "error",
-                "message": "Business creation returned an invalid response."
+                "message": (
+                    "Business creation returned an invalid response."
+                )
             }), 500
 
         business = db.session.get(Business, business_id)
@@ -333,7 +346,9 @@ def create_business():
 
             return jsonify({
                 "status": "error",
-                "message": "Business was created, but could not be retrieved."
+                "message": (
+                    "Business was created, but could not be retrieved."
+                )
             }), 500
 
         return jsonify({
@@ -350,7 +365,9 @@ def create_business():
 
         return jsonify({
             "status": "error",
-            "message": "Unable to contact the registration service."
+            "message": (
+                "Unable to contact the registration service."
+            )
         }), 503
 
     except Exception:
@@ -363,6 +380,216 @@ def create_business():
         return jsonify({
             "status": "error",
             "message": "An unexpected error occurred."
+        }), 500
+
+    finally:
+        db.session.remove()
+
+
+# ==================================================
+# UPDATE BUSINESS PROFILE
+# ==================================================
+
+@business_bp.route(
+    "/<uuid:business_id>",
+    methods=["PUT"]
+)
+@business_member_required("owner", "admin")
+def update_business(business_id):
+
+    denied = check_business_access(business_id)
+
+    if denied:
+        return denied
+
+    try:
+        business = db.session.get(Business, business_id)
+
+        if not business:
+            return jsonify({
+                "status": "error",
+                "message": "Business not found."
+            }), 404
+
+        data = request.get_json(silent=True)
+
+        if not isinstance(data, dict):
+            return jsonify({
+                "status": "error",
+                "message": "A valid JSON request body is required."
+            }), 400
+
+        # Only allow fields supported by the current Business model.
+        allowed_fields = {
+            "name",
+            "slug",
+            "email",
+            "phone",
+            "address",
+            "logo_url"
+        }
+
+        unsupported_fields = set(data.keys()) - allowed_fields
+
+        if unsupported_fields:
+            return jsonify({
+                "status": "error",
+                "message": (
+                    "Unsupported business profile fields: "
+                    + ", ".join(sorted(unsupported_fields))
+                )
+            }), 400
+
+        name = data.get("name", business.name)
+        slug = data.get("slug", business.slug)
+        email = data.get("email", business.email)
+        phone = data.get("phone", business.phone)
+        address = data.get("address", business.address)
+        logo_url = data.get("logo_url", business.logo_url)
+
+        # Validate business name.
+        if not isinstance(name, str) or not name.strip():
+            return jsonify({
+                "status": "error",
+                "message": "Business name is required."
+            }), 400
+
+        name = name.strip()
+
+        if len(name) > 150:
+            return jsonify({
+                "status": "error",
+                "message": (
+                    "Business name cannot exceed 150 characters."
+                )
+            }), 400
+
+        # Validate business slug.
+        if not isinstance(slug, str):
+            return jsonify({
+                "status": "error",
+                "message": "Invalid business URL slug."
+            }), 400
+
+        slug = slug.strip().lower()
+
+        if len(slug) > 60 or not re.fullmatch(
+            r"[a-z0-9]+(?:-[a-z0-9]+)*",
+            slug
+        ):
+            return jsonify({
+                "status": "error",
+                "message": (
+                    "Use a valid lowercase slug with letters, "
+                    "numbers and hyphens."
+                )
+            }), 400
+
+        # Check whether another business already uses this slug.
+        existing_business = Business.query.filter(
+            Business.slug == slug,
+            Business.id != business_id
+        ).first()
+
+        if existing_business:
+            return jsonify({
+                "status": "error",
+                "message": "That business URL is already in use."
+            }), 409
+
+        # Validate email.
+        if email is not None:
+            if not isinstance(email, str):
+                return jsonify({
+                    "status": "error",
+                    "message": "Invalid business email address."
+                }), 400
+
+            email = email.strip().lower() or None
+
+            if email and (
+                len(email) > 254
+                or not re.fullmatch(
+                    r"[^@\s]+@[^@\s]+\.[^@\s]+",
+                    email
+                )
+            ):
+                return jsonify({
+                    "status": "error",
+                    "message": "Enter a valid business email address."
+                }), 400
+
+        # Validate phone.
+        if phone is not None:
+            phone = str(phone).strip() or None
+
+            if phone and len(phone) > 30:
+                return jsonify({
+                    "status": "error",
+                    "message": (
+                        "Phone number cannot exceed 30 characters."
+                    )
+                }), 400
+
+        # Validate address.
+        if address is not None:
+            address = str(address).strip() or None
+
+            if address and len(address) > 500:
+                return jsonify({
+                    "status": "error",
+                    "message": "Address cannot exceed 500 characters."
+                }), 400
+
+        # Validate logo URL.
+        if logo_url is not None:
+            logo_url = str(logo_url).strip() or None
+
+            if logo_url and not re.match(
+                r"^https?://",
+                logo_url,
+                flags=re.IGNORECASE
+            ):
+                return jsonify({
+                    "status": "error",
+                    "message": (
+                        "Logo URL must start with http:// or https://."
+                    )
+                }), 400
+
+            if logo_url and len(logo_url) > 2048:
+                return jsonify({
+                    "status": "error",
+                    "message": "Logo URL is too long."
+                }), 400
+
+        # Update the existing Business model fields.
+        business.name = name
+        business.slug = slug
+        business.email = email
+        business.phone = phone
+        business.address = address
+        business.logo_url = logo_url
+
+        db.session.commit()
+
+        return jsonify({
+            "status": "success",
+            "message": "Business profile updated successfully.",
+            "business": business.to_dict()
+        }), 200
+
+    except Exception:
+        db.session.rollback()
+
+        logger.exception(
+            "Failed to update business profile for %s.",
+            business_id
+        )
+
+        return jsonify({
+            "status": "error",
+            "message": "Unable to update business profile."
         }), 500
 
     finally:
@@ -497,7 +724,9 @@ def create_branch(business_id):
         if existing_branch:
             return jsonify({
                 "status": "error",
-                "message": "A branch with this name already exists."
+                "message": (
+                    "A branch with this name already exists."
+                )
             }), 409
 
         result = db.session.execute(
@@ -724,7 +953,9 @@ def invite_business_staff(business_id):
         if existing_membership:
             return jsonify({
                 "status": "error",
-                "message": "This user already belongs to the business."
+                "message": (
+                    "This user already belongs to the business."
+                )
             }), 409
 
         membership = BusinessMember(
@@ -805,7 +1036,9 @@ def invite_business_staff(business_id):
 
         return jsonify({
             "status": "error",
-            "message": "Unable to invite this employee. Check the server logs."
+            "message": (
+                "Unable to invite this employee. Check the server logs."
+            )
         }), 500
 
     finally:
@@ -866,7 +1099,10 @@ def update_business_staff(business_id, user_id):
         if str(user_id) == str(g.current_user_id):
             return jsonify({
                 "status": "error",
-                "message": "You cannot change your own staff role or assignments."
+                "message": (
+                    "You cannot change your own staff role "
+                    "or assignments."
+                )
             }), 403
 
         membership.role = role
@@ -1010,7 +1246,9 @@ def update_business_staff_status(business_id, user_id):
     if str(user_id) == str(g.current_user_id):
         return jsonify({
             "status": "error",
-            "message": "You cannot suspend or deactivate your own account."
+            "message": (
+                "You cannot suspend or deactivate your own account."
+            )
         }), 403
 
     try:
@@ -1066,7 +1304,9 @@ def update_business_staff_status(business_id, user_id):
 
         return jsonify({
             "status": "error",
-            "message": "Unable to update staff account status."
+            "message": (
+                "Unable to update staff account status."
+            )
         }), 500
 
     finally:
