@@ -1,6 +1,5 @@
-from datetime import datetime
-
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Index, func
 
 from extensions import db
 
@@ -34,36 +33,44 @@ class Category(db.Model):
         nullable=True
     )
 
+    color = db.Column(
+        db.String(7),
+        nullable=False,
+        default="#64748b",
+        server_default="#64748b"
+    )
+
+    icon = db.Column(
+        db.Text,
+        nullable=True
+    )
+
     is_active = db.Column(
         db.Boolean,
-        nullable=True,
+        nullable=False,
         default=True,
         server_default=db.true()
     )
 
     created_at = db.Column(
         db.DateTime(timezone=True),
-        nullable=True,
-        server_default=db.func.now()
+        nullable=False,
+        server_default=func.now()
     )
 
     updated_at = db.Column(
         db.DateTime(timezone=True),
-        nullable=True,
-        server_default=db.func.now(),
-        onupdate=db.func.now()
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now()
     )
 
     __table_args__ = (
-        db.UniqueConstraint(
-            "business_id",
-            "name",
-            name="categories_business_id_name_key"
-        ),
-        db.UniqueConstraint(
-            "id",
-            "business_id",
-            name="categories_id_business_id_key"
+        Index(
+            "uq_categories_business_name_lower",
+            business_id,
+            func.lower(name),
+            unique=True
         ),
     )
 
@@ -73,6 +80,8 @@ class Category(db.Model):
             "business_id": str(self.business_id),
             "name": self.name,
             "description": self.description,
+            "color": self.color,
+            "icon": self.icon,
             "is_active": self.is_active,
             "created_at": (
                 self.created_at.isoformat()
@@ -83,3 +92,6 @@ class Category(db.Model):
                 if self.updated_at else None
             )
         }
+
+    def __repr__(self):
+        return f"<Category {self.name}>"
