@@ -1,7 +1,10 @@
+```python
 import os
 import logging
 import re
 import secrets
+import copy
+
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
@@ -9,17 +12,20 @@ import requests
 
 from flask import Blueprint, request, jsonify, g
 from sqlalchemy import text
-from models.business_settings import (
-    BusinessSettings,
-    DEFAULT_BUSINESS_SETTINGS,
-)
+
 from supabase import create_client
 from supabase.lib.client_options import ClientOptions
 
 from extensions import db
 from auth import supabase_auth_required, business_member_required
+
 from models.business import Business
 from models.business_member import BusinessMember
+from models.business_settings import (
+    BusinessSettings,
+    DEFAULT_BUSINESS_SETTINGS,
+)
+
 
 logger = logging.getLogger("myduka.business")
 
@@ -190,6 +196,229 @@ def check_business_access(business_id):
         }), 403
 
     return None
+
+
+def validate_settings_payload(submitted_settings):
+    """
+    Validate settings without modifying unrelated groups.
+
+    Returns:
+        (validated_settings, error_message)
+    """
+
+    if not isinstance(submitted_settings, dict):
+        return None, "Settings must be a valid object."
+
+    allowed_fields = {
+        "store": {
+            "currency",
+            "timezone",
+            "dateFormat",
+            "language",
+            "storeName",
+            "storeSlug",
+            "storeEmail",
+            "storePhone",
+            "storeDescription",
+            "primaryColor",
+            "secondaryColor",
+        },
+        "orders": {
+            "orderPrefix",
+            "taxEnabled",
+            "taxRate",
+            "requireCustomerPhone",
+            "allowGuestCheckout",
+            "orderConfirmation",
+        },
+        "notifications": {
+            "newOrderNotification",
+            "lowStockNotification",
+            "paymentNotification",
+            "emailNotifications",
+            "smsNotifications",
+        },
+    }
+
+    boolean_fields = {
+        "orders": {
+            "taxEnabled",
+            "requireCustomerPhone",
+            "allowGuestCheckout",
+            "orderConfirmation",
+        },
+        "notifications": {
+            "newOrderNotification",
+            "lowStockNotification",
+            "paymentNotification",
+            "emailNotifications",
+            "smsNotifications",
+        },
+    }
+
+    validated = copy.deepcopy(submitted_settings)
+
+    for group, values in validated.items():
+
+        if group not in allowed_fields:
+            return None, (
+                f"Unsupported settings group: {group}."
+            )
+
+        if not isinstance(values, dict):
+            return None, (
+                f"The {group} settings must be an object."
+            )
+
+        invalid_fields = set(values.keys()) - allowed_fields[group]
+
+        if invalid_fields:
+            return None, (
+                f"Unsupported fields in {group}: "
+                f"{', '.join(sorted(invalid_fields))}."
+            )
+
+    # Validate boolean settings.
+    for group, fields in boolean_fields.items():
+        group_values = validated.get(group, {})
+
+        for key in fields:
+            if key in group_values:
+                if not isinstance(group_values[key], bool):
+                    return None, (
+                        f"{group}.{key} must be a boolean."
+                    )
+
+    # Validate tax rate.
+    orders = validated.get("orders", {})
+
+    if "taxRate" in orders:
+        value = orders["taxRate"]
+
+        if isinstance(value, bool):
+            return None, "Tax rate must be a number."
+
+        try:
+            tax_rate = float(value)
+
+            if not 0 <= tax_rate <= 100:
+                raise ValueError()
+
+            orders["taxRate"] = tax_rate
+
+        except (TypeError, ValueError):
+            return None, (
+                "Tax rate must be between 0 and 100."
+            )
+
+    # Validate store string settings.
+    store = validated.get("store", {})
+
+    string_limits = {
+        "timezone": 100,
+        "dateFormat": 30,
+        "language": 20,
+        "storeName": 150,
+        "storeSlug": 60,
+        "storeEmail": 254,
+        "storePhone": 30,
+        "storeDescription": 2000,
+        "primaryColor": 20,
+        "secondaryColor": 20,
+    }
+
+    for key, maximum_length in string_limits.items():
+        if key not in store:
+            continue
+
+        value = store[key]
+
+        if value is None:
+            value = ""
+
+        if not isinstance(value, str):
+            return None, f"store.{key} must be text."
+
+        value = value.strip()
+
+        if len(value) > maximum_length:
+            return None, (
+                f"store.{key} cannot exceed "
+                f"{maximum_length} characters."
+            )
+
+        store[key] = value
+
+    # Validate currency.
+    if "currency" in store:
+        currency = str(store["currency"]).strip().upper()
+
+        if not re.fullmatch(r"[A-Z]{3}", currency):
+            return None, (
+                "Currency must be a valid three-letter code."
+            )
+
+        store["currency"] = currency
+
+    # Validate store email.
+    if "storeEmail" in store:
+        email = store["storeEmail"]
+
+        if email and not re.fullmatch(
+            r"[^@\s]+@[^@\s]+\.[^@\s]+",
+            email
+        ):
+            return None, (
+                "Enter a valid store email address."
+            )
+
+        store["storeEmail"] = email or None
+
+    # Validate store slug.
+    if "storeSlug" in store:
+        slug = store["storeSlug"].lower()
+
+        if slug and not re.fullmatch(
+            r"[a-z0-9]+(?:-[a-z0-9]+)*",
+            slug
+        ):
+            return None, (
+                "Store URL slug must contain only letters, "
+                "numbers and hyphens."
+            )
+
+        store["storeSlug"] = slug
+
+    # Validate brand colours.
+    for colour_field in ("primaryColor", "secondaryColor"):
+        if colour_field in store:
+            colour = store[colour_field]
+
+            if colour and not re.fullmatch(
+                r"#[0-9a-fA-F]{6}",
+                colour
+            ):
+                return None, (
+                    f"{colour_field} must be a valid hex colour."
+                )
+
+    # Validate order prefix.
+    if "orderPrefix" in orders:
+        prefix = orders["orderPrefix"]
+
+        if not isinstance(prefix, str):
+            return None, "Order prefix must be text."
+
+        prefix = prefix.strip()
+
+        if not prefix or len(prefix) > 20:
+            return None, (
+                "Order prefix must contain between 1 and 20 characters."
+            )
+
+        orders["orderPrefix"] = prefix
+
+    return validated, None
 
 
 # ==================================================
@@ -422,7 +651,6 @@ def update_business(business_id):
                 "message": "A valid JSON request body is required."
             }), 400
 
-        # Only allow fields supported by the current Business model.
         allowed_fields = {
             "name",
             "slug",
@@ -450,7 +678,6 @@ def update_business(business_id):
         address = data.get("address", business.address)
         logo_url = data.get("logo_url", business.logo_url)
 
-        # Validate business name.
         if not isinstance(name, str) or not name.strip():
             return jsonify({
                 "status": "error",
@@ -467,7 +694,6 @@ def update_business(business_id):
                 )
             }), 400
 
-        # Validate business slug.
         if not isinstance(slug, str):
             return jsonify({
                 "status": "error",
@@ -488,7 +714,6 @@ def update_business(business_id):
                 )
             }), 400
 
-        # Check whether another business already uses this slug.
         existing_business = Business.query.filter(
             Business.slug == slug,
             Business.id != business_id
@@ -500,7 +725,6 @@ def update_business(business_id):
                 "message": "That business URL is already in use."
             }), 409
 
-        # Validate email.
         if email is not None:
             if not isinstance(email, str):
                 return jsonify({
@@ -522,7 +746,6 @@ def update_business(business_id):
                     "message": "Enter a valid business email address."
                 }), 400
 
-        # Validate phone.
         if phone is not None:
             phone = str(phone).strip() or None
 
@@ -534,7 +757,6 @@ def update_business(business_id):
                     )
                 }), 400
 
-        # Validate address.
         if address is not None:
             address = str(address).strip() or None
 
@@ -544,7 +766,6 @@ def update_business(business_id):
                     "message": "Address cannot exceed 500 characters."
                 }), 400
 
-        # Validate logo URL.
         if logo_url is not None:
             logo_url = str(logo_url).strip() or None
 
@@ -566,7 +787,6 @@ def update_business(business_id):
                     "message": "Logo URL is too long."
                 }), 400
 
-        # Update the existing Business model fields.
         business.name = name
         business.slug = slug
         business.email = email
@@ -1317,11 +1537,8 @@ def update_business_staff_status(business_id, user_id):
 
 
 # ==================================================
-# BUSINESS SETTINGS
+# GET BUSINESS SETTINGS
 # ==================================================
-
-import copy
-
 
 @business_bp.route(
     "/<uuid:business_id>/settings",
@@ -1330,11 +1547,10 @@ import copy
 @business_member_required("owner", "admin", "manager")
 def get_business_settings(business_id):
 
-    if business_id != g.business_id:
-        return jsonify({
-            "status": "error",
-            "message": "Business access denied."
-        }), 403
+    denied = check_business_access(business_id)
+
+    if denied:
+        return denied
 
     try:
         settings_record = db.session.get(
@@ -1345,15 +1561,21 @@ def get_business_settings(business_id):
         if not settings_record:
             settings_record = BusinessSettings(
                 business_id=business_id,
-                settings=copy.deepcopy(DEFAULT_BUSINESS_SETTINGS)
+                settings=copy.deepcopy(
+                    DEFAULT_BUSINESS_SETTINGS
+                )
             )
 
             db.session.add(settings_record)
             db.session.commit()
 
+        settings = copy.deepcopy(
+            settings_record.settings or DEFAULT_BUSINESS_SETTINGS
+        )
+
         return jsonify({
             "status": "success",
-            "settings": settings_record.settings
+            "settings": settings
         }), 200
 
     except Exception:
@@ -1373,6 +1595,10 @@ def get_business_settings(business_id):
         db.session.remove()
 
 
+# ==================================================
+# UPDATE BUSINESS SETTINGS
+# ==================================================
+
 @business_bp.route(
     "/<uuid:business_id>/settings",
     methods=["PUT"]
@@ -1380,131 +1606,36 @@ def get_business_settings(business_id):
 @business_member_required("owner", "admin")
 def update_business_settings(business_id):
 
-    if business_id != g.business_id:
+    denied = check_business_access(business_id)
+
+    if denied:
+        return denied
+
+    data = request.get_json(silent=True)
+
+    if not isinstance(data, dict):
         return jsonify({
             "status": "error",
-            "message": "Business access denied."
-        }), 403
-
-    data = request.get_json(silent=True) or {}
-    submitted_settings = data.get("settings", data)
-
-    if not isinstance(submitted_settings, dict):
-        return jsonify({
-            "status": "error",
-            "message": "Settings must be a valid object."
+            "message": "A valid JSON request body is required."
         }), 400
 
-    allowed_fields = {
-        "store": {
-            "currency",
-            "timezone",
-            "dateFormat",
-            "language",
-            "storeName",
-            "storeSlug",
-            "storeEmail",
-            "storePhone",
-            "storeDescription",
-            "primaryColor",
-            "secondaryColor",
-        },
-        "orders": {
-            "orderPrefix",
-            "taxEnabled",
-            "taxRate",
-            "requireCustomerPhone",
-            "allowGuestCheckout",
-            "orderConfirmation",
-        },
-        "notifications": {
-            "newOrderNotification",
-            "lowStockNotification",
-            "paymentNotification",
-            "emailNotifications",
-            "smsNotifications",
-        },
-    }
+    submitted_settings = data.get("settings", data)
 
-    for group, values in submitted_settings.items():
+    validated_settings, validation_error = (
+        validate_settings_payload(submitted_settings)
+    )
 
-        if group not in allowed_fields:
-            return jsonify({
-                "status": "error",
-                "message": f"Unsupported settings group: {group}."
-            }), 400
+    if validation_error:
+        return jsonify({
+            "status": "error",
+            "message": validation_error
+        }), 400
 
-        if not isinstance(values, dict):
-            return jsonify({
-                "status": "error",
-                "message": f"The {group} settings must be an object."
-            }), 400
-
-        invalid_fields = set(values.keys()) - allowed_fields[group]
-
-        if invalid_fields:
-            return jsonify({
-                "status": "error",
-                "message": (
-                    f"Unsupported fields in {group}: "
-                    f"{', '.join(sorted(invalid_fields))}."
-                )
-            }), 400
-
-    orders = submitted_settings.get("orders", {})
-
-    if "taxRate" in orders:
-        try:
-            tax_rate = float(orders["taxRate"])
-
-            if not 0 <= tax_rate <= 100:
-                raise ValueError()
-
-            orders["taxRate"] = tax_rate
-
-        except (TypeError, ValueError):
-            return jsonify({
-                "status": "error",
-                "message": "Tax rate must be between 0 and 100."
-            }), 400
-
-    for group in ("orders", "notifications"):
-        for key, value in submitted_settings.get(group, {}).items():
-            if isinstance(value, bool):
-                continue
-
-            if key != "taxRate":
-                return jsonify({
-                    "status": "error",
-                    "message": f"{group}.{key} must be a boolean."
-                }), 400
-
-    store = submitted_settings.get("store", {})
-
-    if "currency" in store:
-        currency = str(store["currency"]).strip().upper()
-
-        if not re.fullmatch(r"[A-Z]{3}", currency):
-            return jsonify({
-                "status": "error",
-                "message": "Currency must be a valid three-letter code."
-            }), 400
-
-        store["currency"] = currency
-
-    if "storeEmail" in store:
-        email = str(store["storeEmail"]).strip()
-
-        if email and not re.fullmatch(
-            r"[^@\s]+@[^@\s]+\.[^@\s]+",
-            email
-        ):
-            return jsonify({
-                "status": "error",
-                "message": "Enter a valid store email address."
-            }), 400
-
-        store["storeEmail"] = email or None
+    if not validated_settings:
+        return jsonify({
+            "status": "error",
+            "message": "No settings were provided."
+        }), 400
 
     try:
         settings_record = db.session.get(
@@ -1529,8 +1660,14 @@ def update_business_settings(business_id):
                 settings_record.settings or {}
             )
 
-        for group, values in submitted_settings.items():
-            current_group = current_settings.setdefault(group, {})
+        # Preserve existing groups and update only submitted fields.
+        for group, values in validated_settings.items():
+
+            current_group = current_settings.setdefault(
+                group,
+                {}
+            )
+
             current_group.update(values)
 
         settings_record.settings = current_settings
@@ -1540,7 +1677,9 @@ def update_business_settings(business_id):
         return jsonify({
             "status": "success",
             "message": "Business settings updated successfully.",
-            "settings": settings_record.settings
+            "settings": copy.deepcopy(
+                settings_record.settings
+            )
         }), 200
 
     except Exception:
@@ -1558,3 +1697,4 @@ def update_business_settings(business_id):
 
     finally:
         db.session.remove()
+```
