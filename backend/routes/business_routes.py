@@ -1,4 +1,3 @@
-```python
 import os
 import logging
 import re
@@ -1697,4 +1696,3 @@ def update_business_settings(business_id):
 
     finally:
         db.session.remove()
-```
