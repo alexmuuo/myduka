@@ -9,7 +9,10 @@ import requests
 
 from flask import Blueprint, request, jsonify, g
 from sqlalchemy import text
-
+from models.business_settings import (
+    BusinessSettings,
+    DEFAULT_BUSINESS_SETTINGS,
+)
 from supabase import create_client
 from supabase.lib.client_options import ClientOptions
 
@@ -1307,6 +1310,250 @@ def update_business_staff_status(business_id, user_id):
             "message": (
                 "Unable to update staff account status."
             )
+        }), 500
+
+    finally:
+        db.session.remove()
+
+
+# ==================================================
+# BUSINESS SETTINGS
+# ==================================================
+
+import copy
+
+
+@business_bp.route(
+    "/<uuid:business_id>/settings",
+    methods=["GET"]
+)
+@business_member_required("owner", "admin", "manager")
+def get_business_settings(business_id):
+
+    if business_id != g.business_id:
+        return jsonify({
+            "status": "error",
+            "message": "Business access denied."
+        }), 403
+
+    try:
+        settings_record = db.session.get(
+            BusinessSettings,
+            business_id
+        )
+
+        if not settings_record:
+            settings_record = BusinessSettings(
+                business_id=business_id,
+                settings=copy.deepcopy(DEFAULT_BUSINESS_SETTINGS)
+            )
+
+            db.session.add(settings_record)
+            db.session.commit()
+
+        return jsonify({
+            "status": "success",
+            "settings": settings_record.settings
+        }), 200
+
+    except Exception:
+        db.session.rollback()
+
+        logger.exception(
+            "Failed to retrieve settings for business %s.",
+            business_id
+        )
+
+        return jsonify({
+            "status": "error",
+            "message": "Unable to retrieve business settings."
+        }), 500
+
+    finally:
+        db.session.remove()
+
+
+@business_bp.route(
+    "/<uuid:business_id>/settings",
+    methods=["PUT"]
+)
+@business_member_required("owner", "admin")
+def update_business_settings(business_id):
+
+    if business_id != g.business_id:
+        return jsonify({
+            "status": "error",
+            "message": "Business access denied."
+        }), 403
+
+    data = request.get_json(silent=True) or {}
+    submitted_settings = data.get("settings", data)
+
+    if not isinstance(submitted_settings, dict):
+        return jsonify({
+            "status": "error",
+            "message": "Settings must be a valid object."
+        }), 400
+
+    allowed_fields = {
+        "store": {
+            "currency",
+            "timezone",
+            "dateFormat",
+            "language",
+            "storeName",
+            "storeSlug",
+            "storeEmail",
+            "storePhone",
+            "storeDescription",
+            "primaryColor",
+            "secondaryColor",
+        },
+        "orders": {
+            "orderPrefix",
+            "taxEnabled",
+            "taxRate",
+            "requireCustomerPhone",
+            "allowGuestCheckout",
+            "orderConfirmation",
+        },
+        "notifications": {
+            "newOrderNotification",
+            "lowStockNotification",
+            "paymentNotification",
+            "emailNotifications",
+            "smsNotifications",
+        },
+    }
+
+    for group, values in submitted_settings.items():
+
+        if group not in allowed_fields:
+            return jsonify({
+                "status": "error",
+                "message": f"Unsupported settings group: {group}."
+            }), 400
+
+        if not isinstance(values, dict):
+            return jsonify({
+                "status": "error",
+                "message": f"The {group} settings must be an object."
+            }), 400
+
+        invalid_fields = set(values.keys()) - allowed_fields[group]
+
+        if invalid_fields:
+            return jsonify({
+                "status": "error",
+                "message": (
+                    f"Unsupported fields in {group}: "
+                    f"{', '.join(sorted(invalid_fields))}."
+                )
+            }), 400
+
+    orders = submitted_settings.get("orders", {})
+
+    if "taxRate" in orders:
+        try:
+            tax_rate = float(orders["taxRate"])
+
+            if not 0 <= tax_rate <= 100:
+                raise ValueError()
+
+            orders["taxRate"] = tax_rate
+
+        except (TypeError, ValueError):
+            return jsonify({
+                "status": "error",
+                "message": "Tax rate must be between 0 and 100."
+            }), 400
+
+    for group in ("orders", "notifications"):
+        for key, value in submitted_settings.get(group, {}).items():
+            if isinstance(value, bool):
+                continue
+
+            if key != "taxRate":
+                return jsonify({
+                    "status": "error",
+                    "message": f"{group}.{key} must be a boolean."
+                }), 400
+
+    store = submitted_settings.get("store", {})
+
+    if "currency" in store:
+        currency = str(store["currency"]).strip().upper()
+
+        if not re.fullmatch(r"[A-Z]{3}", currency):
+            return jsonify({
+                "status": "error",
+                "message": "Currency must be a valid three-letter code."
+            }), 400
+
+        store["currency"] = currency
+
+    if "storeEmail" in store:
+        email = str(store["storeEmail"]).strip()
+
+        if email and not re.fullmatch(
+            r"[^@\s]+@[^@\s]+\.[^@\s]+",
+            email
+        ):
+            return jsonify({
+                "status": "error",
+                "message": "Enter a valid store email address."
+            }), 400
+
+        store["storeEmail"] = email or None
+
+    try:
+        settings_record = db.session.get(
+            BusinessSettings,
+            business_id
+        )
+
+        if not settings_record:
+            current_settings = copy.deepcopy(
+                DEFAULT_BUSINESS_SETTINGS
+            )
+
+            settings_record = BusinessSettings(
+                business_id=business_id,
+                settings=current_settings
+            )
+
+            db.session.add(settings_record)
+
+        else:
+            current_settings = copy.deepcopy(
+                settings_record.settings or {}
+            )
+
+        for group, values in submitted_settings.items():
+            current_group = current_settings.setdefault(group, {})
+            current_group.update(values)
+
+        settings_record.settings = current_settings
+
+        db.session.commit()
+
+        return jsonify({
+            "status": "success",
+            "message": "Business settings updated successfully.",
+            "settings": settings_record.settings
+        }), 200
+
+    except Exception:
+        db.session.rollback()
+
+        logger.exception(
+            "Failed to update settings for business %s.",
+            business_id
+        )
+
+        return jsonify({
+            "status": "error",
+            "message": "Unable to update business settings."
         }), 500
 
     finally:
