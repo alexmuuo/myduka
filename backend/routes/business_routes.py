@@ -350,6 +350,274 @@ def list_branches(business_id):
 )
 @business_member_required("owner", "admin", "manager")
 def create_branch(business_id):
+    # MYDUKA PHASE 2 — BRANCH MANAGEMENT BACKEND ROUTES
+#
+# Add this block to:
+# backend/routes/business_routes.py
+#
+# INSERTION POINT:
+# Immediately after create_branch() and before the
+# "# LIST BUSINESS STAFF" section.
+#
+# These routes use the existing imports and serialize_branch() helper:
+#   from flask import request, jsonify, g
+#   from sqlalchemy import text
+#   from extensions import db
+#   from auth import business_member_required
+#
+# Existing staff routes and business-registration routes remain untouched.
+
+
+# ==================================================
+# UPDATE BUSINESS BRANCH
+# ==================================================
+
+@business_bp.route(
+    "/<uuid:business_id>/branches/<uuid:branch_id>",
+    methods=["PUT"]
+)
+@business_member_required("owner", "admin")
+def update_branch(business_id, branch_id):
+
+    if business_id != g.business_id:
+        return jsonify({
+            "status": "error",
+            "message": "Business access denied."
+        }), 403
+
+    data = request.get_json(silent=True) or {}
+
+    name = str(data.get("name", "")).strip()
+    phone = data.get("phone")
+    address = data.get("address")
+
+    if not name:
+        return jsonify({
+            "status": "error",
+            "message": "Branch name is required."
+        }), 400
+
+    if len(name) > 150:
+        return jsonify({
+            "status": "error",
+            "message": "Branch name cannot exceed 150 characters."
+        }), 400
+
+    if phone is not None:
+        phone = str(phone).strip() or None
+        if len(phone or "") > 30:
+            return jsonify({
+                "status": "error",
+                "message": "Branch phone number is too long."
+            }), 400
+
+    if address is not None:
+        address = str(address).strip() or None
+
+    try:
+        existing_name = db.session.execute(
+            text("""
+                SELECT id
+                FROM public.branches
+                WHERE business_id = :business_id
+                  AND LOWER(TRIM(name)) = LOWER(TRIM(:name))
+                  AND id <> :branch_id
+                LIMIT 1
+            """),
+            {
+                "business_id": g.business_id,
+                "name": name,
+                "branch_id": branch_id
+            }
+        ).first()
+
+        if existing_name:
+            return jsonify({
+                "status": "error",
+                "message": "Another branch with this name already exists."
+            }), 409
+
+        result = db.session.execute(
+            text("""
+                UPDATE public.branches
+                SET
+                    name = :name,
+                    phone = :phone,
+                    address = :address,
+                    updated_at = NOW()
+                WHERE id = :branch_id
+                  AND business_id = :business_id
+                RETURNING
+                    id,
+                    business_id,
+                    name,
+                    phone,
+                    address,
+                    is_main,
+                    is_active,
+                    created_at,
+                    updated_at
+            """),
+            {
+                "name": name,
+                "phone": phone,
+                "address": address,
+                "branch_id": branch_id,
+                "business_id": g.business_id
+            }
+        )
+
+        row = result.mappings().first()
+
+        if not row:
+            db.session.rollback()
+            return jsonify({
+                "status": "error",
+                "message": "Branch not found."
+            }), 404
+
+        db.session.commit()
+
+        return jsonify({
+            "status": "success",
+            "message": "Branch updated successfully.",
+            "branch": serialize_branch(row)
+        }), 200
+
+    except Exception:
+        db.session.rollback()
+        logger.exception(
+            "Failed to update branch %s for business %s.",
+            branch_id,
+            business_id
+        )
+        return jsonify({
+            "status": "error",
+            "message": "Unable to update branch."
+        }), 500
+
+    finally:
+        db.session.remove()
+
+
+# ==================================================
+# ACTIVATE / DEACTIVATE BUSINESS BRANCH
+# ==================================================
+
+@business_bp.route(
+    "/<uuid:business_id>/branches/<uuid:branch_id>/status",
+    methods=["PATCH"]
+)
+@business_member_required("owner", "admin")
+def update_branch_status(business_id, branch_id):
+
+    if business_id != g.business_id:
+        return jsonify({
+            "status": "error",
+            "message": "Business access denied."
+        }), 403
+
+    data = request.get_json(silent=True) or {}
+    is_active = data.get("is_active")
+
+    if not isinstance(is_active, bool):
+        return jsonify({
+            "status": "error",
+            "message": "A boolean is_active value is required."
+        }), 400
+
+    try:
+        branch_result = db.session.execute(
+            text("""
+                SELECT
+                    id,
+                    business_id,
+                    name,
+                    phone,
+                    address,
+                    is_main,
+                    is_active,
+                    created_at,
+                    updated_at
+                FROM public.branches
+                WHERE id = :branch_id
+                  AND business_id = :business_id
+                LIMIT 1
+            """),
+            {
+                "branch_id": branch_id,
+                "business_id": g.business_id
+            }
+        )
+
+        branch = branch_result.mappings().first()
+
+        if not branch:
+            return jsonify({
+                "status": "error",
+                "message": "Branch not found."
+            }), 404
+
+        if branch["is_main"] and not is_active:
+            return jsonify({
+                "status": "error",
+                "message": "The Main Branch cannot be deactivated."
+            }), 400
+
+        result = db.session.execute(
+            text("""
+                UPDATE public.branches
+                SET
+                    is_active = :is_active,
+                    updated_at = NOW()
+                WHERE id = :branch_id
+                  AND business_id = :business_id
+                RETURNING
+                    id,
+                    business_id,
+                    name,
+                    phone,
+                    address,
+                    is_main,
+                    is_active,
+                    created_at,
+                    updated_at
+            """),
+            {
+                "is_active": is_active,
+                "branch_id": branch_id,
+                "business_id": g.business_id
+            }
+        )
+
+        updated_branch = result.mappings().one()
+        db.session.commit()
+
+        return jsonify({
+            "status": "success",
+            "message": (
+                "Branch activated successfully."
+                if is_active
+                else "Branch deactivated successfully."
+            ),
+            "branch": serialize_branch(updated_branch)
+        }), 200
+
+    except Exception:
+        db.session.rollback()
+        logger.exception(
+            "Failed to change status for branch %s in business %s.",
+            branch_id,
+            business_id
+        )
+        return jsonify({
+            "status": "error",
+            "message": "Unable to update branch status."
+        }), 500
+
+    finally:
+        db.session.remove()
+
 
     if business_id != g.business_id:
         return jsonify({
