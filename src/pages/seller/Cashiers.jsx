@@ -1,222 +1,377 @@
-import React, { useMemo, useState } from "react";
-
-const INITIAL_EMPLOYEES = [];
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import api from "../../api/api";
 
 const ROLES = [
+  { value: "admin", label: "Admin" },
+  { value: "manager", label: "Manager" },
   { value: "cashier", label: "Cashier" },
-  { value: "branch_manager", label: "Branch Manager" },
-  { value: "inventory_manager", label: "Inventory Manager" },
-  { value: "staff", label: "General Staff" },
 ];
-
-const STATUSES = [
-  { value: "invited", label: "Invitation Pending" },
-  { value: "active", label: "Active" },
-  { value: "suspended", label: "Suspended" },
-];
-
-const EMPTY_FORM = {
-  name: "",
-  email: "",
-  phone: "",
-  username: "",
-  role: "cashier",
-  branch: "",
-  status: "invited",
-  notes: "",
-};
 
 const styles = `
 .md-employees {
-  color: var(--text-primary, #172033);
   width: 100%;
   max-width: 1500px;
   margin: 0 auto;
   padding: 24px;
+  color: var(--text-primary, #172033);
 }
 .md-employees * { box-sizing: border-box; }
 .md-employees button,
 .md-employees input,
-.md-employees select,
-.md-employees textarea { font: inherit; }
+.md-employees select { font: inherit; }
 .md-employees button { cursor: pointer; }
+.md-employees button:disabled { opacity: .55; cursor: not-allowed; }
+
 .md-employees .me-header {
-  display: flex; justify-content: space-between; align-items: flex-start;
-  gap: 16px; flex-wrap: wrap; margin-bottom: 22px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
 }
-.md-employees h1 { font-size: 26px; margin: 0 0 7px; font-weight: 750; }
-.md-employees .me-subtitle { color: var(--text-secondary, #64748b); margin: 0; font-size: 14px; }
+.md-employees h1 {
+  font-size: 26px;
+  margin: 0 0 7px;
+  font-weight: 750;
+}
+.md-employees .me-subtitle {
+  color: var(--text-secondary, #64748b);
+  margin: 0;
+  font-size: 14px;
+}
 .md-employees .me-btn {
   border: 1px solid var(--border-color, #e2e8f0);
-  border-radius: 9px; padding: 10px 15px; font-weight: 650;
-  background: var(--card-bg, #fff); color: var(--text-primary, #172033);
-  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  border-radius: 9px;
+  padding: 10px 15px;
+  font-weight: 650;
+  background: var(--card-bg, #fff);
+  color: var(--text-primary, #172033);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
 }
 .md-employees .me-btn-primary {
-  background: var(--primary-color, #2563eb); border-color: var(--primary-color, #2563eb);
+  background: var(--primary-color, #2563eb);
+  border-color: var(--primary-color, #2563eb);
   color: white;
 }
-.md-employees .me-btn-danger { color: #dc2626; }
-.md-employees .me-btn:disabled { opacity: .5; cursor: not-allowed; }
-.md-employees .me-preview {
-  border: 1px solid #bfdbfe; background: #eff6ff; color: #1e40af;
-  padding: 12px 15px; border-radius: 10px; font-size: 13px;
-  margin-bottom: 20px; line-height: 1.5;
-}
 .md-employees .me-stats {
-  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px; margin-bottom: 22px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
 }
 .md-employees .me-stat {
-  background: var(--card-bg, #fff); border: 1px solid var(--border-color, #e2e8f0);
-  border-radius: 12px; padding: 17px;
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 12px;
+  padding: 17px;
 }
-.md-employees .me-stat-label { font-size: 13px; color: var(--text-secondary, #64748b); }
-.md-employees .me-stat-value { font-size: 26px; font-weight: 750; margin-top: 8px; }
+.md-employees .me-stat-label {
+  font-size: 13px;
+  color: var(--text-secondary, #64748b);
+}
+.md-employees .me-stat-value {
+  font-size: 26px;
+  font-weight: 750;
+  margin-top: 8px;
+}
 .md-employees .me-toolbar {
-  display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 15px;
 }
 .md-employees .me-input,
-.md-employees .me-select,
-.md-employees .me-textarea {
-  width: 100%; min-width: 0; border: 1px solid var(--border-color, #cbd5e1);
+.md-employees .me-select {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--border-color, #cbd5e1);
   background: var(--input-bg, var(--card-bg, #fff));
-  color: var(--text-primary, #172033); border-radius: 8px;
-  padding: 10px 11px; outline: none;
+  color: var(--text-primary, #172033);
+  border-radius: 8px;
+  padding: 10px 11px;
+  outline: none;
 }
 .md-employees .me-input:focus,
-.md-employees .me-select:focus,
-.md-employees .me-textarea:focus { border-color: var(--primary-color, #2563eb); }
+.md-employees .me-select:focus {
+  border-color: var(--primary-color, #2563eb);
+}
 .md-employees .me-search { flex: 1 1 250px; }
 .md-employees .me-filter { flex: 0 1 190px; }
+
 .md-employees .me-table-wrap {
-  overflow-x: auto; border: 1px solid var(--border-color, #e2e8f0);
-  border-radius: 12px; background: var(--card-bg, #fff);
+  overflow-x: auto;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 12px;
+  background: var(--card-bg, #fff);
 }
-.md-employees table { border-collapse: collapse; width: 100%; min-width: 850px; }
-.md-employees th, .md-employees td {
-  padding: 14px 15px; text-align: left;
-  border-bottom: 1px solid var(--border-color, #e2e8f0); font-size: 13px;
+.md-employees table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 760px;
+}
+.md-employees th,
+.md-employees td {
+  padding: 14px 15px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+  font-size: 13px;
 }
 .md-employees th {
-  color: var(--text-secondary, #64748b); font-weight: 650;
-  background: var(--surface-bg, #f8fafc); white-space: nowrap;
+  color: var(--text-secondary, #64748b);
+  font-weight: 650;
+  background: var(--surface-bg, #f8fafc);
+  white-space: nowrap;
 }
 .md-employees tr:last-child td { border-bottom: 0; }
-.md-employees .me-person { display: flex; align-items: center; gap: 10px; }
+.md-employees .me-person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 .md-employees .me-avatar {
-  width: 36px; height: 36px; border-radius: 50%;
-  display: grid; place-items: center; flex-shrink: 0;
-  background: var(--surface-bg, #eff6ff); color: var(--primary-color, #2563eb);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  background: var(--surface-bg, #eff6ff);
+  color: var(--primary-color, #2563eb);
   font-weight: 750;
 }
 .md-employees .me-person-name { font-weight: 700; }
-.md-employees .me-muted { color: var(--text-secondary, #64748b); font-size: 12px; margin-top: 3px; }
-.md-employees .me-badge {
-  display: inline-flex; border-radius: 20px; padding: 5px 9px;
-  font-size: 11px; font-weight: 700; white-space: nowrap;
+.md-employees .me-muted {
+  color: var(--text-secondary, #64748b);
+  font-size: 12px;
+  margin-top: 3px;
+  overflow-wrap: anywhere;
 }
-.md-employees .me-active { background: #dcfce7; color: #166534; }
-.md-employees .me-invited { background: #fef3c7; color: #92400e; }
-.md-employees .me-suspended { background: #fee2e2; color: #991b1b; }
+.md-employees .me-badge {
+  display: inline-flex;
+  border-radius: 20px;
+  padding: 5px 9px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.md-employees .me-active {
+  background: #dcfce7;
+  color: #166534;
+}
+.md-employees .me-suspended {
+  background: #fee2e2;
+  color: #991b1b;
+}
 .md-employees .me-actions { display: flex; gap: 7px; }
 .md-employees .me-icon-btn {
-  border: 1px solid var(--border-color, #e2e8f0); border-radius: 7px;
-  background: transparent; color: var(--text-primary, #172033);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-primary, #172033);
   padding: 6px 9px;
 }
-.md-employees .me-empty { padding: 55px 20px; text-align: center; }
-.md-employees .me-empty-icon { font-size: 34px; margin-bottom: 10px; }
-.md-employees .me-empty h3 { margin: 0 0 7px; font-size: 17px; }
+.md-employees .me-empty {
+  padding: 55px 20px;
+  text-align: center;
+}
+.md-employees .me-empty-icon {
+  font-size: 34px;
+  margin-bottom: 10px;
+}
+.md-employees .me-empty h3 {
+  margin: 0 0 7px;
+  font-size: 17px;
+}
 .md-employees .me-empty p {
-  margin: 0 auto 17px; max-width: 420px; line-height: 1.5;
-  font-size: 13px; color: var(--text-secondary, #64748b);
+  margin: 0 auto 17px;
+  max-width: 440px;
+  line-height: 1.5;
+  font-size: 13px;
+  color: var(--text-secondary, #64748b);
+}
+.md-employees .me-message {
+  padding: 12px 15px;
+  border-radius: 9px;
+  font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+.md-employees .me-error {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+.md-employees .me-success {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+.md-employees .me-loading {
+  padding: 45px 20px;
+  text-align: center;
+  color: var(--text-secondary, #64748b);
 }
 .md-employees .me-modal-backdrop {
-  position: fixed; inset: 0; z-index: 1000; background: rgba(15,23,42,.55);
-  display: flex; align-items: center; justify-content: center;
-  padding: 18px; overflow-y: auto;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(15,23,42,.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  overflow-y: auto;
 }
 .md-employees .me-modal {
-  width: 100%; max-width: 620px; max-height: 92vh; overflow-y: auto;
-  background: var(--card-bg, #fff); color: var(--text-primary, #172033);
-  border-radius: 14px; padding: 22px;
+  width: 100%;
+  max-width: 560px;
+  max-height: 92vh;
+  overflow-y: auto;
+  background: var(--card-bg, #fff);
+  color: var(--text-primary, #172033);
+  border-radius: 14px;
+  padding: 22px;
   box-shadow: 0 20px 60px rgba(0,0,0,.2);
 }
 .md-employees .me-modal-header {
-  display: flex; justify-content: space-between; gap: 12px; align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
   margin-bottom: 20px;
 }
-.md-employees .me-modal-header h2 { font-size: 19px; margin: 0; }
+.md-employees .me-modal-header h2 {
+  font-size: 19px;
+  margin: 0;
+}
 .md-employees .me-close {
-  border: 0; background: transparent; color: inherit; font-size: 24px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 24px;
 }
-.md-employees .me-form-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+.md-employees .me-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 16px;
 }
-.md-employees .me-field { display: flex; flex-direction: column; gap: 6px; }
-.md-employees .me-field label { font-size: 12px; font-weight: 700; }
-.md-employees .me-field small { color: var(--text-secondary, #64748b); font-size: 11px; }
-.md-employees .me-full { grid-column: 1 / -1; }
+.md-employees .me-field label {
+  font-size: 12px;
+  font-weight: 700;
+}
+.md-employees .me-field small {
+  color: var(--text-secondary, #64748b);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.md-employees .me-branches {
+  display: grid;
+  gap: 9px;
+  margin-top: 4px;
+}
+.md-employees .me-branch-option {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 8px;
+  padding: 11px;
+  font-size: 13px;
+}
+.md-employees .me-branch-option input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary-color, #2563eb);
+}
 .md-employees .me-modal-footer {
-  display: flex; justify-content: flex-end; gap: 9px;
-  margin-top: 22px; flex-wrap: wrap;
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  margin-top: 22px;
+  flex-wrap: wrap;
 }
-.md-employees .me-detail-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 15px;
-}
-.md-employees .me-detail-label {
-  font-size: 11px; color: var(--text-secondary, #64748b); margin-bottom: 5px;
-}
-.md-employees .me-detail-value { font-size: 14px; font-weight: 650; overflow-wrap: anywhere; }
 .md-employees .me-notice {
-  padding: 11px; border-radius: 8px; background: var(--surface-bg, #f8fafc);
-  font-size: 12px; line-height: 1.5; margin-top: 17px;
+  padding: 11px;
+  border-radius: 8px;
+  background: var(--surface-bg, #f8fafc);
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 15px;
 }
-@media (max-width: 850px) {
-  .md-employees .me-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (max-width: 600px) {
+@media (max-width: 700px) {
   .md-employees { padding: 16px; }
   .md-employees h1 { font-size: 22px; }
-  .md-employees .me-form-grid, .md-employees .me-detail-grid { grid-template-columns: 1fr; }
-  .md-employees .me-full { grid-column: auto; }
+  .md-employees .me-stats { grid-template-columns: 1fr 1fr; }
   .md-employees .me-modal { padding: 17px; }
+}
+@media (max-width: 420px) {
+  .md-employees .me-stats { grid-template-columns: 1fr; }
 }
 `;
 
+function getBusinessId() {
+  return localStorage.getItem("mydukaBusinessId");
+}
+
+function getErrorMessage(error) {
+  return (
+    error?.response?.data?.error ||
+    error?.response?.data?.message ||
+    error?.message ||
+    "Something went wrong. Please try again."
+  );
+}
+
+function roleLabel(role) {
+  return ROLES.find((item) => item.value === role)?.label || role || "—";
+}
+
 function formatDate(value) {
   if (!value) return "—";
-  return new Date(value).toLocaleDateString(undefined, {
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return "—";
+
+  return date.toLocaleDateString(undefined, {
     day: "numeric",
     month: "short",
     year: "numeric",
   });
 }
 
-function roleLabel(value) {
-  return ROLES.find((role) => role.value === value)?.label || value || "—";
-}
+function getBranchNames(member) {
+  if (!Array.isArray(member.branches) || member.branches.length === 0) {
+    return "No branch assigned";
+  }
 
-function statusLabel(value) {
-  return STATUSES.find((status) => status.value === value)?.label || value;
+  return member.branches
+    .map((branch) => branch.name || `Branch ${branch.id}`)
+    .join(", ");
 }
 
 function downloadCSV(employees) {
   const headers = [
-    "Name", "Username", "Email", "Phone", "Role", "Branch",
-    "Status", "Date Added",
+    "User ID",
+    "Email",
+    "Role",
+    "Branches",
+    "Account Status",
+    "Date Added",
   ];
 
   const rows = employees.map((employee) => [
-    employee.name,
-    employee.username,
-    employee.email,
-    employee.phone,
+    employee.user_id,
+    employee.email || "",
     roleLabel(employee.role),
-    employee.branch,
-    statusLabel(employee.status),
-    formatDate(employee.createdAt),
+    getBranchNames(employee),
+    employee.is_active ? "Active" : "Suspended",
+    formatDate(employee.created_at),
   ]);
 
   const escape = (value) =>
@@ -232,176 +387,170 @@ function downloadCSV(employees) {
 
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
+
   link.href = url;
-  link.download = "myduka-employees.csv";
+  link.download = "myduka-staff.csv";
   link.click();
+
   URL.revokeObjectURL(url);
 }
 
 export default function Cashiers() {
-  const [employees, setEmployees] = useState(INITIAL_EMPLOYEES);
+  const businessId = getBusinessId();
+
+  const [employees, setEmployees] = useState([]);
+  const [branches, setBranches] = useState([]);
+
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [modal, setModal] = useState(null);
-  const [selectedEmployee, setSelectedEmployee] = useState(null);
-  const [form, setForm] = useState(EMPTY_FORM);
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState("cashier");
+  const [selectedBranches, setSelectedBranches] = useState([]);
+
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const loadData = useCallback(async () => {
+    if (!businessId) {
+      setError("No active business was found. Please select or create a business first.");
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const [staffResponse, branchResponse] = await Promise.all([
+        api.get(`/businesses/${businessId}/staff`),
+        api.get(`/businesses/${businessId}/branches`),
+      ]);
+
+      const staffData = staffResponse.data?.staff;
+      const branchData = branchResponse.data?.branches;
+
+      setEmployees(Array.isArray(staffData) ? staffData : []);
+      setBranches(Array.isArray(branchData) ? branchData : []);
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [businessId]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const stats = useMemo(() => ({
     total: employees.length,
-    active: employees.filter((item) => item.status === "active").length,
-    invited: employees.filter((item) => item.status === "invited").length,
-    suspended: employees.filter((item) => item.status === "suspended").length,
+    active: employees.filter((item) => item.is_active).length,
+    suspended: employees.filter((item) => !item.is_active).length,
   }), [employees]);
 
   const filteredEmployees = useMemo(() => {
     const term = search.trim().toLowerCase();
 
     return employees.filter((employee) => {
-      const matchesSearch = !term || [
-        employee.name,
-        employee.username,
-        employee.email,
-        employee.phone,
-        employee.branch,
-      ].some((value) => String(value || "").toLowerCase().includes(term));
+      const branchNames = getBranchNames(employee);
+
+      const matchesSearch =
+        !term ||
+        [
+          employee.email,
+          employee.user_id,
+          employee.role,
+          branchNames,
+        ].some((value) =>
+          String(value || "").toLowerCase().includes(term)
+        );
 
       const matchesRole =
         roleFilter === "all" || employee.role === roleFilter;
 
       const matchesStatus =
-        statusFilter === "all" || employee.status === statusFilter;
+        statusFilter === "all" ||
+        (statusFilter === "active" && employee.is_active) ||
+        (statusFilter === "suspended" && !employee.is_active);
 
       return matchesSearch && matchesRole && matchesStatus;
     });
   }, [employees, search, roleFilter, statusFilter]);
 
-  function openCreate() {
-    setForm(EMPTY_FORM);
+  function openInviteModal() {
+    setEmail("");
+    setRole("cashier");
+    setSelectedBranches([]);
     setError("");
-    setSelectedEmployee(null);
-    setModal("form");
+    setSuccess("");
+    setModalOpen(true);
   }
 
-  function openEdit(employee) {
-    setForm({
-      name: employee.name || "",
-      email: employee.email || "",
-      phone: employee.phone || "",
-      username: employee.username || "",
-      role: employee.role || "cashier",
-      branch: employee.branch || "",
-      status: employee.status || "invited",
-      notes: employee.notes || "",
-    });
-    setError("");
-    setSelectedEmployee(employee);
-    setModal("form");
+  function toggleBranch(branchId) {
+    setSelectedBranches((current) =>
+      current.includes(branchId)
+        ? current.filter((id) => id !== branchId)
+        : [...current, branchId]
+    );
   }
 
-  function updateForm(field, value) {
-    setForm((current) => ({ ...current, [field]: value }));
-  }
-
-  function saveEmployee(event) {
+  async function sendInvitation(event) {
     event.preventDefault();
+
     setError("");
+    setSuccess("");
 
-    const name = form.name.trim();
-    const username = form.username.trim();
-    const email = form.email.trim().toLowerCase();
-    const phone = form.phone.trim();
+    const normalizedEmail = email.trim().toLowerCase();
 
-    if (!name || !username || !phone) {
-      setError("Name, username and phone number are required.");
+    if (!normalizedEmail) {
+      setError("Enter the employee's email address.");
       return;
     }
 
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
       setError("Enter a valid email address.");
       return;
     }
 
-    const duplicateUsername = employees.some(
-      (employee) =>
-        employee.username.toLowerCase() === username.toLowerCase() &&
-        employee.id !== selectedEmployee?.id
-    );
-
-    if (duplicateUsername) {
-      setError("That username is already in use.");
+    if (selectedBranches.length === 0) {
+      setError("Assign the employee to at least one branch.");
       return;
     }
 
-    if (email) {
-      const duplicateEmail = employees.some(
-        (employee) =>
-          employee.email?.toLowerCase() === email &&
-          employee.id !== selectedEmployee?.id
-      );
-
-      if (duplicateEmail) {
-        setError("That email address is already assigned to another employee.");
-        return;
-      }
+    if (!businessId) {
+      setError("No active business was found.");
+      return;
     }
 
-    const now = new Date().toISOString();
+    setSubmitting(true);
 
-    if (selectedEmployee) {
-      setEmployees((current) =>
-        current.map((employee) =>
-          employee.id === selectedEmployee.id
-            ? { ...employee, ...form, name, username, email, phone, updatedAt: now }
-            : employee
-        )
+    try {
+      await api.post(`/businesses/${businessId}/staff/invite`, {
+        email: normalizedEmail,
+        role,
+        branch_ids: selectedBranches,
+      });
+
+      setModalOpen(false);
+      setEmail("");
+      setSelectedBranches([]);
+
+      setSuccess(
+        `Invitation sent to ${normalizedEmail}. The employee should check their email to accept it.`
       );
-    } else {
-      setEmployees((current) => [
-        {
-          id: `EMP-${Date.now()}`,
-          ...form,
-          name,
-          username,
-          email,
-          phone,
-          createdAt: now,
-          updatedAt: now,
-          lastActiveAt: null,
-        },
-        ...current,
-      ]);
+
+      await loadData();
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setSubmitting(false);
     }
-
-    setModal(null);
-  }
-
-  function changeStatus(employee, status) {
-    setEmployees((current) =>
-      current.map((item) =>
-        item.id === employee.id
-          ? { ...item, status, updatedAt: new Date().toISOString() }
-          : item
-      )
-    );
-
-    setSelectedEmployee((current) =>
-      current?.id === employee.id ? { ...current, status } : current
-    );
-  }
-
-  function removeEmployee(employee) {
-    const confirmed = window.confirm(
-      `Remove ${employee.name} from this employee list?`
-    );
-
-    if (!confirmed) return;
-
-    setEmployees((current) =>
-      current.filter((item) => item.id !== employee.id)
-    );
-    setModal(null);
   }
 
   return (
@@ -410,37 +559,40 @@ export default function Cashiers() {
 
       <div className="me-header">
         <div>
-          <h1>Cashiers & Employees</h1>
+          <h1>Staff & Cashier Management</h1>
           <p className="me-subtitle">
-            Manage your team, assign roles and control employee access.
+            Invite your team, assign roles and manage branch access.
           </p>
         </div>
 
-        <button className="me-btn me-btn-primary" onClick={openCreate}>
-          + Add Employee
+        <button
+          className="me-btn me-btn-primary"
+          onClick={openInviteModal}
+          disabled={!businessId || branches.length === 0}
+        >
+          + Invite Staff
         </button>
       </div>
 
-      <div className="me-preview">
-        <strong>Frontend preview:</strong> Employee records created here are
-        temporary and will disappear when the page is refreshed. Invitations,
-        authentication, permissions and branch assignments will be connected
-        to the MyDuka backend later. No passwords are collected or stored here.
-      </div>
+      {error && !modalOpen && (
+        <div className="me-message me-error">{error}</div>
+      )}
+
+      {success && (
+        <div className="me-message me-success">{success}</div>
+      )}
 
       <div className="me-stats">
         <div className="me-stat">
-          <div className="me-stat-label">Total employees</div>
+          <div className="me-stat-label">Total staff</div>
           <div className="me-stat-value">{stats.total}</div>
         </div>
+
         <div className="me-stat">
           <div className="me-stat-label">Active accounts</div>
           <div className="me-stat-value">{stats.active}</div>
         </div>
-        <div className="me-stat">
-          <div className="me-stat-label">Pending invitations</div>
-          <div className="me-stat-value">{stats.invited}</div>
-        </div>
+
         <div className="me-stat">
           <div className="me-stat-label">Suspended accounts</div>
           <div className="me-stat-value">{stats.suspended}</div>
@@ -450,7 +602,7 @@ export default function Cashiers() {
       <div className="me-toolbar">
         <input
           className="me-input me-search"
-          placeholder="Search name, username, email, phone or branch..."
+          placeholder="Search email, role, user ID or branch..."
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
@@ -461,9 +613,9 @@ export default function Cashiers() {
           onChange={(event) => setRoleFilter(event.target.value)}
         >
           <option value="all">All roles</option>
-          {ROLES.map((role) => (
-            <option key={role.value} value={role.value}>
-              {role.label}
+          {ROLES.map((item) => (
+            <option key={item.value} value={item.value}>
+              {item.label}
             </option>
           ))}
         </select>
@@ -474,11 +626,8 @@ export default function Cashiers() {
           onChange={(event) => setStatusFilter(event.target.value)}
         >
           <option value="all">All account statuses</option>
-          {STATUSES.map((status) => (
-            <option key={status.value} value={status.value}>
-              {status.label}
-            </option>
-          ))}
+          <option value="active">Active</option>
+          <option value="suspended">Suspended</option>
         </select>
 
         <button
@@ -488,320 +637,232 @@ export default function Cashiers() {
         >
           ↓ Export CSV
         </button>
+
+        <button
+          className="me-btn"
+          onClick={loadData}
+          disabled={loading}
+        >
+          ↻ Refresh
+        </button>
       </div>
 
       <div className="me-table-wrap">
-        {filteredEmployees.length === 0 ? (
+        {loading ? (
+          <div className="me-loading">Loading staff records...</div>
+        ) : filteredEmployees.length === 0 ? (
           <div className="me-empty">
             <div className="me-empty-icon">👥</div>
+
             <h3>
               {employees.length === 0
-                ? "No employees added yet"
-                : "No matching employees"}
+                ? "No staff members yet"
+                : "No matching staff members"}
             </h3>
+
             <p>
               {employees.length === 0
-                ? "Add your first employee or cashier to start organising your team."
+                ? "Invite your first team member to give them access to this business."
                 : "Try changing your search or filters."}
             </p>
-            {employees.length === 0 && (
-              <button className="me-btn me-btn-primary" onClick={openCreate}>
-                + Add your first employee
+
+            {employees.length === 0 && branches.length > 0 && (
+              <button
+                className="me-btn me-btn-primary"
+                onClick={openInviteModal}
+              >
+                + Invite your first staff member
               </button>
+            )}
+
+            {branches.length === 0 && (
+              <p>
+                Create a branch before inviting staff members.
+              </p>
             )}
           </div>
         ) : (
           <table>
             <thead>
               <tr>
-                <th>EMPLOYEE</th>
-                <th>USERNAME</th>
+                <th>STAFF MEMBER</th>
                 <th>ROLE</th>
-                <th>BRANCH</th>
+                <th>ASSIGNED BRANCHES</th>
                 <th>ACCOUNT STATUS</th>
                 <th>DATE ADDED</th>
-                <th>ACTIONS</th>
               </tr>
             </thead>
+
             <tbody>
-              {filteredEmployees.map((employee) => (
-                <tr key={employee.id}>
-                  <td>
-                    <div className="me-person">
-                      <div className="me-avatar">
-                        {employee.name?.charAt(0)?.toUpperCase() || "?"}
+              {filteredEmployees.map((employee) => {
+                const active = Boolean(employee.is_active);
+                const userId = employee.user_id || employee.id;
+
+                return (
+                  <tr key={employee.membership_id || userId}>
+                    <td>
+                      <div className="me-person">
+                        <div className="me-avatar">
+                          {(employee.email || "U").charAt(0).toUpperCase()}
+                        </div>
+
+                        <div>
+                          <div className="me-person-name">
+                            {employee.email || "Staff member"}
+                          </div>
+
+                          <div className="me-muted">
+                            ID: {userId || "—"}
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <div className="me-person-name">{employee.name}</div>
-                        <div className="me-muted">{employee.email || employee.phone}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td>{employee.username}</td>
-                  <td>{roleLabel(employee.role)}</td>
-                  <td>{employee.branch || "Not assigned"}</td>
-                  <td>
-                    <span className={`me-badge me-${employee.status}`}>
-                      {statusLabel(employee.status)}
-                    </span>
-                  </td>
-                  <td>{formatDate(employee.createdAt)}</td>
-                  <td>
-                    <div className="me-actions">
-                      <button
-                        className="me-icon-btn"
-                        title="View employee"
-                        onClick={() => {
-                          setSelectedEmployee(employee);
-                          setModal("details");
-                        }}
+                    </td>
+
+                    <td>{roleLabel(employee.role)}</td>
+
+                    <td>{getBranchNames(employee)}</td>
+
+                    <td>
+                      <span
+                        className={`me-badge ${
+                          active ? "me-active" : "me-suspended"
+                        }`}
                       >
-                        View
-                      </button>
-                      <button
-                        className="me-icon-btn"
-                        title="Edit employee"
-                        onClick={() => openEdit(employee)}
-                      >
-                        Edit
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                        {active ? "Active" : "Suspended"}
+                      </span>
+                    </td>
+
+                    <td>{formatDate(employee.created_at)}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
       </div>
 
-      {modal === "form" && (
-        <div className="me-modal-backdrop" onMouseDown={(event) => {
-          if (event.target === event.currentTarget) setModal(null);
-        }}>
-          <form className="me-modal" onSubmit={saveEmployee}>
+      {modalOpen && (
+        <div
+          className="me-modal-backdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !submitting) {
+              setModalOpen(false);
+              setError("");
+            }
+          }}
+        >
+          <form className="me-modal" onSubmit={sendInvitation}>
             <div className="me-modal-header">
-              <h2>{selectedEmployee ? "Edit Employee" : "Add Employee"}</h2>
-              <button type="button" className="me-close" onClick={() => setModal(null)}>
+              <h2>Invite Staff Member</h2>
+
+              <button
+                type="button"
+                className="me-close"
+                onClick={() => {
+                  setModalOpen(false);
+                  setError("");
+                }}
+                disabled={submitting}
+              >
                 ×
               </button>
             </div>
 
-            <div className="me-form-grid">
-              <div className="me-field">
-                <label>Full name *</label>
-                <input
-                  className="me-input"
-                  value={form.name}
-                  onChange={(event) => updateForm("name", event.target.value)}
-                  placeholder="Employee's full name"
-                  required
-                />
-              </div>
+            <div className="me-field">
+              <label>Email address *</label>
 
-              <div className="me-field">
-                <label>Username *</label>
-                <input
-                  className="me-input"
-                  value={form.username}
-                  onChange={(event) => updateForm("username", event.target.value)}
-                  placeholder="e.g. john.cashier"
-                  required
-                />
-              </div>
+              <input
+                className="me-input"
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="employee@example.com"
+                required
+                autoFocus
+              />
 
-              <div className="me-field">
-                <label>Email address</label>
-                <input
-                  className="me-input"
-                  type="email"
-                  value={form.email}
-                  onChange={(event) => updateForm("email", event.target.value)}
-                  placeholder="employee@example.com"
-                />
-              </div>
+              <small>
+                MyDuka will send an invitation to this email address.
+              </small>
+            </div>
 
-              <div className="me-field">
-                <label>Phone number *</label>
-                <input
-                  className="me-input"
-                  value={form.phone}
-                  onChange={(event) => updateForm("phone", event.target.value)}
-                  placeholder="e.g. 07XXXXXXXX"
-                  required
-                />
-              </div>
+            <div className="me-field">
+              <label>Staff role *</label>
 
-              <div className="me-field">
-                <label>Employee role *</label>
-                <select
-                  className="me-select"
-                  value={form.role}
-                  onChange={(event) => updateForm("role", event.target.value)}
-                >
-                  {ROLES.map((role) => (
-                    <option key={role.value} value={role.value}>
-                      {role.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <select
+                className="me-select"
+                value={role}
+                onChange={(event) => setRole(event.target.value)}
+              >
+                {ROLES.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-              <div className="me-field">
-                <label>Assigned branch</label>
-                <input
-                  className="me-input"
-                  value={form.branch}
-                  onChange={(event) => updateForm("branch", event.target.value)}
-                  placeholder="e.g. Nairobi Branch"
-                />
-                <small>Branch selection will connect to the Branches module.</small>
-              </div>
+            <div className="me-field">
+              <label>Assign branches *</label>
 
-              <div className="me-field me-full">
-                <label>Account status</label>
-                <select
-                  className="me-select"
-                  value={form.status}
-                  onChange={(event) => updateForm("status", event.target.value)}
-                >
-                  {STATUSES.map((status) => (
-                    <option key={status.value} value={status.value}>
-                      {status.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <small>
+                Select every branch this staff member should be able to access.
+              </small>
 
-              <div className="me-field me-full">
-                <label>Internal notes</label>
-                <textarea
-                  className="me-textarea"
-                  rows="3"
-                  value={form.notes}
-                  onChange={(event) => updateForm("notes", event.target.value)}
-                  placeholder="Optional notes about this employee..."
-                />
+              <div className="me-branches">
+                {branches.map((branch) => (
+                  <label
+                    className="me-branch-option"
+                    key={branch.id}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedBranches.includes(branch.id)}
+                      onChange={() => toggleBranch(branch.id)}
+                    />
+
+                    <span>
+                      {branch.name}
+                      {branch.is_main ? " (Main Branch)" : ""}
+                    </span>
+                  </label>
+                ))}
               </div>
             </div>
 
             {error && (
-              <div style={{ color: "#dc2626", fontSize: 13, marginTop: 14 }}>
+              <div className="me-message me-error">
                 {error}
               </div>
             )}
 
+            <div className="me-notice">
+              An invitation will be sent to the employee's email. They must
+              accept the invitation before accessing the business.
+            </div>
+
             <div className="me-modal-footer">
-              <button type="button" className="me-btn" onClick={() => setModal(null)}>
+              <button
+                type="button"
+                className="me-btn"
+                onClick={() => {
+                  setModalOpen(false);
+                  setError("");
+                }}
+                disabled={submitting}
+              >
                 Cancel
               </button>
-              <button type="submit" className="me-btn me-btn-primary">
-                {selectedEmployee ? "Save Changes" : "Add Employee"}
+
+              <button
+                type="submit"
+                className="me-btn me-btn-primary"
+                disabled={submitting || branches.length === 0}
+              >
+                {submitting ? "Sending invitation..." : "Send Invitation"}
               </button>
             </div>
           </form>
-        </div>
-      )}
-
-      {modal === "details" && selectedEmployee && (
-        <div className="me-modal-backdrop" onMouseDown={(event) => {
-          if (event.target === event.currentTarget) setModal(null);
-        }}>
-          <div className="me-modal">
-            <div className="me-modal-header">
-              <h2>Employee Details</h2>
-              <button type="button" className="me-close" onClick={() => setModal(null)}>
-                ×
-              </button>
-            </div>
-
-            <div className="me-person" style={{ marginBottom: 22 }}>
-              <div className="me-avatar" style={{ width: 50, height: 50, fontSize: 19 }}>
-                {selectedEmployee.name?.charAt(0)?.toUpperCase()}
-              </div>
-              <div>
-                <div className="me-person-name" style={{ fontSize: 17 }}>
-                  {selectedEmployee.name}
-                </div>
-                <div className="me-muted">{selectedEmployee.username}</div>
-              </div>
-            </div>
-
-            <div className="me-detail-grid">
-              <div>
-                <div className="me-detail-label">Email address</div>
-                <div className="me-detail-value">{selectedEmployee.email || "Not provided"}</div>
-              </div>
-              <div>
-                <div className="me-detail-label">Phone number</div>
-                <div className="me-detail-value">{selectedEmployee.phone}</div>
-              </div>
-              <div>
-                <div className="me-detail-label">Role</div>
-                <div className="me-detail-value">{roleLabel(selectedEmployee.role)}</div>
-              </div>
-              <div>
-                <div className="me-detail-label">Assigned branch</div>
-                <div className="me-detail-value">{selectedEmployee.branch || "Not assigned"}</div>
-              </div>
-              <div>
-                <div className="me-detail-label">Account status</div>
-                <div className="me-detail-value">
-                  <span className={`me-badge me-${selectedEmployee.status}`}>
-                    {statusLabel(selectedEmployee.status)}
-                  </span>
-                </div>
-              </div>
-              <div>
-                <div className="me-detail-label">Date added</div>
-                <div className="me-detail-value">{formatDate(selectedEmployee.createdAt)}</div>
-              </div>
-              <div className="me-full">
-                <div className="me-detail-label">Internal notes</div>
-                <div className="me-detail-value" style={{ fontWeight: 400 }}>
-                  {selectedEmployee.notes || "No notes"}
-                </div>
-              </div>
-            </div>
-
-            <div className="me-notice">
-              Account invitations and permissions are not active in this frontend
-              preview. The backend will enforce role permissions and branch access.
-            </div>
-
-            <div className="me-modal-footer" style={{ justifyContent: "space-between" }}>
-              <button
-                className="me-btn me-btn-danger"
-                onClick={() => removeEmployee(selectedEmployee)}
-              >
-                Remove
-              </button>
-
-              <div className="me-actions">
-                {selectedEmployee.status !== "active" && (
-                  <button
-                    className="me-btn"
-                    onClick={() => changeStatus(selectedEmployee, "active")}
-                  >
-                    Activate
-                  </button>
-                )}
-                {selectedEmployee.status !== "suspended" && (
-                  <button
-                    className="me-btn"
-                    onClick={() => changeStatus(selectedEmployee, "suspended")}
-                  >
-                    Suspend
-                  </button>
-                )}
-                <button
-                  className="me-btn me-btn-primary"
-                  onClick={() => openEdit(selectedEmployee)}
-                >
-                  Edit Employee
-                </button>
-              </div>
-            </div>
-          </div>
         </div>
       )}
     </div>
