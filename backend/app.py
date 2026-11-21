@@ -10,6 +10,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from extensions import db
 
 from routes.business_routes import business_bp
+from routes.branch_routes import branch_bp
 from routes.superadmin_routes import superadmin_bp
 from routes.profile_routes import profile_bp
 from routes.category_routes import category_bp
@@ -54,7 +55,6 @@ if DATABASE_URL.startswith("postgres://"):
         "postgresql+psycopg://",
         1
     )
-
 elif DATABASE_URL.startswith("postgresql://"):
     DATABASE_URL = DATABASE_URL.replace(
         "postgresql://",
@@ -195,6 +195,7 @@ db.init_app(app)
 # ============================================================
 
 app.register_blueprint(business_bp)
+app.register_blueprint(branch_bp)
 app.register_blueprint(superadmin_bp)
 app.register_blueprint(profile_bp)
 app.register_blueprint(category_bp)
@@ -248,6 +249,7 @@ def database_test():
         }), 200
 
     except SQLAlchemyError:
+
         db.session.rollback()
 
         logger.exception(
